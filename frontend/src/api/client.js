@@ -1,0 +1,48 @@
+const BASE_URL = 'http://localhost:4000';
+
+// Wraps every API call: attaches JSON headers, sends the httpOnly auth
+// cookie automatically (credentials: 'include'), and normalizes error
+// handling so callers just get a thrown Error with a readable message
+// instead of having to check res.ok everywhere.
+async function request(path, options = {}) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    credentials: 'include',
+  });
+
+  // .catch(() => ({})) covers responses with no body (e.g. some error
+  // pages) so this doesn't throw on top of the actual error below.
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.error || 'Something went wrong');
+  }
+
+  return data;
+}
+
+export const api = {
+  register: (email, password) =>
+    request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (email, password) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  me: () => request('/auth/me'),
+  getAccounts: () => request('/accounts'),
+  createAccount: (name, type) =>
+    request('/accounts', { method: 'POST', body: JSON.stringify({ name, type }) }),
+  deleteAccount: (id) => request(`/accounts/${id}`, { method: 'DELETE' }),
+  getCategories: () => request('/categories'),
+  createCategory: (name) =>
+    request('/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  getTransactions: (params = '') => request(`/transactions${params}`),
+  createTransaction: (data) =>
+    request('/transactions', { method: 'POST', body: JSON.stringify(data) }),
+  deleteTransaction: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
+  getRecurring: () => request('/recurring'),
+  createRecurring: (data) =>
+    request('/recurring', { method: 'POST', body: JSON.stringify(data) }),
+  deleteRecurring: (id) => request(`/recurring/${id}`, { method: 'DELETE' }),
+  runRecurringNow: () => request('/recurring/run-now', { method: 'POST' }),
+};

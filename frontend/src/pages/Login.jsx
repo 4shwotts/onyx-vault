@@ -1,0 +1,127 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../api/client';
+import OnyxMark from '../components/OnyxMark';
+
+export default function Login() {
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (mode === 'register') {
+        await api.register(email, password);
+      } else {
+        await api.login(email, password);
+      }
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', padding: 24,
+      position: 'relative', zIndex: 1,
+    }}>
+      <div style={{
+        background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
+        width: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+        position: 'relative', zIndex: 1,
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 10, background: 'var(--nav-bg)',
+            border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
+            margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <OnyxMark size={26} lineColor="#eef1f3" offsetColor="rgba(0,0,0,0.5)" />
+          </div>
+          <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
+            <span style={{ fontWeight: 700 }}>Onyx</span>{' '}
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Vault</span>
+          </p>
+          <p className="font-mono" style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', letterSpacing: 1 }}>
+            {mode === 'login' ? 'SIGN IN TO CONTINUE' : 'CREATE YOUR ACCOUNT'}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="font-mono"
+            style={inputStyle}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            className="font-mono"
+            style={{ ...inputStyle, marginBottom: 18 }}
+          />
+
+          {error && (
+            <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 14 }}>{error}</p>
+          )}
+
+          <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
+            {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+          </button>
+        </form>
+
+        <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <span
+            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+            style={{ color: '#7d3c98', cursor: 'pointer' }}
+          >
+            {mode === 'login' ? 'Register' : 'Sign in'}
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  background: '#15181a',
+  border: '0.5px solid #2e3336',
+  borderRadius: 8,
+  padding: '11px 12px',
+  fontSize: 14,
+  color: 'var(--text-primary)',
+  marginBottom: 10,
+};
+
+const buttonStyle = {
+  width: '100%',
+  background: 'var(--accent)',
+  color: 'var(--accent-text)',
+  border: 'none',
+  borderRadius: 8,
+  padding: 12,
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: 'pointer',
+};
