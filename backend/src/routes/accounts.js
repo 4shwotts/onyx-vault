@@ -5,6 +5,8 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+const MAX_ACCOUNTS_PER_USER = 10;
+
 // Every route below is scoped to req.userId (set by requireAuth from the
 // verified JWT), so a user can only ever see or modify their own accounts.
 
@@ -29,6 +31,13 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    // Counted here rather than relying on a DB constraint, so we can
+    // return a clear message instead of a raw constraint violation.
+    const countResult = await pool.query('SELECT COUNT(*) FROM accounts WHERE user_id = $1', [req.userId]);
+    if (Number(countResult.rows[0].count) >= MAX_ACCOUNTS_PER_USER) {
+      return res.status(403).json({ error: `You've reached the limit of ${MAX_ACCOUNTS_PER_USER} accounts` });
+    }
+
     const result = await pool.query(
       'INSERT INTO accounts (user_id, name, type, balance) VALUES ($1, $2, $3, 0) RETURNING *',
       [req.userId, name, type]

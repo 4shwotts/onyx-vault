@@ -6,6 +6,8 @@ const { isAnomalous } = require('../utils/anomaly');
 const router = express.Router();
 router.use(requireAuth);
 
+const MAX_TRANSACTIONS_PER_USER = 10000;
+
 async function assertAccountOwnership(accountId, userId, client = pool) {
   const result = await client.query(
     'SELECT id FROM accounts WHERE id = $1 AND user_id = $2',
@@ -24,6 +26,19 @@ async function assertCategoryOwnership(categoryId, userId, client = pool) {
     [categoryId, userId]
   );
   return result.rows.length > 0;
+}
+
+// Counts transactions via a join back to accounts, since transactions
+// has no user_id column of its own, ownership only exists through the
+// account it belongs to.
+async function countUserTransactions(userId, client = pool) {
+  const result = await client.query(
+    `SELECT COUNT(*) FROM transactions t
+     JOIN accounts a ON a.id = t.account_id
+     WHERE a.user_id = $1`,
+    [userId]
+  );
+  return Number(result.rows[0].count);
 }
 
 router.get('/', async (req, res) => {
@@ -94,6 +109,11 @@ router.post('/', async (req, res) => {
     if (!ownsCategory) {
       return res.status(403).json({ error: 'That category does not belong to you' });
     }
+  }
+
+  const existingCount = await countUserTransactions(req.userId);
+  if (existingCount >= MAX_TRANSACTIONS_PER_USER) {
+    return res.status(403).json({ error: `You've reached the limit of ${MAX_TRANSACTIONS_PER_USER} transactions` });
   }
 
   const client = await pool.connect();

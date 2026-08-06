@@ -6,6 +6,8 @@ const { processRecurringTransactions, processRule } = require('../cron/processRe
 const router = express.Router();
 router.use(requireAuth);
 
+const MAX_RECURRING_RULES_PER_USER = 15;
+
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
@@ -50,6 +52,11 @@ router.post('/', async (req, res) => {
     if (ownsCategory.rows.length === 0) {
       return res.status(403).json({ error: 'That category does not belong to you' });
     }
+  }
+
+  const countResult = await pool.query('SELECT COUNT(*) FROM recurring_transactions WHERE user_id = $1', [req.userId]);
+  if (Number(countResult.rows[0].count) >= MAX_RECURRING_RULES_PER_USER) {
+    return res.status(403).json({ error: `You've reached the limit of ${MAX_RECURRING_RULES_PER_USER} recurring rules` });
   }
 
   try {
