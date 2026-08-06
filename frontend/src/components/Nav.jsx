@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import OnyxMark from '../components/OnyxMark';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -8,6 +7,25 @@ const links = [
   { to: '/accounts', label: 'Accounts' },
   { to: '/import', label: 'Import' },
 ];
+
+// Gem-cut diamond mark: outer rhombus outline + one horizontal facet
+// line. Drawn twice — a faint light duplicate offset slightly below-right
+// underneath, then the dark line on top — that offset pair is what reads
+// as etched/engraved into the chrome rather than printed on top of it.
+function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,255,255,0.6)' }) {
+  const gemPath = 'M12 3 L22 9 L12 21 L2 9 Z';
+  const facetLine = 'M2 9 L22 9';
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
+      <g transform="translate(0.6,0.8)">
+        <path d={gemPath} stroke={offsetColor} strokeWidth="2" strokeLinejoin="round" />
+        <path d={facetLine} stroke={offsetColor} strokeWidth="1.8" strokeLinecap="round" />
+      </g>
+      <path d={gemPath} stroke={lineColor} strokeWidth="2" strokeLinejoin="round" />
+      <path d={facetLine} stroke={lineColor} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default function Nav() {
   const navigate = useNavigate();

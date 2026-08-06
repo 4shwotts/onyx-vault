@@ -1,7 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import OnyxMark from '../components/OnyxMark';
+
+// Same mark as Nav.jsx, duplicated locally rather than imported from a
+// shared file — both pages need it, but neither should break if the
+// other's import path changes.
+function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,255,255,0.6)' }) {
+  const gemPath = 'M12 3 L22 9 L12 21 L2 9 Z';
+  const facetLine = 'M2 9 L22 9';
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
+      <g transform="translate(0.6,0.8)">
+        <path d={gemPath} stroke={offsetColor} strokeWidth="2" strokeLinejoin="round" />
+        <path d={facetLine} stroke={offsetColor} strokeWidth="1.8" strokeLinecap="round" />
+      </g>
+      <path d={gemPath} stroke={lineColor} strokeWidth="2" strokeLinejoin="round" />
+      <path d={facetLine} stroke={lineColor} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default function Login() {
   const [mode, setMode] = useState('login');
