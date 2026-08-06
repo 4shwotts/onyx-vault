@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Nav from '../components/Nav';
 import { api } from '../api/client';
 
-const ACCOUNT_TYPES = ['checking', 'savings', 'credit'];
+const ACCOUNT_TYPES = ['current', 'savings', 'credit'];
 
 export default function Accounts() {
   const [accounts, setAccounts] = useState([]);
