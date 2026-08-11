@@ -14,6 +14,10 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  // Render's outbound networking has unreliable IPv6 routing to some
+  // hosts, including Gmail's SMTP servers. Forcing IPv4 avoids
+  // ENETUNREACH errors that only show up in production, not locally.
+  family: 4,
 });
 
 async function sendVerificationEmail(to, token) {
