@@ -9,14 +9,14 @@ if (!process.env.CLIENT_ORIGIN) {
 }
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
-  // Render's outbound networking has unreliable IPv6 routing to some
-  // hosts, including Gmail's SMTP servers. Forcing IPv4 avoids
-  // ENETUNREACH errors that only show up in production, not locally.
+  
   family: 4,
 });
 
