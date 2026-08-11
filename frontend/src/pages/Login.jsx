@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 
 // Same mark as Nav.jsx, duplicated locally rather than imported from a
@@ -26,24 +26,47 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [unverified, setUnverified] = useState(false);
+  const [resendStatus, setResendStatus] = useState('idle'); // idle | sending | sent
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setUnverified(false);
     setLoading(true);
 
     try {
       if (mode === 'register') {
         await api.register(email, password);
+        // No cookie is set on register anymore, accounts are inactive
+        // until the verification link is clicked, so there's nothing
+        // to navigate to yet, show the "check your email" message instead.
+        setRegistered(true);
       } else {
         await api.login(email, password);
+        navigate('/dashboard');
       }
-      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
+      if (err.message === 'Please verify your email before logging in') {
+        setUnverified(true);
+      }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    setResendStatus('sending');
+    try {
+      await api.resendVerification(email);
+      setResendStatus('sent');
+    } catch {
+      // Backend always returns a generic success message, so this
+      // branch shouldn't normally fire, but fall back gracefully if it does.
+      setResendStatus('sent');
     }
   }
 
@@ -75,45 +98,85 @@ export default function Login() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="font-mono"
-            style={inputStyle}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            className="font-mono"
-            style={{ ...inputStyle, marginBottom: 18 }}
-          />
+        {registered ? (
+          <>
+            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
+              Account created. Check your email for a verification link before signing in.
+            </p>
+            <button
+              onClick={() => { setRegistered(false); setMode('login'); setEmail(''); setPassword(''); }}
+              className="font-mono"
+              style={buttonStyle}
+            >
+              Back to sign in
+            </button>
+          </>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); }}
+                required
+                className="font-mono"
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className="font-mono"
+                style={{ ...inputStyle, marginBottom: mode === 'login' ? 8 : 18 }}
+              />
 
-          {error && (
-            <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 14 }}>{error}</p>
-          )}
+              {mode === 'login' && (
+                <p className="font-mono" style={{ textAlign: 'right', fontSize: 12, marginBottom: 18 }}>
+                  <Link to="/forgot-password" style={{ color: '#7d3c98' }}>Forgot password?</Link>
+                </p>
+              )}
 
-          <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        </form>
+              {error && (
+                <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: unverified ? 8 : 14 }}>{error}</p>
+              )}
 
-        <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <span
-            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-            style={{ color: '#7d3c98', cursor: 'pointer' }}
-          >
-            {mode === 'login' ? 'Register' : 'Sign in'}
-          </span>
-        </p>
+              {unverified && (
+                resendStatus === 'sent' ? (
+                  <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    If that account exists and isn't verified, a new link has been sent.
+                  </p>
+                ) : (
+                  <p className="font-mono" style={{ fontSize: 12, marginBottom: 14 }}>
+                    <span
+                      onClick={resendStatus === 'sending' ? undefined : handleResend}
+                      style={{ color: '#7d3c98', cursor: resendStatus === 'sending' ? 'default' : 'pointer' }}
+                    >
+                      {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
+                    </span>
+                  </p>
+                )
+              )}
+
+              <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
+                {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+              </button>
+            </form>
+
+            <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
+              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+              <span
+                onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); }}
+                style={{ color: '#7d3c98', cursor: 'pointer' }}
+              >
+                {mode === 'login' ? 'Register' : 'Sign in'}
+              </span>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

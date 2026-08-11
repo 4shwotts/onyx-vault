@@ -58,6 +58,16 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Same reasoning as forgotPasswordLimiter — stops someone hammering
+// this endpoint to spam a victim's inbox or probe which emails exist.
+const resendVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many requests. Please try again in a few minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 function normalizeEmail(email) {
   return (email || '').trim().toLowerCase();
 }
@@ -96,7 +106,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     } catch (emailErr) {
       console.error('Verification email failed to send:', emailErr.message);
       // The account still exists, do not fail the request, the user can
-      // be pointed at a resend flow later if this becomes a real problem.
+      // use the resend-verification endpoint if this becomes a real problem.
     }
 
     // No cookie is set here, accounts are inactive until the email link
@@ -139,6 +149,49 @@ router.post('/verify-email', async (req, res) => {
   } catch (err) {
     console.error('Verify email error:', err.message);
     res.status(500).json({ error: 'Something went wrong verifying your email' });
+  }
+});
+
+router.post('/resend-verification', resendVerificationLimiter, async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  // Same generic response regardless of outcome — otherwise this becomes
+  // a way to check which emails are registered or already verified.
+  const genericResponse = {
+    message: 'If an account with that email exists and is not yet verified, a new verification link has been sent.',
+  };
+
+  try {
+    const result = await pool.query('SELECT id, email, email_verified FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    if (user && !user.email_verified) {
+      // Clear out old tokens first so an expired or previously issued
+      // link stops working once a new one is sent.
+      await pool.query('DELETE FROM email_verification_tokens WHERE user_id = $1', [user.id]);
+
+      const { token, tokenHash } = generateToken();
+      const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
+      await pool.query(
+        'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+        [user.id, tokenHash, expiresAt]
+      );
+
+      try {
+        await sendVerificationEmail(user.email, token);
+      } catch (emailErr) {
+        console.error('Resend verification email failed to send:', emailErr.message);
+      }
+    }
+
+    res.json(genericResponse);
+  } catch (err) {
+    console.error('Resend verification error:', err.message);
+    res.json(genericResponse);
   }
 });
 
