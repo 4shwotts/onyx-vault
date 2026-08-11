@@ -1,3 +1,11 @@
+const dns = require('dns');
+// Render's DNS resolver returns Gmail's IPv6 address first, which then
+// fails with ENETUNREACH since Render's outbound network doesn't route
+// IPv6 to Gmail reliably. This forces Node to prefer IPv4 results
+// globally, which nodemailer's own 'family' option wasn't enough to
+// override on its own.
+dns.setDefaultResultOrder('ipv4first');
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
