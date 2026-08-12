@@ -36,18 +36,18 @@ export default function ForgotPassword() {
         width: 300, minHeight: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
         position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <p className="font-mono" style={{ fontSize: 15, margin: 0 }}>Reset your password</p>
-          {!submitted && (
+        {!submitted && (
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <p className="font-mono" style={{ fontSize: 15, margin: 0 }}>Reset your password</p>
             <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '8px 0 0' }}>
               Enter your email and we'll send you a reset link
             </p>
-          )}
-        </div>
+          </div>
+        )}
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {submitted ? (
-            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>
+            <p className="font-mono" style={{ fontSize: 16, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.6 }}>
               If an account with that email exists, a password reset link has been sent.
             </p>
           ) : (
