@@ -4,13 +4,23 @@ import { api } from '../api/client';
 
 const ACCOUNT_TYPES = ['current', 'savings', 'credit'];
 
+// Names are generated from the type rather than typed by hand, e.g.
+// "Current", or "Current 2" if the user already has one of that type,
+// so the account name always matches what it actually is.
+function getAutoName(type, existingAccounts) {
+  const base = type.charAt(0).toUpperCase() + type.slice(1);
+  const sameTypeCount = existingAccounts.filter((a) => a.type === type).length;
+  return sameTypeCount === 0 ? base : `${base} ${sameTypeCount + 1}`;
+}
+
+const GHOST_ACCOUNTS = ['Current', 'Savings', 'Credit'];
+
 export default function Accounts() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [type, setType] = useState('checking');
+  const [type, setType] = useState('current');
   const [submitting, setSubmitting] = useState(false);
 
   async function loadAccounts() {
@@ -31,9 +41,9 @@ export default function Accounts() {
     setSubmitting(true);
     setError('');
     try {
-      await api.createAccount(name, type);
-      setName('');
-      setType('checking');
+      const autoName = getAutoName(type, accounts);
+      await api.createAccount(autoName, type);
+      setType('current');
       setShowForm(false);
       await loadAccounts();
     } catch (err) {
@@ -64,9 +74,7 @@ export default function Accounts() {
 
         {showForm && (
           <form onSubmit={handleCreate} style={formStyle}>
-            <input type="text" placeholder="Account name (e.g. Checking)" value={name}
-              onChange={(e) => setName(e.target.value)} required className="font-mono" style={inputStyle} />
-            <select value={type} onChange={(e) => setType(e.target.value)} className="font-mono" style={selectStyle}>
+            <select value={type} onChange={(e) => setType(e.target.value)} className="font-mono" style={{ ...selectStyle, marginBottom: 14 }}>
               {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
             <button type="submit" disabled={submitting} className="font-mono" style={{ ...buttonStyle, width: '100%' }}>
@@ -79,6 +87,24 @@ export default function Accounts() {
 
         {loading ? (
           <p style={{ color: '#888', fontSize: 14 }}>Loading accounts...</p>
+        ) : accounts.length === 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
+            <div onClick={() => setShowForm(true)} style={linkCardStyle}>
+              <span style={{ fontSize: 24, color: '#666' }}>+</span>
+              <p className="font-mono" style={{ fontSize: 13, color: '#666', margin: 0, letterSpacing: 0.5, fontWeight: 600 }}>LINK ACCOUNT</p>
+            </div>
+            {GHOST_ACCOUNTS.map((label) => (
+              <div key={label} className="chrome-surface" style={{ ...cardStyle, filter: 'blur(5px)', opacity: 0.4, pointerEvents: 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                  <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                    {label}
+                  </p>
+                </div>
+                <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>£0.00</p>
+                <p className="font-mono" style={{ fontSize: 12, color: '#6b6b6b', margin: 0, fontWeight: 400, letterSpacing: 0.5 }}>•••• 0000</p>
+              </div>
+            ))}
+          </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
             {accounts.map((acc) => (
@@ -115,10 +141,7 @@ const linkCardStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
   gap: 10, minHeight: 150, cursor: 'pointer',
 };
-const inputStyle = {
-  width: '100%', boxSizing: 'border-box', background: '#1a1a1a', border: '0.5px solid #333',
-  borderRadius: 8, padding: '12px 14px', fontSize: 15, color: '#fff', marginBottom: 10,
-};
+
 const selectStyle = {
   width: '100%', boxSizing: 'border-box', background: '#1a1a1a', border: '0.5px solid #333',
   borderRadius: 8, padding: '12px 40px 12px 14px', fontSize: 15, color: '#fff', marginBottom: 10,

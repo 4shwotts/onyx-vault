@@ -45,6 +45,66 @@ const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
+// Shared donut-arc math, pulled out so it can run once on real data and
+// once on placeholder data for the empty state, without duplicating the
+// reservation/scaling logic.
+function buildArcs(list, totalSpend, previousTotals, circumference) {
+  const rawDashes = list.map(([, value]) => {
+    const fraction = totalSpend > 0 ? value / totalSpend : 0;
+    return fraction * circumference;
+  });
+  const effectiveDashes = list.map(([, value], i) => (value > 0 ? Math.max(rawDashes[i], MIN_SLOT) : 0));
+  const totalEffective = effectiveDashes.reduce((a, b) => a + b, 0);
+  const scale = totalEffective > circumference ? circumference / totalEffective : 1;
+
+  let cumulativeOffset = 0;
+  return list.map(([name, value], i) => {
+    const scaledEffective = effectiveDashes[i] * scale;
+    const visibleDash = value > 0 ? Math.max(scaledEffective - GAP, 0) : 0;
+    const color = getCategoryColor(i);
+    const prevValue = previousTotals[name] || 0;
+    const pct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : (value > 0 ? null : 0);
+    const arc = {
+      name, value, color, prevValue, pct,
+      dashArray: `${visibleDash} ${circumference - visibleDash}`,
+      dashOffset: -(cumulativeOffset + GAP / 2),
+    };
+    cumulativeOffset += scaledEffective;
+    return arc;
+  });
+}
+
+// Placeholder content shown, blurred, behind an overlay message whenever
+// a section has no real data yet — keeps every chrome card at its normal
+// size and layout instead of the page reflowing around empty space.
+const FAKE_ACCOUNTS = [
+  { id: 'ghost-1', name: 'Current', balance: 1240 },
+  { id: 'ghost-2', name: 'Savings', balance: 3820 },
+  { id: 'ghost-3', name: 'Credit', balance: -180 },
+];
+const FAKE_CATEGORY_LIST = [['Groceries', 420], ['Transport', 180], ['Dining', 150], ['Utilities', 95], ['Shopping', 60]];
+const FAKE_RECENT = [
+  { id: 'ghost-1', description: 'Tesco', amount: -42.10 },
+  { id: 'ghost-2', description: 'Salary', amount: 2100 },
+  { id: 'ghost-3', description: 'Netflix', amount: -11.99 },
+  { id: 'ghost-4', description: 'Costa Coffee', amount: -4.50 },
+  { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
+];
+
+function EmptyOverlay({ message, tone = 'light' }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+      <p className="font-mono" style={{
+        fontSize: 14, margin: 0, padding: '8px 18px', borderRadius: 8,
+        color: tone === 'dark' ? '#e5e5e5' : '#3a3a3a',
+        background: tone === 'dark' ? 'rgba(20,20,20,0.85)' : 'rgba(255,255,255,0.6)',
+      }}>
+        {message}
+      </p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [accounts, setAccounts] = useState([]);
   const [allTransactions, setAllTransactions] = useState([]);
@@ -83,6 +143,7 @@ export default function Dashboard() {
     setMonthTransactions(allTransactions.filter((t) => t.date >= monthRange.from && t.date <= monthRange.to));
   }, [selectedMonth, allTransactions]);
 
+  const hasAccounts = accounts.length > 0;
   const accountPages = chunkArray(accounts, ACCOUNTS_PER_PAGE);
 
   // Auto-rotate through pages of accounts (fixes the layout compression
@@ -114,6 +175,7 @@ export default function Dashboard() {
 
   const categoryList = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
+  const hasSpendData = categoryList.length > 0;
 
   // --- Previous-month comparison data, computed directly from the
   // selected month via date math (not array adjacency), so it's correct
@@ -153,39 +215,26 @@ export default function Dashboard() {
     : (projectedTotal > 0 ? 100 : 0);
 
   const circumference = 2 * Math.PI * 46;
+  const arcs = buildArcs(categoryList, totalSpend, previousCategoryTotals, circumference);
 
-  // Two passes: first reserve a minimum slot per category (visible arc +
-  // gap) so tiny categories don't get crowded out. Then, since several
-  // small categories plus a couple of large ones can add up to MORE than
-  // the actual circle, scale every reserved slot down proportionally so
-  // the total always fits exactly within one full circle.
-  const rawDashes = categoryList.map(([, value]) => {
-    const fraction = totalSpend > 0 ? value / totalSpend : 0;
-    return fraction * circumference;
-  });
-  const effectiveDashes = categoryList.map(([, value], i) => (value > 0 ? Math.max(rawDashes[i], MIN_SLOT) : 0));
-  const totalEffective = effectiveDashes.reduce((a, b) => a + b, 0);
-  const scale = totalEffective > circumference ? circumference / totalEffective : 1;
+  const fakeTotalSpend = FAKE_CATEGORY_LIST.reduce((sum, [, v]) => sum + v, 0);
+  const fakeArcs = buildArcs(FAKE_CATEGORY_LIST, fakeTotalSpend, {}, circumference);
 
-  let cumulativeOffset = 0;
-  const arcs = categoryList.map(([name, value], i) => {
-    const scaledEffective = effectiveDashes[i] * scale;
-    const visibleDash = value > 0 ? Math.max(scaledEffective - GAP, 0) : 0;
-    const color = getCategoryColor(i);
-    const prevValue = previousCategoryTotals[name] || 0;
-    const pct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : (value > 0 ? null : 0);
-    const arc = {
-      name, value, color, prevValue, pct,
-      dashArray: `${visibleDash} ${circumference - visibleDash}`,
-      dashOffset: -(cumulativeOffset + GAP / 2),
-    };
-    cumulativeOffset += scaledEffective;
-    return arc;
-  });
-
-  const maxBarVal = Math.max(1, ...arcs.map((a) => a.value), ...arcs.map((a) => a.prevValue));
+  // Everything below picks real data when it exists, otherwise the fake
+  // placeholder set, so the card layout never has to branch structurally.
+  const displayArcs = hasSpendData ? arcs : fakeArcs;
+  const displayCategoryList = hasSpendData ? categoryList : FAKE_CATEGORY_LIST;
+  const displayTotalSpend = hasSpendData ? totalSpend : fakeTotalSpend;
+  const displayProjected = hasSpendData ? projectedTotal : displayTotalSpend * 1.5;
+  const displayPctVsLastMonth = hasSpendData ? pctVsLastMonth : -8;
+  const displayIsCurrentMonth = hasSpendData ? isCurrentMonth : true;
+  const displayDaysElapsed = hasSpendData ? daysElapsed : 14;
+  const displayDaysInMonth = hasSpendData ? daysInSelMonth : 30;
+  const displayMaxBarVal = hasSpendData ? Math.max(1, ...arcs.map((a) => a.value), ...arcs.map((a) => a.prevValue)) : Math.max(1, ...fakeArcs.map((a) => a.value));
+  const displayShortMonthLabel = hasSpendData ? shortMonthLabel : 'THIS MONTH';
 
   const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  const hasRecent = recent.length > 0;
   const currentAccountPage = accountPages[accountPage] || [];
 
   return (
@@ -207,42 +256,42 @@ export default function Dashboard() {
               £{totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
 
-            {accounts.length === 0 ? (
-              <p style={{ color: '#888', fontSize: 14, marginTop: 18 }}>No accounts yet — add one on the Accounts page.</p>
-            ) : (
-              <>
-                <div
-                  key={accountPage}
-                  className="account-page-fade"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${Math.min(currentAccountPage.length, 3) || 1}, 1fr)`,
-                    gap: 16, marginTop: 18,
-                  }}
-                >
-                  {currentAccountPage.map((acc) => (
-                    <div key={acc.id} style={darkCardStyle}>
-                      <p className="font-mono" style={{ fontSize: 13, color: '#9a9a9a', margin: '0 0 8px', letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 700 }}>
-                        {acc.name}
-                      </p>
-                      <p className="font-mono" style={{ fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>
-                        £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                {accountPages.length > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
-                    {accountPages.map((_, i) => (
-                      <span key={i} style={{
-                        width: 6, height: 6, borderRadius: '50%',
-                        background: i === accountPage ? '#333' : 'rgba(0,0,0,0.2)',
-                        transition: 'background 0.3s ease',
-                      }} />
-                    ))}
+            <div style={{ position: 'relative', minHeight: 108, marginTop: 18 }}>
+              <div
+                key={hasAccounts ? accountPage : 'empty'}
+                className={hasAccounts ? 'account-page-fade' : ''}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
+                  gap: 16,
+                  filter: hasAccounts ? 'none' : 'blur(6px)',
+                  opacity: hasAccounts ? 1 : 0.45,
+                  pointerEvents: hasAccounts ? 'auto' : 'none',
+                }}
+              >
+                {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
+                  <div key={acc.id} style={darkCardStyle}>
+                    <p className="font-mono" style={{ fontSize: 13, color: '#9a9a9a', margin: '0 0 8px', letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 700 }}>
+                      {acc.name}
+                    </p>
+                    <p className="font-mono" style={{ fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>
+                      £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
                   </div>
-                )}
-              </>
+                ))}
+              </div>
+              {!hasAccounts && <EmptyOverlay message="No accounts yet — add one on the Accounts page." />}
+            </div>
+            {hasAccounts && accountPages.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                {accountPages.map((_, i) => (
+                  <span key={i} style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: i === accountPage ? '#333' : 'rgba(0,0,0,0.2)',
+                    transition: 'background 0.3s ease',
+                  }} />
+                ))}
+              </div>
             )}
           </div>
 
@@ -256,145 +305,149 @@ export default function Dashboard() {
 
             <div className="chrome-surface" style={{
               borderRadius: 16, padding: '24px 28px', height: CARD_HEIGHT,
-              display: 'flex', alignItems: 'stretch', gap: 0,
+              position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
-              {categoryList.length === 0 ? (
-                <p style={{ color: '#3a3a3a', fontSize: 15, position: 'relative', zIndex: 1 }}>
-                  {availableMonths.length === 0 ? 'No transactions yet.' : `No spending recorded for ${monthLabel}.`}
-                </p>
-              ) : (
-                <>
-                  {/* SECTION 1: donut + legend with trend arrows */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0 }}>
-                    <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                      Categories
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
-                      <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
-                        <circle cx="60" cy="60" r="46" fill="none" stroke="#00000012" strokeWidth="9" />
-                        {arcs.map((arc) => (
-                          <circle
-                            key={arc.name} cx="60" cy="60" r="46" fill="none" stroke={arc.color} strokeWidth="9"
-                            strokeLinecap="round" transform="rotate(-90 60 60)"
-                            style={{
-                              strokeDasharray: arc.dashArray,
-                              strokeDashoffset: arc.dashOffset,
-                              transition: 'stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease',
-                            }}
-                          />
-                        ))}
-                        <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="19" fill="#101112">
-                          £{totalSpend.toFixed(0)}
-                        </text>
-                        <text x="60" y="74" textAnchor="middle" className="font-mono" fontSize="9" fill="#3a3a3a" fontWeight="600">
-                          {shortMonthLabel.toUpperCase()}
-                        </text>
-                      </svg>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-                        {arcs.map((arc) => (
-                          <div key={arc.name} style={{
-                            display: 'grid', gridTemplateColumns: '16px 138px 55px 1fr',
-                            alignItems: 'center', columnGap: 10,
-                          }}>
-                            <span style={{
-                              width: 14, height: 14, borderRadius: 4, background: arc.color,
-                            }} />
-                            <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>{arc.name}</span>
-                            <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>
-                              £{arc.value.toFixed(0)}
-                            </span>
-                            <span>
-                              {arc.pct !== null && (
-                                <span className="font-mono" style={{
-                                  fontSize: 13, fontWeight: 700,
-                                  color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
-                                }}>
-                                  {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
-                                </span>
-                              )}
-                              {arc.pct === null && arc.value > 0 && (
-                                <span className="font-mono" style={{
-                                  fontSize: 12, color: '#333', fontWeight: 700,
-                                  border: '1px solid #999', borderRadius: 4, padding: '1px 6px',
-                                  background: 'rgba(0,0,0,0.05)',
-                                }}>
-                                  NEW
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+              <div style={{
+                display: 'flex', width: '100%', gap: 0,
+                filter: hasSpendData ? 'none' : 'blur(6px)',
+                opacity: hasSpendData ? 1 : 0.45,
+                pointerEvents: hasSpendData ? 'auto' : 'none',
+              }}>
+                {/* SECTION 1: donut + legend with trend arrows */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0 }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                    Categories
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
+                    <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
+                      <circle cx="60" cy="60" r="46" fill="none" stroke="#00000012" strokeWidth="9" />
+                      {displayArcs.map((arc) => (
+                        <circle
+                          key={arc.name} cx="60" cy="60" r="46" fill="none" stroke={arc.color} strokeWidth="9"
+                          strokeLinecap="round" transform="rotate(-90 60 60)"
+                          style={{
+                            strokeDasharray: arc.dashArray,
+                            strokeDashoffset: arc.dashOffset,
+                            transition: 'stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease',
+                          }}
+                        />
+                      ))}
+                      <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="19" fill="#101112">
+                        £{displayTotalSpend.toFixed(0)}
+                      </text>
+                      <text x="60" y="74" textAnchor="middle" className="font-mono" fontSize="9" fill="#3a3a3a" fontWeight="600">
+                        {displayShortMonthLabel.toUpperCase()}
+                      </text>
+                    </svg>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                      {displayArcs.map((arc) => (
+                        <div key={arc.name} style={{
+                          display: 'grid', gridTemplateColumns: '16px 138px 55px 1fr',
+                          alignItems: 'center', columnGap: 10,
+                        }}>
+                          <span style={{ width: 14, height: 14, borderRadius: 4, background: arc.color }} />
+                          <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>{arc.name}</span>
+                          <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>
+                            £{arc.value.toFixed(0)}
+                          </span>
+                          <span>
+                            {arc.pct !== null && (
+                              <span className="font-mono" style={{
+                                fontSize: 13, fontWeight: 700,
+                                color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
+                              }}>
+                                {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
+                              </span>
+                            )}
+                            {arc.pct === null && arc.value > 0 && (
+                              <span className="font-mono" style={{
+                                fontSize: 12, color: '#333', fontWeight: 700,
+                                border: '1px solid #999', borderRadius: 4, padding: '1px 6px',
+                                background: 'rgba(0,0,0,0.05)',
+                              }}>
+                                NEW
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                </div>
 
-                  {/* divider */}
-                  <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
+                {/* divider */}
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                  {/* SECTION 2: pace / projection */}
-                  <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1 }}>
-                    <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                      {isCurrentMonth ? 'On Track For' : 'Total Spend'}
+                {/* SECTION 2: pace / projection */}
+                <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1 }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                    {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
+                  </p>
+                  <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700 }}>
+                    £{(displayIsCurrentMonth ? displayProjected : displayTotalSpend).toFixed(0)}
+                  </p>
+                  <p className="font-mono" style={{
+                    fontSize: 16, margin: 0, fontWeight: 700,
+                    color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
+                  }}>
+                    {displayPctVsLastMonth >= 0 ? '↑' : '↓'} {Math.abs(displayPctVsLastMonth).toFixed(0)}% vs last month
+                  </p>
+                  {displayIsCurrentMonth && (
+                    <p className="font-mono" style={{ fontSize: 13, color: '#777', margin: '12px 0 0' }}>
+                      Day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700 }}>
-                      £{(isCurrentMonth ? projectedTotal : totalSpend).toFixed(0)}
-                    </p>
-                    <p className="font-mono" style={{
-                      fontSize: 16, margin: 0, fontWeight: 700,
-                      color: pctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
-                    }}>
-                      {pctVsLastMonth >= 0 ? '↑' : '↓'} {Math.abs(pctVsLastMonth).toFixed(0)}% vs last month
-                    </p>
-                    {isCurrentMonth && (
-                      <p className="font-mono" style={{ fontSize: 13, color: '#777', margin: '12px 0 0' }}>
-                        Day {daysElapsed} of {daysInSelMonth}
-                      </p>
-                    )}
-                  </div>
+                  )}
+                </div>
 
-                  {/* divider */}
-                  <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
+                {/* divider */}
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                  {/* SECTION 3: this month vs last month bars */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 12, position: 'relative', zIndex: 1, minWidth: 0 }}>
-                    <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 2px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                      This Month vs Last
-                    </p>
-                    {arcs.map((arc) => {
-                      const curPct = Math.min(100, (arc.value / maxBarVal) * 100);
-                      const prevPct = Math.min(100, (arc.prevValue / maxBarVal) * 100);
-                      return (
-                        <div key={arc.name}>
-                          <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
-                          <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
-                            <div style={{
-                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
-                              width: `${curPct}%`, background: arc.color,
-                            }} />
-                            <div style={{
-                              position: 'absolute', top: -2, bottom: -2, width: 2,
-                              left: `calc(${prevPct}% - 1px)`, background: 'rgba(0,0,0,0.55)', borderRadius: 1,
-                            }} title={`Last month: £${arc.prevValue.toFixed(0)}`} />
-                          </div>
+                {/* SECTION 3: this month vs last month bars */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 12, position: 'relative', zIndex: 1, minWidth: 0 }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 2px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                    This Month vs Last
+                  </p>
+                  {displayArcs.map((arc) => {
+                    const curPct = Math.min(100, (arc.value / displayMaxBarVal) * 100);
+                    const prevPct = Math.min(100, (arc.prevValue / displayMaxBarVal) * 100);
+                    return (
+                      <div key={arc.name}>
+                        <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
+                        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
+                          <div style={{
+                            position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
+                            width: `${curPct}%`, background: arc.color,
+                          }} />
+                          <div style={{
+                            position: 'absolute', top: -2, bottom: -2, width: 2,
+                            left: `calc(${prevPct}% - 1px)`, background: 'rgba(0,0,0,0.55)', borderRadius: 1,
+                          }} title={`Last month: £${arc.prevValue.toFixed(0)}`} />
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {!hasSpendData && (
+                <EmptyOverlay message={availableMonths.length === 0 ? 'No transactions yet.' : `No spending recorded for ${monthLabel}.`} />
               )}
             </div>
           </div>
 
           <div>
             <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 10px', fontWeight: 700 }}>Recent Transactions</p>
-            {recent.length === 0 ? (
-              <p style={{ color: '#888', fontSize: 14 }}>No transactions yet.</p>
-            ) : (
-              <div style={darkListStyle}>
-                {recent.map((t, i) => (
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                ...darkListStyle,
+                filter: hasRecent ? 'none' : 'blur(6px)',
+                opacity: hasRecent ? 1 : 0.45,
+                pointerEvents: hasRecent ? 'auto' : 'none',
+              }}>
+                {(hasRecent ? recent : FAKE_RECENT).map((t, i, arr) => (
                   <div key={t.id} style={{
                     display: 'flex', justifyContent: 'space-between', padding: '13px 18px',
-                    borderBottom: i < recent.length - 1 ? '0.5px solid #262626' : 'none',
+                    borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
                   }}>
                     <p className="font-mono" style={{ fontSize: 15, color: '#eef1f3', margin: 0, fontWeight: 600 }}>
                       {t.description || '(no description)'}
@@ -405,7 +458,8 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            )}
+              {!hasRecent && <EmptyOverlay message="No transactions yet." tone="dark" />}
+            </div>
           </div>
 
         </div>

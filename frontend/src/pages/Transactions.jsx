@@ -4,6 +4,30 @@ import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
 
+// Placeholder rows shown, blurred, behind an overlay message when there
+// are no real transactions yet — keeps the chrome card at its normal
+// size instead of collapsing down to a single line of text.
+const FAKE_TRANSACTIONS = [
+  { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
+  { id: 'ghost-2', description: 'Salary', category_name: 'Income', account_name: 'Current', date: '2026-08-01', amount: 2400, is_recurring: true, is_anomaly: false },
+  { id: 'ghost-3', description: 'Netflix', category_name: 'Entertainment', account_name: 'Current', date: '2026-07-29', amount: -11.99, is_recurring: true, is_anomaly: false },
+  { id: 'ghost-4', description: 'Amazon', category_name: 'Shopping', account_name: 'Current', date: '2026-07-27', amount: -58.40, is_recurring: false, is_anomaly: false },
+  { id: 'ghost-5', description: 'Costa Coffee', category_name: 'Dining', account_name: 'Current', date: '2026-07-25', amount: -4.50, is_recurring: false, is_anomaly: false },
+];
+
+function EmptyOverlay({ message }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+      <p className="font-mono" style={{
+        fontSize: 14, margin: 0, padding: '8px 18px', borderRadius: 8,
+        color: '#3a3a3a', background: 'rgba(255,255,255,0.6)',
+      }}>
+        {message}
+      </p>
+    </div>
+  );
+}
+
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -163,6 +187,8 @@ export default function Transactions() {
     }
   }
 
+  const displayTransactions = transactions.length === 0 ? FAKE_TRANSACTIONS : transactions;
+
   return (
     <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
@@ -252,42 +278,48 @@ export default function Transactions() {
 
         {loading ? (
           <p style={{ color: '#888', fontSize: 14 }}>Loading transactions...</p>
-        ) : transactions.length === 0 ? (
-          <p style={{ color: '#888', fontSize: 14 }}>No transactions yet.</p>
         ) : (
-          <div className="chrome-surface" style={{ borderRadius: 14, padding: '10px 8px' }}>
-            {transactions.map((t, i) => (
-              <div key={t.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
-                borderBottom: i < transactions.length - 1 ? '0.5px solid #00000022' : 'none',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 9, background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ color: '#9a9a9a', fontSize: 15 }}>{(t.category_name || '?')[0]?.toUpperCase()}</span>
+          <div style={{ position: 'relative' }}>
+            <div className="chrome-surface" style={{
+              borderRadius: 14, padding: '10px 8px',
+              filter: transactions.length === 0 ? 'blur(6px)' : 'none',
+              opacity: transactions.length === 0 ? 0.45 : 1,
+              pointerEvents: transactions.length === 0 ? 'none' : 'auto',
+            }}>
+              {displayTransactions.map((t, i) => (
+                <div key={t.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
+                  borderBottom: i < displayTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ color: '#9a9a9a', fontSize: 15 }}>{(t.category_name || '?')[0]?.toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {t.description || '(no description)'}
+                        {t.is_recurring && <span className="font-mono" style={{ fontSize: 12, color: '#333', border: '1px solid #333', borderRadius: 4, padding: '1px 6px' }}>RECURRING</span>}
+                        {t.is_anomaly && (
+                          <span className="font-mono" style={{ fontSize: 12, color: 'var(--expense)', border: '1px solid var(--expense)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                            <span style={{ fontSize: 15, position: 'relative', top: -1 }}>⚠</span> UNUSUAL
+                          </span>
+                        )}
+                      </p>
+                      <p className="font-mono" style={{ fontSize: 13, color: '#3a3a3a', margin: 0 }}>
+                        {t.account_name} · {t.category_name || 'Uncategorized'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {t.description || '(no description)'}
-                      {t.is_recurring && <span className="font-mono" style={{ fontSize: 12, color: '#333', border: '1px solid #333', borderRadius: 4, padding: '1px 6px' }}>RECURRING</span>}
-                      {t.is_anomaly && (
-                        <span className="font-mono" style={{ fontSize: 12, color: 'var(--expense)', border: '1px solid var(--expense)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ fontSize: 15, position: 'relative', top: -1 }}>⚠</span> UNUSUAL
-                        </span>
-                      )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <p className="font-mono" style={{ fontSize: 17, fontWeight: 700, margin: 0, color: Number(t.amount) < 0 ? '#b83232' : '#1f8a52' }}>
+                      {Number(t.amount) < 0 ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 13, color: '#3a3a3a', margin: 0 }}>
-                      {t.account_name} · {t.category_name || 'Uncategorized'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    </p>
+                    <span onClick={() => handleDelete(t.id)} style={{ cursor: 'pointer', color: '#00000066', fontSize: 16 }}>×</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <p className="font-mono" style={{ fontSize: 17, fontWeight: 700, margin: 0, color: Number(t.amount) < 0 ? '#b83232' : '#1f8a52' }}>
-                    {Number(t.amount) < 0 ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
-                  </p>
-                  <span onClick={() => handleDelete(t.id)} style={{ cursor: 'pointer', color: '#00000066', fontSize: 16 }}>×</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            {transactions.length === 0 && <EmptyOverlay message="No transactions yet." />}
           </div>
         )}
       </div>

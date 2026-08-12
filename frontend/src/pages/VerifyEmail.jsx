@@ -33,8 +33,9 @@ export default function VerifyEmail() {
     }}>
       <div style={{
         background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+        width: 300, minHeight: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
         position: 'relative', zIndex: 1, textAlign: 'center',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
       }}>
         {status === 'verifying' && (
           <p className="font-mono" style={{ fontSize: 14, color: 'var(--text-secondary)' }}>

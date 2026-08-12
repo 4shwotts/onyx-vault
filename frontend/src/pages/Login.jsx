@@ -78,8 +78,8 @@ export default function Login() {
     }}>
       <div style={{
         background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
-        position: 'relative', zIndex: 1,
+        width: 300, minHeight: 380, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+        position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
@@ -98,85 +98,87 @@ export default function Login() {
           </p>
         </div>
 
-        {registered ? (
-          <>
-            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
-              Account created. Check your email for a verification link before signing in.
-            </p>
-            <button
-              onClick={() => { setRegistered(false); setMode('login'); setEmail(''); setPassword(''); }}
-              className="font-mono"
-              style={buttonStyle}
-            >
-              Back to sign in
-            </button>
-          </>
-        ) : (
-          <>
-            <form onSubmit={handleSubmit}>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); }}
-                required
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          {registered ? (
+            <>
+              <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
+                Account created. Check your email for a verification link before signing in.
+              </p>
+              <button
+                onClick={() => { setRegistered(false); setMode('login'); setEmail(''); setPassword(''); }}
                 className="font-mono"
-                style={inputStyle}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="font-mono"
-                style={{ ...inputStyle, marginBottom: mode === 'login' ? 8 : 18 }}
-              />
-
-              {mode === 'login' && (
-                <p className="font-mono" style={{ textAlign: 'right', fontSize: 12, marginBottom: 18 }}>
-                  <Link to="/forgot-password" style={{ color: '#7d3c98' }}>Forgot password?</Link>
-                </p>
-              )}
-
-              {error && (
-                <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: unverified ? 8 : 14 }}>{error}</p>
-              )}
-
-              {unverified && (
-                resendStatus === 'sent' ? (
-                  <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
-                    If that account exists and isn't verified, a new link has been sent.
-                  </p>
-                ) : (
-                  <p className="font-mono" style={{ fontSize: 12, marginBottom: 14 }}>
-                    <span
-                      onClick={resendStatus === 'sending' ? undefined : handleResend}
-                      style={{ color: '#7d3c98', cursor: resendStatus === 'sending' ? 'default' : 'pointer' }}
-                    >
-                      {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
-                    </span>
-                  </p>
-                )
-              )}
-
-              <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
-                {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
-              </button>
-            </form>
-
-            <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
-              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-              <span
-                onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); }}
-                style={{ color: '#7d3c98', cursor: 'pointer' }}
+                style={buttonStyle}
               >
-                {mode === 'login' ? 'Register' : 'Sign in'}
-              </span>
-            </p>
-          </>
-        )}
+                Back to sign in
+              </button>
+            </>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit}>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); }}
+                  required
+                  className="font-mono"
+                  style={inputStyle}
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="font-mono"
+                  style={{ ...inputStyle, marginBottom: mode === 'login' ? 8 : 18 }}
+                />
+
+                {mode === 'login' && (
+                  <p className="font-mono" style={{ textAlign: 'right', fontSize: 12, marginBottom: 18 }}>
+                    <Link to="/forgot-password" style={{ color: '#7d3c98' }}>Forgot password?</Link>
+                  </p>
+                )}
+
+                {error && (
+                  <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: unverified ? 8 : 14 }}>{error}</p>
+                )}
+
+                {unverified && (
+                  resendStatus === 'sent' ? (
+                    <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                      If that account exists and isn't verified, a new link has been sent.
+                    </p>
+                  ) : (
+                    <p className="font-mono" style={{ fontSize: 12, marginBottom: 14 }}>
+                      <span
+                        onClick={resendStatus === 'sending' ? undefined : handleResend}
+                        style={{ color: '#7d3c98', cursor: resendStatus === 'sending' ? 'default' : 'pointer' }}
+                      >
+                        {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
+                      </span>
+                    </p>
+                  )
+                )}
+
+                <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
+                  {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+                </button>
+              </form>
+
+              <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
+                {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+                <span
+                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); }}
+                  style={{ color: '#7d3c98', cursor: 'pointer' }}
+                >
+                  {mode === 'login' ? 'Register' : 'Sign in'}
+                </span>
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

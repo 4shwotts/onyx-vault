@@ -45,54 +45,56 @@ export default function ResetPassword() {
     }}>
       <div style={{
         background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
-        position: 'relative', zIndex: 1,
+        width: 300, minHeight: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+        position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <p className="font-mono" style={{ fontSize: 15, margin: 0 }}>Choose a new password</p>
         </div>
 
-        {success ? (
-          <>
-            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
-              Your password has been updated.
-            </p>
-            <button onClick={() => navigate('/login')} className="font-mono" style={buttonStyle}>
-              Go to sign in
-            </button>
-          </>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <input
-              type="password"
-              placeholder="New password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="font-mono"
-              style={inputStyle}
-            />
-            <input
-              type="password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-              className="font-mono"
-              style={{ ...inputStyle, marginBottom: 18 }}
-            />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          {success ? (
+            <>
+              <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
+                Your password has been updated.
+              </p>
+              <button onClick={() => navigate('/login')} className="font-mono" style={buttonStyle}>
+                Go to sign in
+              </button>
+            </>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <input
+                type="password"
+                placeholder="New password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className="font-mono"
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                className="font-mono"
+                style={{ ...inputStyle, marginBottom: 18 }}
+              />
 
-            {error && (
-              <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 14 }}>{error}</p>
-            )}
+              {error && (
+                <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 14 }}>{error}</p>
+              )}
 
-            <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
-              {loading ? 'Please wait...' : 'Update password'}
-            </button>
-          </form>
-        )}
+              <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
+                {loading ? 'Please wait...' : 'Update password'}
+              </button>
+            </form>
+          )}
+        </div>
 
         <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
           <Link to="/login" style={{ color: '#7d3c98' }}>Back to sign in</Link>
