@@ -47,7 +47,11 @@ const ACCOUNT_ROTATE_MS = 4000;
 // Max individual categories shown before the rest get folded into a
 // single "Other" slice — keeps the donut/legend/bars from silently
 // dropping data as more categories get added over time.
-const MAX_VISIBLE_CATEGORIES = 4;
+const MAX_VISIBLE_CATEGORIES = 5;
+// "Bills" always gets one of the visible slots when it has spend this
+// month, rather than competing purely on rank — everything else still
+// ranks by amount, with the overflow folding into "Other".
+const PINNED_CATEGORY = 'Bills';
 
 // Shared donut-arc math, pulled out so it can run once on real data and
 // once on placeholder data for the empty state, without duplicating the
@@ -78,17 +82,28 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   });
 }
 
-// Folds anything past MAX_VISIBLE_CATEGORIES into a single "Other"
-// entry, and reports how many distinct categories are hidden inside it,
-// so the UI can say so rather than silently truncating.
+// Pins PINNED_CATEGORY into one of the visible slots (if it has spend
+// this month), fills the rest by rank, and folds anything past
+// MAX_VISIBLE_CATEGORIES into a single "Other" entry — reporting how
+// many distinct categories are hidden inside it, so the UI can say so
+// rather than silently truncating.
 function condenseCategories(sortedEntries) {
-  if (sortedEntries.length <= MAX_VISIBLE_CATEGORIES) {
-    return { list: sortedEntries, hiddenCount: 0 };
+  const pinnedEntry = sortedEntries.find(([name]) => name === PINNED_CATEGORY);
+  const rest = sortedEntries.filter(([name]) => name !== PINNED_CATEGORY);
+
+  const remainingSlots = pinnedEntry ? MAX_VISIBLE_CATEGORIES - 1 : MAX_VISIBLE_CATEGORIES;
+  const visibleRest = rest.slice(0, remainingSlots);
+  const hiddenRest = rest.slice(remainingSlots);
+
+  let list = pinnedEntry ? [pinnedEntry, ...visibleRest] : visibleRest;
+  list = list.slice().sort((a, b) => b[1] - a[1]);
+
+  if (hiddenRest.length > 0) {
+    const otherTotal = hiddenRest.reduce((sum, [, val]) => sum + val, 0);
+    list = [...list, ['Other', otherTotal]];
   }
-  const visible = sortedEntries.slice(0, MAX_VISIBLE_CATEGORIES);
-  const rest = sortedEntries.slice(MAX_VISIBLE_CATEGORIES);
-  const otherTotal = rest.reduce((sum, [, val]) => sum + val, 0);
-  return { list: [...visible, ['Other', otherTotal]], hiddenCount: rest.length };
+
+  return { list, hiddenCount: hiddenRest.length };
 }
 
 // Placeholder content shown, lightly blurred, behind an overlay message
