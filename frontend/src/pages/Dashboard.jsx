@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
@@ -44,6 +44,10 @@ const CARD_HEIGHT = 260;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
+// Max individual categories shown before the rest get folded into a
+// single "Other" slice — keeps the donut/legend/bars from silently
+// dropping data as more categories get added over time.
+const MAX_VISIBLE_CATEGORIES = 4;
 
 // Shared donut-arc math, pulled out so it can run once on real data and
 // once on placeholder data for the empty state, without duplicating the
@@ -61,7 +65,7 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   return list.map(([name, value], i) => {
     const scaledEffective = effectiveDashes[i] * scale;
     const visibleDash = value > 0 ? Math.max(scaledEffective - GAP, 0) : 0;
-    const color = getCategoryColor(i);
+    const color = name === 'Other' ? '#5a5a5a' : getCategoryColor(i);
     const prevValue = previousTotals[name] || 0;
     const pct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : (value > 0 ? null : 0);
     const arc = {
@@ -72,6 +76,19 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
     cumulativeOffset += scaledEffective;
     return arc;
   });
+}
+
+// Folds anything past MAX_VISIBLE_CATEGORIES into a single "Other"
+// entry, and reports how many distinct categories are hidden inside it,
+// so the UI can say so rather than silently truncating.
+function condenseCategories(sortedEntries) {
+  if (sortedEntries.length <= MAX_VISIBLE_CATEGORIES) {
+    return { list: sortedEntries, hiddenCount: 0 };
+  }
+  const visible = sortedEntries.slice(0, MAX_VISIBLE_CATEGORIES);
+  const rest = sortedEntries.slice(MAX_VISIBLE_CATEGORIES);
+  const otherTotal = rest.reduce((sum, [, val]) => sum + val, 0);
+  return { list: [...visible, ['Other', otherTotal]], hiddenCount: rest.length };
 }
 
 // Placeholder content shown, lightly blurred, behind an overlay message
@@ -114,6 +131,39 @@ function EmptyOverlay({ message, tone = 'light' }) {
   );
 }
 
+// Animates a number counting up from its previous value to a new target
+// whenever the target changes, instead of the figure just snapping in —
+// real polish signal, cheap to add, makes the dashboard feel alive on
+// load and whenever the selected month changes.
+function AnimatedNumber({ value, formatter, duration = 700 }) {
+  const [display, setDisplay] = useState(value);
+  const fromRef = useRef(value);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = value;
+    if (from === to) return undefined;
+    const start = performance.now();
+
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(from + (to - from) * eased);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = to;
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [value, duration]);
+
+  return <>{formatter(display)}</>;
+}
+
 export default function Dashboard() {
   const [accounts, setAccounts] = useState([]);
   const [allTransactions, setAllTransactions] = useState([]);
@@ -122,6 +172,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [accountPage, setAccountPage] = useState(0);
+  const [chartsMounted, setChartsMounted] = useState(false);
 
   const availableMonths = getAvailableMonths(allTransactions);
 
@@ -151,6 +202,14 @@ export default function Dashboard() {
     if (!monthRange) return;
     setMonthTransactions(allTransactions.filter((t) => t.date >= monthRange.from && t.date <= monthRange.to));
   }, [selectedMonth, allTransactions]);
+
+  // Triggers the donut/bar reveal animation shortly after data is ready,
+  // rather than everything being visible on the very first paint.
+  useEffect(() => {
+    if (loading) return;
+    const timer = setTimeout(() => setChartsMounted(true), 60);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const hasAccounts = accounts.length > 0;
   const accountPages = chunkArray(accounts, ACCOUNTS_PER_PAGE);
@@ -182,7 +241,8 @@ export default function Dashboard() {
       categoryTotals[name] = (categoryTotals[name] || 0) + Math.abs(Number(t.amount));
     });
 
-  const categoryList = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const sortedCategoryEntries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const { list: categoryList, hiddenCount } = condenseCategories(sortedCategoryEntries);
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
 
@@ -204,12 +264,21 @@ export default function Dashboard() {
     const prevTo = new Date(prevYear, prevMonthNum - 1, prevLastDay).toISOString().slice(0, 10);
 
     const prevMonthTransactions = allTransactions.filter((t) => t.date >= prevFrom && t.date <= prevTo);
+    const prevRawTotals = {};
     prevMonthTransactions
       .filter((t) => Number(t.amount) < 0)
       .forEach((t) => {
         const name = t.category_name || 'Uncategorized';
-        previousCategoryTotals[name] = (previousCategoryTotals[name] || 0) + Math.abs(Number(t.amount));
+        prevRawTotals[name] = (prevRawTotals[name] || 0) + Math.abs(Number(t.amount));
       });
+    // Fold last month's data the same way, using THIS month's visible
+    // category names, so an "Other"-bucketed category still compares
+    // sensibly against its own prior spend.
+    const visibleNames = new Set(categoryList.map(([name]) => name));
+    Object.entries(prevRawTotals).forEach(([name, val]) => {
+      const bucket = visibleNames.has(name) ? name : 'Other';
+      previousCategoryTotals[bucket] = (previousCategoryTotals[bucket] || 0) + val;
+    });
     prevTotalSpend = Object.values(previousCategoryTotals).reduce((a, b) => a + b, 0);
 
     daysInSelMonth = new Date(selYear, selMonthNum, 0).getDate();
@@ -232,7 +301,6 @@ export default function Dashboard() {
   // Everything below picks real data when it exists, otherwise the fake
   // placeholder set, so the card layout never has to branch structurally.
   const displayArcs = hasSpendData ? arcs : fakeArcs;
-  const displayCategoryList = hasSpendData ? categoryList : FAKE_CATEGORY_LIST;
   const displayTotalSpend = hasSpendData ? totalSpend : fakeTotalSpend;
   const displayProjected = hasSpendData ? projectedTotal : displayTotalSpend * 1.5;
   const displayPctVsLastMonth = hasSpendData ? pctVsLastMonth : -8;
@@ -241,10 +309,14 @@ export default function Dashboard() {
   const displayDaysInMonth = hasSpendData ? daysInSelMonth : 30;
   const displayMaxBarVal = hasSpendData ? Math.max(1, ...arcs.map((a) => a.value), ...arcs.map((a) => a.prevValue)) : Math.max(1, ...fakeArcs.map((a) => a.value));
   const displayShortMonthLabel = hasSpendData ? shortMonthLabel : 'THIS MONTH';
+  const displayHiddenCount = hasSpendData ? hiddenCount : 0;
 
   const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
   const hasRecent = recent.length > 0;
   const currentAccountPage = accountPages[accountPage] || [];
+
+  const revealArcs = chartsMounted ? displayArcs : displayArcs.map((a) => ({ ...a, dashArray: `0 ${circumference}` }));
+  const revealMaxBar = chartsMounted ? displayMaxBarVal : displayMaxBarVal;
 
   return (
     <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
@@ -262,7 +334,7 @@ export default function Dashboard() {
               Total Balance:
             </p>
             <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
-              £{totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
             <div style={{ position: 'relative', minHeight: 108, marginTop: 18 }}>
@@ -284,7 +356,7 @@ export default function Dashboard() {
                       {acc.name}
                     </p>
                     <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
-                      £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      £<AnimatedNumber value={Number(acc.balance)} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                     </p>
                   </div>
                 ))}
@@ -317,7 +389,14 @@ export default function Dashboard() {
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
+                {displayHiddenCount > 0 && (
+                  <span className="font-mono" style={{ fontSize: 11, color: '#666', fontWeight: 600 }}>
+                    +{displayHiddenCount} more in Other
+                  </span>
+                )}
+              </div>
               {availableMonths.length > 0 && (
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
               )}
@@ -349,14 +428,14 @@ export default function Dashboard() {
                         </filter>
                       </defs>
                       <circle cx="60" cy="60" r="46" fill="none" stroke="#00000020" strokeWidth="9" filter="url(#donutTrackShadow)" />
-                      {displayArcs.map((arc) => (
+                      {revealArcs.map((arc) => (
                         <circle
                           key={arc.name} cx="60" cy="60" r="46" fill="none" stroke={arc.color} strokeWidth="9"
                           strokeLinecap="round" transform="rotate(-90 60 60)" filter="url(#donutArcShadow)"
                           style={{
                             strokeDasharray: arc.dashArray,
                             strokeDashoffset: arc.dashOffset,
-                            transition: 'stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease',
+                            transition: 'stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.5s ease',
                           }}
                         />
                       ))}
@@ -416,7 +495,7 @@ export default function Dashboard() {
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
                   <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
-                    £{(displayIsCurrentMonth ? displayProjected : displayTotalSpend).toFixed(0)}
+                    £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
                   <p className="font-mono" style={{
                     fontSize: 16, margin: 0, fontWeight: 700,
@@ -440,8 +519,8 @@ export default function Dashboard() {
                     This Month vs Last
                   </p>
                   {displayArcs.map((arc) => {
-                    const curPct = Math.min(100, (arc.value / displayMaxBarVal) * 100);
-                    const prevPct = Math.min(100, (arc.prevValue / displayMaxBarVal) * 100);
+                    const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
+                    const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                     return (
                       <div key={arc.name}>
                         <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
@@ -450,6 +529,7 @@ export default function Dashboard() {
                             position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
                             width: `${curPct}%`, background: arc.color,
                             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15)',
+                            transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
                           }} />
                           <div style={{
                             position: 'absolute', top: -2, bottom: -2, width: 2,
