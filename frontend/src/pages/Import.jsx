@@ -223,11 +223,17 @@ export default function Import() {
 
                   <p className="font-mono" style={{
                     fontSize: 15, fontWeight: 700, margin: 0, width: 100,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end',
-                    lineHeight: 1,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2,
                     color: row.amount < 0 ? 'var(--expense)' : 'var(--income)',
                   }}>
-                    {row.amount < 0 ? '−' : '+'}£{Math.abs(row.amount).toFixed(2)}
+                    {row.amount < 0 ? (
+                      <span>−</span>
+                    ) : (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                        <path d="M12 4v16M4 12h16" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+                      </svg>
+                    )}
+                    £{Math.abs(row.amount).toFixed(2)}
                   </p>
                 </div>
               ))}
