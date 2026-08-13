@@ -212,3 +212,21 @@ body {
   pointer-events: none;
   z-index: 0;
 }
+
+/* Skeleton loading — a soft pulsing opacity sweep on placeholder shapes
+   that match the real layout, so the page reads as "about to appear"
+   rather than a blank screen with a loading string. */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.skeleton-block {
+  background: #d8dadd;
+  border-radius: 8px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+.skeleton-block-dark {
+  background: #1c1c1c;
+  border-radius: 8px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}

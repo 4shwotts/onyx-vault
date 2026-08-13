@@ -107,6 +107,32 @@ function condenseCategories(sortedEntries) {
   return { list, hiddenCount: hiddenRest.length };
 }
 
+// Picks the single most useful thing to say about this month's spend:
+// the biggest increase, otherwise the biggest decrease, otherwise a
+// plain summary — real natural-language content rather than pure
+// decoration, and it degrades gracefully when there isn't enough data
+// to compare against.
+function buildInsight(arcs, isCurrentMonth, daysElapsed, daysInMonth) {
+  const real = arcs.filter((a) => a.name !== 'Other');
+  const withIncrease = real.filter((a) => a.pct !== null && a.pct > 5).sort((a, b) => b.pct - a.pct);
+  const withDecrease = real.filter((a) => a.pct !== null && a.pct < -5).sort((a, b) => a.pct - b.pct);
+
+  if (withIncrease.length > 0) {
+    const top = withIncrease[0];
+    return { text: `You're spending ${Math.round(top.pct)}% more on ${top.name} than last month.`, tone: 'warn' };
+  }
+  if (withDecrease.length > 0) {
+    const top = withDecrease[0];
+    return { text: `Nice — ${top.name} spending is down ${Math.round(Math.abs(top.pct))}% from last month.`, tone: 'good' };
+  }
+  if (real.length > 0) {
+    const top = real.slice().sort((a, b) => b.value - a.value)[0];
+    const dayNote = isCurrentMonth ? ` (day ${daysElapsed} of ${daysInMonth})` : '';
+    return { text: `${top.name} is your biggest category so far this month${dayNote}.`, tone: 'neutral' };
+  }
+  return null;
+}
+
 // Placeholder content shown, lightly blurred, behind an overlay message
 // whenever a section has no real data yet — keeps every chrome card at
 // its normal size and layout instead of the page reflowing around empty
@@ -178,6 +204,33 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
   }, [value, duration]);
 
   return <>{formatter(display)}</>;
+}
+
+// Skeleton layout shown while the initial fetch is in flight — shaped
+// like the real page instead of a bare "Loading..." string, so the
+// dashboard feels like it's about to appear rather than being blank.
+function DashboardSkeleton() {
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
+      <div>
+        <div className="skeleton-block" style={{ width: 140, height: 15, marginBottom: 10 }} />
+        <div className="skeleton-block" style={{ width: 220, height: 40, marginBottom: 18 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton-block-dark" style={{ height: 76, borderRadius: 12 }} />
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 10 }} />
+        <div className="skeleton-block" style={{ height: CARD_HEIGHT, borderRadius: 16 }} />
+      </div>
+      <div>
+        <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 10 }} />
+        <div className="skeleton-block-dark" style={{ height: 240, borderRadius: 14 }} />
+      </div>
+    </div>
+  );
 }
 
 export default function Dashboard() {
@@ -328,6 +381,8 @@ export default function Dashboard() {
   const displayShortMonthLabel = hasSpendData ? shortMonthLabel : 'THIS MONTH';
   const displayHiddenCount = hasSpendData ? hiddenCount : 0;
 
+  const insight = hasSpendData ? buildInsight(arcs, isCurrentMonth, daysElapsed, daysInSelMonth) : null;
+
   const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
   const hasRecent = recent.length > 0;
   const currentAccountPage = accountPages[accountPage] || [];
@@ -346,6 +401,8 @@ export default function Dashboard() {
     navigate(`/transactions?${params.toString()}`);
   }
 
+  const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
+
   return (
     <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
       <Nav />
@@ -353,7 +410,7 @@ export default function Dashboard() {
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: '#888', fontSize: 14 }}>Loading...</p>
+        <DashboardSkeleton />
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
 
@@ -416,7 +473,7 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
                 <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
                 {displayHiddenCount > 0 && (
@@ -429,6 +486,12 @@ export default function Dashboard() {
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
               )}
             </div>
+
+            {insight && (
+              <p className="font-mono" style={{ fontSize: 13, color: insightColor, margin: '0 0 10px', fontWeight: 600 }}>
+                {insight.text}
+              </p>
+            )}
 
             <div className="chrome-surface" style={{
               borderRadius: 16, padding: '24px 28px', height: CARD_HEIGHT,
