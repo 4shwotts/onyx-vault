@@ -278,24 +278,16 @@ export default function Dashboard() {
                   pointerEvents: hasAccounts ? 'auto' : 'none',
                 }}
               >
-                {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc, i) => {
-                  const accentColor = getCategoryColor(i);
-                  return (
-                    <div key={acc.id} style={{ ...darkCardStyle, position: 'relative', overflow: 'hidden', paddingLeft: 22 }}>
-                      <div style={{
-                        position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
-                        background: accentColor,
-                        boxShadow: `0 0 10px ${accentColor}88, inset 0 1px 0 rgba(255,255,255,0.3)`,
-                      }} />
-                      <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 8px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700 }}>
-                        {acc.name}
-                      </p>
-                      <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4 }}>
-                        £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  );
-                })}
+                {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
+                  <div key={acc.id} style={darkCardStyle}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 8px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700 }}>
+                      {acc.name}
+                    </p>
+                    <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4 }}>
+                      £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                ))}
               </div>
               {!hasAccounts && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, transform: 'translateY(-6px)' }}>
@@ -356,11 +348,7 @@ export default function Dashboard() {
                           <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000000" floodOpacity="0.22" />
                         </filter>
                       </defs>
-                      {/* Track drawn as a shadowed groove plus a thin top-edge
-                          highlight ring, so it reads as carved into the
-                          surface rather than a flat gray circle. */}
                       <circle cx="60" cy="60" r="46" fill="none" stroke="#00000020" strokeWidth="9" filter="url(#donutTrackShadow)" />
-                      <circle cx="60" cy="60" r="46.5" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1" opacity="0.6" />
                       {displayArcs.map((arc) => (
                         <circle
                           key={arc.name} cx="60" cy="60" r="46" fill="none" stroke={arc.color} strokeWidth="9"
