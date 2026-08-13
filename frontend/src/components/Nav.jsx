@@ -72,7 +72,18 @@ export default function Nav() {
               fontWeight: 600,
             })}
           >
-            {link.label}
+            {({ isActive }) => (
+              <>
+                {link.label}
+                {isActive && (
+                  <>
+                    <span className="nav-facet" />
+                    <span className="nav-sweep" />
+                    <span className="nav-sweep nav-sweep-secondary" />
+                  </>
+                )}
+              </>
+            )}
           </NavLink>
         ))}
 

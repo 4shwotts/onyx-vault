@@ -120,43 +120,69 @@ body {
 }
 .account-page-fade { animation: accountPageFade 0.45s ease; }
 
-/* Active nav tab: a light sweep passes across the tab on a loop, plus a
-   punchier breathing glow — more "energized" than a static outline,
-   built from solid semi-transparent blocks and box-shadow only, no
-   color-blend gradients. */
-@keyframes navGlowPulse {
-  0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(142, 68, 173, 0.6) inset,
-      0 0 10px rgba(142, 68, 173, 0.45);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1.5px rgba(178, 102, 214, 0.9) inset,
-      0 0 20px rgba(142, 68, 173, 0.75);
-  }
-}
-@keyframes navSweep {
-  0% { left: -60%; }
-  55% { left: 130%; }
-  100% { left: 130%; }
-}
+/* ---- Active nav tab: crystalline surface ----
+   Three layers, no purple ring:
+   1. .nav-tab-active — just establishes the clipping box.
+   2. .nav-facet — a static cut-crystal facet pattern (two overlapping
+      diagonal hairline grids), always visible while active, so the tab
+      itself reads as a faceted surface rather than a flat pill.
+   3. .nav-sweep (x2, staggered) — a light beam crossing the facets with
+      a chromatic fringe (magenta leading edge, cyan trailing edge, white
+      hot core), the way light splits passing through a cut gem. Eased
+      with many keyframe stops so it decelerates into the tab and
+      accelerates back out, not a linear slide. */
 .nav-tab-active {
   position: relative;
   overflow: hidden;
-  animation: navGlowPulse 2.2s ease-in-out infinite;
 }
-.nav-tab-active::before {
-  content: '';
+
+.nav-facet {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 35%;
-  background: rgba(255, 255, 255, 0.16);
-  transform: skewX(-20deg);
-  left: -60%;
-  animation: navSweep 2.2s ease-in-out infinite;
+  inset: 0;
+  background:
+    repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0px, rgba(255,255,255,0.09) 1px, transparent 2px, transparent 9px),
+    repeating-linear-gradient(25deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 2px, transparent 13px),
+    repeating-linear-gradient(70deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, transparent 2px, transparent 16px);
+  mix-blend-mode: overlay;
   pointer-events: none;
+}
+
+.nav-sweep {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  width: 20%;
+  left: -45%;
+  transform: skewX(-18deg);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(216, 122, 255, 0.35) 34%,
+    rgba(255, 255, 255, 0.9) 48%,
+    rgba(122, 210, 255, 0.4) 62%,
+    transparent 100%
+  );
+  animation: navCrystalSweep 3.6s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+.nav-sweep-secondary {
+  width: 9%;
+  opacity: 0.55;
+  animation-delay: 1.5s;
+  animation-duration: 3.6s;
+}
+
+@keyframes navCrystalSweep {
+  0%   { left: -50%; opacity: 0; }
+  6%   { opacity: 1; }
+  18%  { left: -10%; opacity: 1; }
+  30%  { left: 25%;  opacity: 1; }
+  42%  { left: 60%;  opacity: 1; }
+  54%  { left: 95%;  opacity: 1; }
+  62%  { left: 125%; opacity: 0; }
+  100% { left: 125%; opacity: 0; }
 }
 
 /* Liquid chrome card surface: one directional light-source gradient
