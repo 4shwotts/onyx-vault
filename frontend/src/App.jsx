@@ -9,12 +9,14 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageBackground from './components/PageBackground';
+import CommandPalette from './components/CommandPalette';
 
 export default function App() {
   return (
     <>
       <PageBackground />
       <BrowserRouter>
+        <CommandPalette />
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />

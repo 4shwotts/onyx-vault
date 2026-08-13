@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
@@ -180,6 +181,7 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [allTransactions, setAllTransactions] = useState([]);
   const [monthTransactions, setMonthTransactions] = useState([]);
@@ -333,6 +335,17 @@ export default function Dashboard() {
   const revealArcs = chartsMounted ? displayArcs : displayArcs.map((a) => ({ ...a, dashArray: `0 ${circumference}` }));
   const revealMaxBar = chartsMounted ? displayMaxBarVal : displayMaxBarVal;
 
+  // Categories are clickable only when they're real (not the aggregate
+  // "Other" bucket) and only when showing real data, not the fake
+  // placeholder set (that data isn't blurred-clickable already, since
+  // the whole section has pointerEvents disabled while empty).
+  function goToCategory(name) {
+    if (!hasSpendData || name === 'Other') return;
+    const params = new URLSearchParams({ category: name });
+    if (selectedMonth) params.set('month', selectedMonth);
+    navigate(`/transactions?${params.toString()}`);
+  }
+
   return (
     <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
       <Nav />
@@ -447,10 +460,12 @@ export default function Dashboard() {
                         <circle
                           key={arc.name} cx="60" cy="60" r="46" fill="none" stroke={arc.color} strokeWidth="9"
                           strokeLinecap="round" transform="rotate(-90 60 60)" filter="url(#donutArcShadow)"
+                          onClick={() => goToCategory(arc.name)}
                           style={{
                             strokeDasharray: arc.dashArray,
                             strokeDashoffset: arc.dashOffset,
                             transition: 'stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.5s ease',
+                            cursor: arc.name === 'Other' ? 'default' : 'pointer',
                           }}
                         />
                       ))}
@@ -463,10 +478,15 @@ export default function Dashboard() {
                     </svg>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
                       {displayArcs.map((arc) => (
-                        <div key={arc.name} style={{
-                          display: 'grid', gridTemplateColumns: '16px 138px 55px 1fr',
-                          alignItems: 'center', columnGap: 10,
-                        }}>
+                        <div
+                          key={arc.name}
+                          onClick={() => goToCategory(arc.name)}
+                          style={{
+                            display: 'grid', gridTemplateColumns: '16px 138px 55px 1fr',
+                            alignItems: 'center', columnGap: 10,
+                            cursor: arc.name === 'Other' ? 'default' : 'pointer',
+                          }}
+                        >
                           <span style={{
                             width: 14, height: 14, borderRadius: 4, background: arc.color,
                             border: '0.5px solid rgba(0,0,0,0.18)',
@@ -537,7 +557,7 @@ export default function Dashboard() {
                     const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                     const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                     return (
-                      <div key={arc.name}>
+                      <div key={arc.name} onClick={() => goToCategory(arc.name)} style={{ cursor: arc.name === 'Other' ? 'default' : 'pointer' }}>
                         <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
                         <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                           <div style={{

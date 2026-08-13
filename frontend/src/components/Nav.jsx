@@ -38,6 +38,10 @@ export default function Nav() {
     }
   }
 
+  function openCommandPalette() {
+    window.dispatchEvent(new Event('open-command-palette'));
+  }
+
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, width: '100%' }}>
       <div className="chrome-surface" style={{
@@ -53,40 +57,61 @@ export default function Nav() {
         </p>
       </div>
 
-      <div className="dark-surface" style={{ display: 'flex', alignItems: 'center', borderRadius: 12, padding: 6, gap: 2 }}>
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) => `font-mono${isActive ? ' nav-tab-active' : ''}`}
-            style={({ isActive }) => ({
-              fontSize: 13,
-              letterSpacing: 0.5,
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: 8,
-              color: isActive ? '#fff' : 'var(--text-secondary)',
-              background: isActive ? '#2a2f33' : 'transparent',
-              borderTop: isActive ? '0.5px solid #565c60' : '0.5px solid transparent',
-              fontWeight: 600,
-              position: 'relative',
-              zIndex: 1,
-            })}
-          >
-            {link.label}
-          </NavLink>
-        ))}
-
-        <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
-
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span
-          onClick={handleLogout}
+          onClick={openCommandPalette}
           className="font-mono"
-          style={{ fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1 }}
+          title="Search (Ctrl/Cmd + K)"
+          style={{
+            fontSize: 11, letterSpacing: 0.5, color: '#7a7a7a', cursor: 'pointer',
+            padding: '7px 12px', borderRadius: 8, background: '#141414', border: '0.5px solid #262626',
+            fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+          }}
         >
-          Logout
+          Search
+          <span style={{
+            fontSize: 10, color: '#9a9a9a', background: '#1e1e1e', border: '0.5px solid #333',
+            borderRadius: 4, padding: '2px 5px',
+          }}>
+            ⌘K
+          </span>
         </span>
+
+        <div className="dark-surface" style={{ display: 'flex', alignItems: 'center', borderRadius: 12, padding: 6, gap: 2 }}>
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) => `font-mono${isActive ? ' nav-tab-active' : ''}`}
+              style={({ isActive }) => ({
+                fontSize: 13,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                padding: '10px 20px',
+                borderRadius: 8,
+                color: isActive ? '#fff' : 'var(--text-secondary)',
+                background: isActive ? '#2a2f33' : 'transparent',
+                borderTop: isActive ? '0.5px solid #565c60' : '0.5px solid transparent',
+                fontWeight: 600,
+                position: 'relative',
+                zIndex: 1,
+              })}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+
+          <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
+
+          <span
+            onClick={handleLogout}
+            className="font-mono"
+            style={{ fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1 }}
+          >
+            Logout
+          </span>
+        </div>
       </div>
     </div>
   );

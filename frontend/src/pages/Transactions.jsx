@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
@@ -38,6 +39,7 @@ function EmptyOverlay({ message }) {
 }
 
 export default function Transactions() {
+  const [searchParams] = useSearchParams();
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -50,6 +52,7 @@ export default function Transactions() {
   const [filterAccount, setFilterAccount] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [appliedUrlFilters, setAppliedUrlFilters] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [accountId, setAccountId] = useState('');
@@ -89,8 +92,10 @@ export default function Transactions() {
       setCategories(cats);
       setRecurring(recs);
       setAllTransactionsForMonths(allTxs);
+      return { cats, accs };
     } catch (err) {
       setError(err.message);
+      return { cats: [], accs: [] };
     } finally {
       setLoading(false);
     }
@@ -99,6 +104,50 @@ export default function Transactions() {
   useEffect(() => {
     loadAll();
   }, [filterAccount, filterCategory, filterMonth]);
+
+  // Applies ?category=, ?account=, and ?month= from the URL (set by the
+  // Dashboard's clickable donut/legend, or the command palette) once
+  // categories/accounts are available to resolve names to ids. Runs
+  // only once, so manually changing filters afterward isn't overridden.
+  useEffect(() => {
+    if (appliedUrlFilters) return;
+    if (categories.length === 0 && accounts.length === 0) return;
+
+    const categoryParam = searchParams.get('category');
+    const accountParam = searchParams.get('account');
+    const monthParam = searchParams.get('month');
+
+    let changed = false;
+    if (categoryParam) {
+      const match = categories.find((c) => c.name === categoryParam);
+      if (match) {
+        setFilterCategory(String(match.id));
+        changed = true;
+      }
+    }
+    if (accountParam) {
+      const match = accounts.find((a) => String(a.id) === accountParam);
+      if (match) {
+        setFilterAccount(String(match.id));
+        changed = true;
+      }
+    }
+    if (monthParam) {
+      setFilterMonth(monthParam);
+      changed = true;
+    }
+    if (changed || categoryParam || accountParam || monthParam) {
+      setAppliedUrlFilters(true);
+    }
+  }, [categories, accounts, searchParams, appliedUrlFilters]);
+
+  // Opens the add-transaction form immediately if the command palette
+  // linked here with ?new=1, independent of data loading.
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowForm(true);
+    }
+  }, [searchParams]);
 
   // Categories are created on the fly here rather than requiring the
   // user to pre-create them: if the typed name matches an existing
