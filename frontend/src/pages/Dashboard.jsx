@@ -93,14 +93,18 @@ const FAKE_RECENT = [
 ];
 
 // Two tones so the pill blends into whichever surface it sits on top of,
-// rather than reading as a generic system alert box.
-function EmptyOverlay({ message, tone = 'light' }) {
+// rather than reading as a generic system alert box. `wide` renders a
+// full-width banner instead of a small centered pill, for rows where a
+// small pill would sit awkwardly over just one of several cards.
+function EmptyOverlay({ message, tone = 'light', wide = false }) {
   const isLight = tone === 'light';
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, padding: wide ? '0 8px' : 0 }}>
       <p className="font-mono" style={{
-        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
-        letterSpacing: 0.3, fontWeight: 600,
+        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: wide ? 12 : 20,
+        letterSpacing: 0.3, fontWeight: 600, textAlign: 'center',
+        width: wide ? '100%' : 'auto',
+        boxSizing: 'border-box',
         color: isLight ? '#2a2a2a' : '#d5d5d5',
         background: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(20,20,20,0.78)',
         border: isLight ? '0.5px solid rgba(0,0,0,0.08)' : '0.5px solid rgba(255,255,255,0.08)',
@@ -289,7 +293,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              {!hasAccounts && <EmptyOverlay message="No accounts yet — add one on the Accounts page." tone="dark" />}
+              {!hasAccounts && <EmptyOverlay message="No accounts yet — add one on the Accounts page." tone="dark" wide />}
             </div>
             {hasAccounts && accountPages.length > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>

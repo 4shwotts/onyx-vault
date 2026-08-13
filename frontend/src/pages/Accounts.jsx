@@ -13,7 +13,14 @@ function getAutoName(type, existingAccounts) {
   return sameTypeCount === 0 ? base : `${base} ${sameTypeCount + 1}`;
 }
 
-const GHOST_ACCOUNTS = ['Current', 'Savings', 'Credit'];
+// Realistic placeholder balances rather than £0.00, so the empty state
+// reads as "here's a preview" instead of "here's a broken account."
+// Matches the figures used on the Dashboard's empty state for consistency.
+const GHOST_ACCOUNTS = [
+  { label: 'Current', balance: 1240 },
+  { label: 'Savings', balance: 3820 },
+  { label: 'Credit', balance: -180 },
+];
 
 export default function Accounts() {
   const [accounts, setAccounts] = useState([]);
@@ -93,14 +100,16 @@ export default function Accounts() {
               <span style={{ fontSize: 24, color: '#666' }}>+</span>
               <p className="font-mono" style={{ fontSize: 13, color: '#666', margin: 0, letterSpacing: 0.5, fontWeight: 600 }}>LINK ACCOUNT</p>
             </div>
-            {GHOST_ACCOUNTS.map((label) => (
+            {GHOST_ACCOUNTS.map(({ label, balance }) => (
               <div key={label} className="chrome-surface" style={{ ...cardStyle, filter: 'blur(3px)', opacity: 0.55, pointerEvents: 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
                   <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {label}
                   </p>
                 </div>
-                <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>£0.00</p>
+                <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>
+                  £{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
                 <p className="font-mono" style={{ fontSize: 12, color: '#6b6b6b', margin: 0, fontWeight: 400, letterSpacing: 0.5 }}>•••• 0000</p>
               </div>
             ))}
@@ -141,7 +150,6 @@ const linkCardStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
   gap: 10, minHeight: 150, cursor: 'pointer',
 };
-
 const selectStyle = {
   width: '100%', boxSizing: 'border-box', background: '#1a1a1a', border: '0.5px solid #333',
   borderRadius: 8, padding: '12px 40px 12px 14px', fontSize: 15, color: '#fff', marginBottom: 10,

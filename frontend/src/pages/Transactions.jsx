@@ -13,6 +13,9 @@ const FAKE_TRANSACTIONS = [
   { id: 'ghost-3', description: 'Netflix', category_name: 'Entertainment', account_name: 'Current', date: '2026-07-29', amount: -11.99, is_recurring: true, is_anomaly: false },
   { id: 'ghost-4', description: 'Amazon', category_name: 'Shopping', account_name: 'Current', date: '2026-07-27', amount: -58.40, is_recurring: false, is_anomaly: false },
   { id: 'ghost-5', description: 'Costa Coffee', category_name: 'Dining', account_name: 'Current', date: '2026-07-25', amount: -4.50, is_recurring: false, is_anomaly: false },
+  { id: 'ghost-6', description: 'Uber', category_name: 'Transport', account_name: 'Current', date: '2026-07-24', amount: -14.30, is_recurring: false, is_anomaly: false },
+  { id: 'ghost-7', description: 'British Gas', category_name: 'Utilities', account_name: 'Current', date: '2026-07-21', amount: -68.00, is_recurring: true, is_anomaly: false },
+  { id: 'ghost-8', description: 'Spotify', category_name: 'Entertainment', account_name: 'Current', date: '2026-07-19', amount: -9.99, is_recurring: true, is_anomaly: false },
 ];
 
 function EmptyOverlay({ message }) {
