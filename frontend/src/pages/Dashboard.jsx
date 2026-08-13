@@ -279,11 +279,11 @@ export default function Dashboard() {
                 }}
               >
                 {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
-                  <div key={acc.id} style={darkCardStyle}>
-                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 8px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700 }}>
+                  <div key={acc.id} className="dark-surface" style={darkCardStyle}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 8px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
                       {acc.name}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4 }}>
+                    <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
                       £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
@@ -445,12 +445,7 @@ export default function Dashboard() {
                     return (
                       <div key={arc.name}>
                         <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
-                        <div style={{
-                          position: 'relative', height: 8, borderRadius: 4, width: '100%',
-                          background: 'rgba(0,0,0,0.08)',
-                          border: '0.5px solid rgba(0,0,0,0.08)',
-                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.12)',
-                        }}>
+                        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                           <div style={{
                             position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
                             width: `${curPct}%`, background: arc.color,
@@ -476,7 +471,7 @@ export default function Dashboard() {
           <div>
             <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 10px', fontWeight: 700 }}>Recent Transactions</p>
             <div style={{ position: 'relative' }}>
-              <div style={{
+              <div className="dark-surface" style={{
                 ...darkListStyle,
                 filter: hasRecent ? 'none' : 'blur(3px)',
                 opacity: hasRecent ? 1 : 0.55,
@@ -489,6 +484,7 @@ export default function Dashboard() {
                     <div key={t.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px',
                       borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
+                      position: 'relative', zIndex: 1,
                     }}>
                       <p className="font-mono" style={{ fontSize: 15, color: '#eef1f3', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{
@@ -514,17 +510,5 @@ export default function Dashboard() {
   );
 }
 
-// Depth without gradients: a slightly lighter top border reads as a
-// physical edge catching light, and the layered box-shadow (outer drop
-// shadow + faint inset top highlight) gives the surface real thickness
-// instead of a flat fill.
-const darkCardStyle = {
-  background: '#141414', borderRadius: 12, padding: '16px 18px',
-  border: '0.5px solid #262626', borderTop: '0.5px solid #3a3a3a',
-  boxShadow: '0 6px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
-};
-const darkListStyle = {
-  background: '#141414', borderRadius: 14, padding: 4,
-  border: '0.5px solid #262626', borderTop: '0.5px solid #3a3a3a',
-  boxShadow: '0 6px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
-};
+const darkCardStyle = { borderRadius: 12, padding: '16px 18px' };
+const darkListStyle = { borderRadius: 14, padding: 4 };

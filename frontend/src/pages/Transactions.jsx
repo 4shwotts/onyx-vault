@@ -264,9 +264,9 @@ export default function Transactions() {
         {recurring.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 10px', fontWeight: 700 }}>Transactions Recurring</p>
-            <div style={darkListStyle}>
+            <div className="dark-surface" style={darkListStyle}>
               {recurring.map((r, i) => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderBottom: i < recurring.length - 1 ? '0.5px solid #262626' : 'none' }}>
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderBottom: i < recurring.length - 1 ? '0.5px solid #262626' : 'none', position: 'relative', zIndex: 1 }}>
                   <div>
                     <p className="font-mono" style={{ fontSize: 16, color: '#e5e5e5', margin: '0 0 2px', fontWeight: 600 }}>{r.description || '(no description)'}</p>
                     <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: 0 }}>
@@ -336,7 +336,7 @@ export default function Transactions() {
   );
 }
 
-const darkListStyle = { background: '#141414', borderRadius: 14, padding: 4 };
+const darkListStyle = { borderRadius: 14, padding: 4 };
 const inputStyle = {
   width: '100%', boxSizing: 'border-box', background: '#1a1a1a', border: '0.5px solid #333',
   borderRadius: 8, padding: '12px 14px', fontSize: 14, color: '#fff', marginBottom: 10,
