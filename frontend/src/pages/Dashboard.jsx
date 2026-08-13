@@ -96,15 +96,13 @@ const FAKE_RECENT = [
 // rather than reading as a generic system alert box. `wide` renders a
 // full-width banner instead of a small centered pill, for rows where a
 // small pill would sit awkwardly over just one of several cards.
-function EmptyOverlay({ message, tone = 'light', wide = false }) {
+function EmptyOverlay({ message, tone = 'light' }) {
   const isLight = tone === 'light';
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, padding: wide ? '0 8px' : 0 }}>
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
       <p className="font-mono" style={{
-        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: wide ? 12 : 20,
-        letterSpacing: 0.3, fontWeight: 600, textAlign: 'center',
-        width: wide ? '100%' : 'auto',
-        boxSizing: 'border-box',
+        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
+        letterSpacing: 0.3, fontWeight: 600,
         color: isLight ? '#2a2a2a' : '#d5d5d5',
         background: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(20,20,20,0.78)',
         border: isLight ? '0.5px solid rgba(0,0,0,0.08)' : '0.5px solid rgba(255,255,255,0.08)',

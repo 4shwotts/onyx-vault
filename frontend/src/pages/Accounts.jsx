@@ -95,24 +95,32 @@ export default function Accounts() {
         {loading ? (
           <p style={{ color: '#888', fontSize: 14 }}>Loading accounts...</p>
         ) : accounts.length === 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
-            <div onClick={() => setShowForm(true)} style={linkCardStyle}>
-              <span style={{ fontSize: 24, color: '#666' }}>+</span>
-              <p className="font-mono" style={{ fontSize: 13, color: '#666', margin: 0, letterSpacing: 0.5, fontWeight: 600 }}>LINK ACCOUNT</p>
-            </div>
-            {GHOST_ACCOUNTS.map(({ label, balance }) => (
-              <div key={label} className="chrome-surface" style={{ ...cardStyle, filter: 'blur(3px)', opacity: 0.55, pointerEvents: 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-                  <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                    {label}
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18, filter: 'blur(3px)', opacity: 0.55, pointerEvents: 'none' }}>
+              {GHOST_ACCOUNTS.map(({ label, balance }) => (
+                <div key={label} className="chrome-surface" style={cardStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                    <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                      {label}
+                    </p>
+                  </div>
+                  <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>
+                    £{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
+                  <p className="font-mono" style={{ fontSize: 12, color: '#6b6b6b', margin: 0, fontWeight: 400, letterSpacing: 0.5 }}>•••• 0000</p>
                 </div>
-                <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>
-                  £{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </p>
-                <p className="font-mono" style={{ fontSize: 12, color: '#6b6b6b', margin: 0, fontWeight: 400, letterSpacing: 0.5 }}>•••• 0000</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+              <p className="font-mono" style={{
+                fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
+                letterSpacing: 0.3, fontWeight: 600, color: '#2a2a2a',
+                background: 'rgba(255,255,255,0.72)', border: '0.5px solid rgba(0,0,0,0.08)',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.10)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              }}>
+                No accounts yet — add one above.
+              </p>
+            </div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
@@ -132,11 +140,7 @@ export default function Accounts() {
                 </p>
               </div>
             ))}
-
-            <div onClick={() => setShowForm(true)} style={linkCardStyle}>
-              <span style={{ fontSize: 24, color: '#666' }}>+</span>
-              <p className="font-mono" style={{ fontSize: 13, color: '#666', margin: 0, letterSpacing: 0.5, fontWeight: 600 }}>LINK ACCOUNT</p>
-            </div>
+            
           </div>
         )}
       </div>
@@ -145,11 +149,7 @@ export default function Accounts() {
 }
 
 const cardStyle = { borderRadius: 14, padding: 26, minHeight: 150 };
-const linkCardStyle = {
-  background: '#141414', borderRadius: 14, padding: 26, border: '0.5px dashed #3a3a3a',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
-  gap: 10, minHeight: 150, cursor: 'pointer',
-};
+
 const selectStyle = {
   width: '100%', boxSizing: 'border-box', background: '#1a1a1a', border: '0.5px solid #333',
   borderRadius: 8, padding: '12px 40px 12px 14px', fontSize: 15, color: '#fff', marginBottom: 10,
