@@ -11,7 +11,7 @@ const CATEGORY_RULES = [
   { keywords: ['restaurant', 'cafe', 'coffee', 'mcdonald', 'kfc', 'deliveroo', 'just eat'], category: 'Eating Out' },
 ];
 
-const BASE_CATEGORIES = ['Uncategorized', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'];
+const BASE_CATEGORIES = ['Uncategorised', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'];
 const CUSTOM_OPTION = '__custom__';
 
 function guessCategory(description) {
