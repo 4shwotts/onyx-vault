@@ -261,7 +261,7 @@ export default function Dashboard() {
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
-            <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0 }}>
+            <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
               £{totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
 
@@ -280,10 +280,10 @@ export default function Dashboard() {
               >
                 {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
                   <div key={acc.id} style={darkCardStyle}>
-                    <p className="font-mono" style={{ fontSize: 13, color: '#9a9a9a', margin: '0 0 8px', letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 700 }}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 8px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700 }}>
                       {acc.name}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 }}>
+                    <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4 }}>
                       £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
@@ -340,11 +340,16 @@ export default function Dashboard() {
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
                     <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
-                      <circle cx="60" cy="60" r="46" fill="none" stroke="#00000012" strokeWidth="9" />
+                      <defs>
+                        <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
+                          <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity="0.28" />
+                        </filter>
+                      </defs>
+                      <circle cx="60" cy="60" r="46" fill="none" stroke="#00000018" strokeWidth="9" />
                       {displayArcs.map((arc) => (
                         <circle
                           key={arc.name} cx="60" cy="60" r="46" fill="none" stroke={arc.color} strokeWidth="9"
-                          strokeLinecap="round" transform="rotate(-90 60 60)"
+                          strokeLinecap="round" transform="rotate(-90 60 60)" filter="url(#donutArcShadow)"
                           style={{
                             strokeDasharray: arc.dashArray,
                             strokeDashoffset: arc.dashOffset,
@@ -365,7 +370,11 @@ export default function Dashboard() {
                           display: 'grid', gridTemplateColumns: '16px 138px 55px 1fr',
                           alignItems: 'center', columnGap: 10,
                         }}>
-                          <span style={{ width: 14, height: 14, borderRadius: 4, background: arc.color }} />
+                          <span style={{
+                            width: 14, height: 14, borderRadius: 4, background: arc.color,
+                            border: '0.5px solid rgba(0,0,0,0.18)',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+                          }} />
                           <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>{arc.name}</span>
                           <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>
                             £{arc.value.toFixed(0)}
@@ -403,7 +412,7 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
-                  <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700 }}>
+                  <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £{(displayIsCurrentMonth ? displayProjected : displayTotalSpend).toFixed(0)}
                   </p>
                   <p className="font-mono" style={{
@@ -433,10 +442,16 @@ export default function Dashboard() {
                     return (
                       <div key={arc.name}>
                         <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
-                        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
+                        <div style={{
+                          position: 'relative', height: 8, borderRadius: 4, width: '100%',
+                          background: 'rgba(0,0,0,0.08)',
+                          border: '0.5px solid rgba(0,0,0,0.08)',
+                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.12)',
+                        }}>
                           <div style={{
                             position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
                             width: `${curPct}%`, background: arc.color,
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15)',
                           }} />
                           <div style={{
                             position: 'absolute', top: -2, bottom: -2, width: 2,
@@ -488,5 +503,17 @@ export default function Dashboard() {
   );
 }
 
-const darkCardStyle = { background: '#141414', borderRadius: 12, padding: '16px 18px' };
-const darkListStyle = { background: '#141414', borderRadius: 14, padding: 4 };
+// Depth without gradients: a slightly lighter top border reads as a
+// physical edge catching light, and the layered box-shadow (outer drop
+// shadow + faint inset top highlight) gives the surface real thickness
+// instead of a flat fill.
+const darkCardStyle = {
+  background: '#141414', borderRadius: 12, padding: '16px 18px',
+  border: '0.5px solid #262626', borderTop: '0.5px solid #3a3a3a',
+  boxShadow: '0 6px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
+};
+const darkListStyle = {
+  background: '#141414', borderRadius: 14, padding: 4,
+  border: '0.5px solid #262626', borderTop: '0.5px solid #3a3a3a',
+  boxShadow: '0 6px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
+};
