@@ -74,9 +74,10 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   });
 }
 
-// Placeholder content shown, blurred, behind an overlay message whenever
-// a section has no real data yet — keeps every chrome card at its normal
-// size and layout instead of the page reflowing around empty space.
+// Placeholder content shown, lightly blurred, behind an overlay message
+// whenever a section has no real data yet — keeps every chrome card at
+// its normal size and layout instead of the page reflowing around empty
+// space, while still reading clearly as "empty", not "broken."
 const FAKE_ACCOUNTS = [
   { id: 'ghost-1', name: 'Current', balance: 1240 },
   { id: 'ghost-2', name: 'Savings', balance: 3820 },
@@ -91,13 +92,21 @@ const FAKE_RECENT = [
   { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
 ];
 
+// Two tones so the pill blends into whichever surface it sits on top of,
+// rather than reading as a generic system alert box.
 function EmptyOverlay({ message, tone = 'light' }) {
+  const isLight = tone === 'light';
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
       <p className="font-mono" style={{
-        fontSize: 14, margin: 0, padding: '8px 18px', borderRadius: 8,
-        color: tone === 'dark' ? '#e5e5e5' : '#3a3a3a',
-        background: tone === 'dark' ? 'rgba(20,20,20,0.85)' : 'rgba(255,255,255,0.6)',
+        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
+        letterSpacing: 0.3, fontWeight: 600,
+        color: isLight ? '#2a2a2a' : '#d5d5d5',
+        background: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(20,20,20,0.78)',
+        border: isLight ? '0.5px solid rgba(0,0,0,0.08)' : '0.5px solid rgba(255,255,255,0.08)',
+        boxShadow: isLight ? '0 6px 18px rgba(0,0,0,0.10)' : '0 6px 18px rgba(0,0,0,0.35)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}>
         {message}
       </p>
@@ -264,8 +273,8 @@ export default function Dashboard() {
                   display: 'grid',
                   gridTemplateColumns: `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
                   gap: 16,
-                  filter: hasAccounts ? 'none' : 'blur(6px)',
-                  opacity: hasAccounts ? 1 : 0.45,
+                  filter: hasAccounts ? 'none' : 'blur(3px)',
+                  opacity: hasAccounts ? 1 : 0.55,
                   pointerEvents: hasAccounts ? 'auto' : 'none',
                 }}
               >
@@ -280,7 +289,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              {!hasAccounts && <EmptyOverlay message="No accounts yet — add one on the Accounts page." />}
+              {!hasAccounts && <EmptyOverlay message="No accounts yet — add one on the Accounts page." tone="dark" />}
             </div>
             {hasAccounts && accountPages.length > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
@@ -309,8 +318,8 @@ export default function Dashboard() {
             }}>
               <div style={{
                 display: 'flex', width: '100%', gap: 0,
-                filter: hasSpendData ? 'none' : 'blur(6px)',
-                opacity: hasSpendData ? 1 : 0.45,
+                filter: hasSpendData ? 'none' : 'blur(3px)',
+                opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
                 {/* SECTION 1: donut + legend with trend arrows */}
@@ -430,7 +439,7 @@ export default function Dashboard() {
               </div>
 
               {!hasSpendData && (
-                <EmptyOverlay message={availableMonths.length === 0 ? 'No transactions yet.' : `No spending recorded for ${monthLabel}.`} />
+                <EmptyOverlay message={availableMonths.length === 0 ? 'No transactions yet.' : `No spending recorded for ${monthLabel}.`} tone="light" />
               )}
             </div>
           </div>
@@ -440,8 +449,8 @@ export default function Dashboard() {
             <div style={{ position: 'relative' }}>
               <div style={{
                 ...darkListStyle,
-                filter: hasRecent ? 'none' : 'blur(6px)',
-                opacity: hasRecent ? 1 : 0.45,
+                filter: hasRecent ? 'none' : 'blur(3px)',
+                opacity: hasRecent ? 1 : 0.55,
                 pointerEvents: hasRecent ? 'auto' : 'none',
               }}>
                 {(hasRecent ? recent : FAKE_RECENT).map((t, i, arr) => (

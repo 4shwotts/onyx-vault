@@ -94,7 +94,7 @@ export default function Accounts() {
               <p className="font-mono" style={{ fontSize: 13, color: '#666', margin: 0, letterSpacing: 0.5, fontWeight: 600 }}>LINK ACCOUNT</p>
             </div>
             {GHOST_ACCOUNTS.map((label) => (
-              <div key={label} className="chrome-surface" style={{ ...cardStyle, filter: 'blur(5px)', opacity: 0.4, pointerEvents: 'none' }}>
+              <div key={label} className="chrome-surface" style={{ ...cardStyle, filter: 'blur(3px)', opacity: 0.55, pointerEvents: 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
                   <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {label}

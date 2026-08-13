@@ -4,9 +4,9 @@ import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
 
-// Placeholder rows shown, blurred, behind an overlay message when there
-// are no real transactions yet — keeps the chrome card at its normal
-// size instead of collapsing down to a single line of text.
+// Placeholder rows shown, lightly blurred, behind an overlay message when
+// there are no real transactions yet — keeps the chrome card at its
+// normal size instead of collapsing down to a single line of text.
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
   { id: 'ghost-2', description: 'Salary', category_name: 'Income', account_name: 'Current', date: '2026-08-01', amount: 2400, is_recurring: true, is_anomaly: false },
@@ -19,8 +19,14 @@ function EmptyOverlay({ message }) {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
       <p className="font-mono" style={{
-        fontSize: 14, margin: 0, padding: '8px 18px', borderRadius: 8,
-        color: '#3a3a3a', background: 'rgba(255,255,255,0.6)',
+        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
+        letterSpacing: 0.3, fontWeight: 600,
+        color: '#2a2a2a',
+        background: 'rgba(255,255,255,0.72)',
+        border: '0.5px solid rgba(0,0,0,0.08)',
+        boxShadow: '0 6px 18px rgba(0,0,0,0.10)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}>
         {message}
       </p>
@@ -282,8 +288,8 @@ export default function Transactions() {
           <div style={{ position: 'relative' }}>
             <div className="chrome-surface" style={{
               borderRadius: 14, padding: '10px 8px',
-              filter: transactions.length === 0 ? 'blur(6px)' : 'none',
-              opacity: transactions.length === 0 ? 0.45 : 1,
+              filter: transactions.length === 0 ? 'blur(3px)' : 'none',
+              opacity: transactions.length === 0 ? 0.55 : 1,
               pointerEvents: transactions.length === 0 ? 'none' : 'auto',
             }}>
               {displayTransactions.map((t, i) => (
