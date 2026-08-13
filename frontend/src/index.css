@@ -120,58 +120,6 @@ body {
 }
 .account-page-fade { animation: accountPageFade 0.45s ease; }
 
-/* ---- Active nav tab: crystalline surface ----
-   .nav-facet: a static mesh of large, hard-edged triangular shards
-   fanning from two focal points (matching a real cut-crystal reference:
-   jagged angular shapes, not repeating small tiles), in a violet/pink/
-   blue palette with real opacity variance between neighboring shards so
-   the edges themselves read as facet boundaries.
-   .nav-sweep: one clean white diagonal band, fast pass then a pause
-   before repeating — the standard "shine" pattern (like a card or
-   button highlight), which reads as convincing specifically because
-   it's quick and doesn't linger. */
-.nav-tab-active {
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-facet {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: overlay;
-  opacity: 0.95;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 64'%3E%3Cpolygon points='0,64 38,10 60,64' fill='%23c9a3f5' opacity='0.55'/%3E%3Cpolygon points='0,64 38,10 0,0' fill='%23f2e0ff' opacity='0.75'/%3E%3Cpolygon points='38,10 60,64 92,64' fill='%238a5fc4' opacity='0.5'/%3E%3Cpolygon points='38,10 92,64 78,22' fill='%23e6bfff' opacity='0.7'/%3E%3Cpolygon points='38,10 78,22 62,0' fill='%23ffffff' opacity='0.6'/%3E%3Cpolygon points='38,10 62,0 0,0' fill='%236f8fdb' opacity='0.4'/%3E%3Cpolygon points='78,22 92,64 128,64' fill='%23b07de0' opacity='0.55'/%3E%3Cpolygon points='78,22 128,64 118,30' fill='%2372c9d9' opacity='0.45'/%3E%3Cpolygon points='78,22 118,30 100,0' fill='%23f4ddff' opacity='0.65'/%3E%3Cpolygon points='78,22 100,0 62,0' fill='%238a5fc4' opacity='0.4'/%3E%3Cpolygon points='118,30 128,64 158,64' fill='%23d9adff' opacity='0.6'/%3E%3Cpolygon points='118,30 158,64 150,26' fill='%235f8fd4' opacity='0.4'/%3E%3Cpolygon points='118,30 150,26 138,0' fill='%23ffffff' opacity='0.55'/%3E%3Cpolygon points='118,30 138,0 100,0' fill='%23a679d1' opacity='0.4'/%3E%3Cpolygon points='150,26 158,64 190,64' fill='%23c9a3f5' opacity='0.55'/%3E%3Cpolygon points='150,26 190,64 182,20' fill='%236fb8d6' opacity='0.4'/%3E%3Cpolygon points='150,26 182,20 172,0' fill='%23f2e0ff' opacity='0.7'/%3E%3Cpolygon points='150,26 172,0 138,0' fill='%237a5aad' opacity='0.4'/%3E%3Cpolygon points='182,20 190,64 220,64' fill='%23b07de0' opacity='0.5'/%3E%3Cpolygon points='182,20 220,64 220,18' fill='%2385c9de' opacity='0.4'/%3E%3Cpolygon points='182,20 220,18 220,0' fill='%23f4ddff' opacity='0.65'/%3E%3Cpolygon points='182,20 220,0 172,0' fill='%238a5fc4' opacity='0.4'/%3E%3C/svg%3E");
-  background-size: 100% 100%;
-}
-
-.nav-sweep {
-  position: absolute;
-  top: -40%;
-  bottom: -40%;
-  width: 16%;
-  left: -25%;
-  transform: skewX(-16deg);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  background: linear-gradient(
-    100deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.75) 50%,
-    transparent 100%
-  );
-  animation: navShineSweep 2.6s ease-in-out infinite;
-}
-
-/* Fast pass across (0% → 55% of the loop), then a longer hold fully
-   off-screen (55% → 100%) before repeating — a quick convincing flash
-   rather than a slow constant crawl. */
-@keyframes navShineSweep {
-  0%   { left: -25%; }
-  38%  { left: 115%; }
-  100% { left: 115%; }
-}
-
 /* Liquid chrome card surface: one directional light-source gradient
    (bottom-right hotspot falling off to a dark corner), soft vertical
    fold bands for undulation, fine random noise for roughness, and a

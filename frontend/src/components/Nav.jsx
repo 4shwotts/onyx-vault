@@ -58,7 +58,7 @@ export default function Nav() {
           <NavLink
             key={link.to}
             to={link.to}
-            className={({ isActive }) => `font-mono${isActive ? ' nav-tab-active' : ''}`}
+            className="font-mono"
             style={({ isActive }) => ({
               fontSize: 13,
               letterSpacing: 0.5,
@@ -72,17 +72,7 @@ export default function Nav() {
               fontWeight: 600,
             })}
           >
-            {({ isActive }) => (
-              <>
-                {link.label}
-                {isActive && (
-                  <>
-                    <span className="nav-facet" />
-                    <span className="nav-sweep" />
-                  </>
-                )}
-              </>
-            )}
+            {link.label}
           </NavLink>
         ))}
 
