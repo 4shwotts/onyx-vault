@@ -11,6 +11,9 @@ const CATEGORY_RULES = [
   { keywords: ['restaurant', 'cafe', 'coffee', 'mcdonald', 'kfc', 'deliveroo', 'just eat'], category: 'Eating Out' },
 ];
 
+const BASE_CATEGORIES = ['Uncategorized', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'];
+const CUSTOM_OPTION = '__custom__';
+
 function guessCategory(description) {
   const lower = (description || '').toLowerCase();
   for (const rule of CATEGORY_RULES) {
@@ -57,6 +60,10 @@ export default function Import() {
               amount: isNaN(amount) ? 0 : amount,
               date,
               category: guessCategory(description),
+              // Whether this row is showing a free-text input instead of
+              // the dropdown, so custom category names aren't limited to
+              // the fixed list.
+              isCustom: false,
             };
           });
           setRows(parsed);
@@ -68,8 +75,20 @@ export default function Import() {
     });
   }
 
-  function updateRowCategory(id, category) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category } : r)));
+  function handleCategorySelect(id, value) {
+    if (value === CUSTOM_OPTION) {
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: '', isCustom: true } : r)));
+    } else {
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: value, isCustom: false } : r)));
+    }
+  }
+
+  function handleCategoryText(id, value) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: value } : r)));
+  }
+
+  function revertToDropdown(id) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: 'Uncategorized', isCustom: false } : r)));
   }
 
   async function handleConfirm() {
@@ -88,13 +107,14 @@ export default function Import() {
 
       for (const row of rows) {
         let categoryId = null;
-        const key = row.category.toLowerCase();
+        const trimmedCategory = row.category.trim();
+        const key = trimmedCategory.toLowerCase();
 
-        if (key !== 'uncategorized') {
+        if (trimmedCategory && key !== 'uncategorized') {
           if (categoryCache[key]) {
             categoryId = categoryCache[key];
           } else {
-            const created = await api.createCategory(row.category);
+            const created = await api.createCategory(trimmedCategory);
             categoryCache[key] = created.id;
             categoryId = created.id;
           }
@@ -141,8 +161,12 @@ export default function Import() {
           </p>
         </label>
 
-        {error && <p style={{ color: 'var(--expense)', fontSize: 14, margin: '16px 0' }}>{error}</p>}
-        {done && <p style={{ color: 'var(--income)', fontSize: 14, margin: '16px 0' }}>Import complete.</p>}
+        {error && <p style={{ color: 'var(--expense)', fontSize: 14, margin: '16px 0', textAlign: 'center' }}>{error}</p>}
+        {done && (
+          <p className="font-mono" style={{ color: '#666', fontSize: 14, margin: '16px 0 0', textAlign: 'center' }}>
+            Import complete.
+          </p>
+        )}
 
         {rows.length === 0 && !error && !done && (
           <div style={emptyHintStyle}>
@@ -168,14 +192,41 @@ export default function Import() {
                   <p className="font-mono" style={{ fontSize: 14, color: '#e5e5e5', margin: 0, flex: 1, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {row.description}
                   </p>
-                  <select value={row.category} onChange={(e) => updateRowCategory(row.id, e.target.value)}
-                    className="font-mono"
-                    style={{ background: '#1a1a1a', border: '0.5px solid #333', borderRadius: 6, color: '#e5e5e5', width: 160, padding: '8px 10px', fontSize: 13 }}>
-                    {['Uncategorized', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'].map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <p className="font-mono" style={{ fontSize: 15, fontWeight: 700, margin: 0, width: 100, textAlign: 'right', color: row.amount < 0 ? 'var(--expense)' : 'var(--income)' }}>
+
+                  {row.isCustom ? (
+                    <div style={{ width: 160, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <input
+                        type="text"
+                        placeholder="Type category"
+                        value={row.category}
+                        onChange={(e) => handleCategoryText(row.id, e.target.value)}
+                        className="font-mono"
+                        style={customCategoryInputStyle}
+                      />
+                      <span
+                        onClick={() => revertToDropdown(row.id)}
+                        className="font-mono"
+                        style={{ fontSize: 10, color: '#7a7a7a', cursor: 'pointer' }}
+                      >
+                        Use list instead
+                      </span>
+                    </div>
+                  ) : (
+                    <select value={row.category} onChange={(e) => handleCategorySelect(row.id, e.target.value)}
+                      className="font-mono" style={categorySelectStyle}>
+                      {BASE_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value={CUSTOM_OPTION}>Other (type your own)</option>
+                    </select>
+                  )}
+
+                  <p className="font-mono" style={{
+                    fontSize: 15, fontWeight: 700, margin: 0, width: 100,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end',
+                    lineHeight: 1,
+                    color: row.amount < 0 ? 'var(--expense)' : 'var(--income)',
+                  }}>
                     {row.amount < 0 ? '−' : '+'}£{Math.abs(row.amount).toFixed(2)}
                   </p>
                 </div>
@@ -201,6 +252,19 @@ const selectStyle = {
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 14px center',
   backgroundSize: '13px',
+};
+const categorySelectStyle = {
+  background: '#1a1a1a', border: '0.5px solid #333', borderRadius: 6, color: '#e5e5e5',
+  width: 160, padding: '8px 26px 8px 10px', fontSize: 13,
+  appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5e5e5' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 8px center',
+  backgroundSize: '11px',
+};
+const customCategoryInputStyle = {
+  background: '#1a1a1a', border: '0.5px solid #333', borderRadius: 6, color: '#e5e5e5',
+  width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: 13,
 };
 const dropZoneStyle = {
   display: 'block', border: '0.5px dashed #3a3a3a', borderRadius: 12, padding: 48,
