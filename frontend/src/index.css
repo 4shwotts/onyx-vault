@@ -120,6 +120,28 @@ body {
 }
 .account-page-fade { animation: accountPageFade 0.45s ease; }
 
+/* Active nav tab glow — a breathing box-shadow ring rather than a static
+   highlight, so the selected page feels alive without a gradient. Two
+   shadows: a tight inner glow for definition, a soft outer bloom that
+   expands and contracts on a loop. */
+@keyframes navActivePulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(142, 68, 173, 0.55) inset,
+      0 0 8px rgba(142, 68, 173, 0.35),
+      0 0 0 rgba(142, 68, 173, 0);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(142, 68, 173, 0.75) inset,
+      0 0 14px rgba(142, 68, 173, 0.55),
+      0 0 4px rgba(142, 68, 173, 0.25);
+  }
+}
+.nav-tab-active {
+  animation: navActivePulse 2.4s ease-in-out infinite;
+}
+
 /* Liquid chrome card surface: one directional light-source gradient
    (bottom-right hotspot falling off to a dark corner), soft vertical
    fold bands for undulation, fine random noise for roughness, and a
