@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import CrystalShine from './CrystalShine';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -76,7 +75,12 @@ export default function Nav() {
             {({ isActive }) => (
               <>
                 {link.label}
-                {isActive && <CrystalShine />}
+                {isActive && (
+                  <>
+                    <span className="nav-facet" />
+                    <span className="nav-sweep" />
+                  </>
+                )}
               </>
             )}
           </NavLink>
