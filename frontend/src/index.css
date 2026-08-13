@@ -121,16 +121,15 @@ body {
 .account-page-fade { animation: accountPageFade 0.45s ease; }
 
 /* ---- Active nav tab: crystalline surface ----
-   Three layers, no purple ring:
-   1. .nav-tab-active — just establishes the clipping box.
-   2. .nav-facet — a static cut-crystal facet pattern (two overlapping
-      diagonal hairline grids), always visible while active, so the tab
-      itself reads as a faceted surface rather than a flat pill.
-   3. .nav-sweep (x2, staggered) — a light beam crossing the facets with
-      a chromatic fringe (magenta leading edge, cyan trailing edge, white
-      hot core), the way light splits passing through a cut gem. Eased
-      with many keyframe stops so it decelerates into the tab and
-      accelerates back out, not a linear slide. */
+   .nav-tab-active clips the effect to the pill's rounded corners.
+   .nav-facet is a static faceted mesh — many small purple/violet/blue/
+   pink triangles at varying opacity, blended with "overlay" so the
+   luminance differences between adjacent shards read as real cut edges,
+   not printed lines.
+   .nav-sweep is a single soft light band with a chromatic edge (magenta
+   leading, cyan trailing, white core) that crosses continuously, linear
+   timing, no hold at either end — it's always in motion, wrapping off
+   one side and reappearing on the other with no visible pause. */
 .nav-tab-active {
   position: relative;
   overflow: hidden;
@@ -139,50 +138,44 @@ body {
 .nav-facet {
   position: absolute;
   inset: 0;
-  background:
-    repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0px, rgba(255,255,255,0.09) 1px, transparent 2px, transparent 9px),
-    repeating-linear-gradient(25deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 2px, transparent 13px),
-    repeating-linear-gradient(70deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, transparent 2px, transparent 16px);
-  mix-blend-mode: overlay;
   pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.85;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'%3E%3Cpolygon points='0,0 40,0 18,22' fill='%23e6c9ff' opacity='0.5'/%3E%3Cpolygon points='40,0 70,0 55,18 18,22' fill='%23b98be0' opacity='0.35'/%3E%3Cpolygon points='70,0 105,0 88,14 55,18' fill='%23d9a6ff' opacity='0.55'/%3E%3Cpolygon points='105,0 140,0 122,20 88,14' fill='%237ea8e8' opacity='0.4'/%3E%3Cpolygon points='140,0 175,0 158,16 122,20' fill='%23f0c6ff' opacity='0.5'/%3E%3Cpolygon points='175,0 200,0 200,18 158,16' fill='%23a679d1' opacity='0.4'/%3E%3Cpolygon points='0,0 18,22 0,30' fill='%239e6fc9' opacity='0.3'/%3E%3Cpolygon points='18,22 55,18 42,42 0,30' fill='%23e0b3ff' opacity='0.45'/%3E%3Cpolygon points='55,18 88,14 78,38 42,42' fill='%237ad6e0' opacity='0.3'/%3E%3Cpolygon points='88,14 122,20 108,40 78,38' fill='%23d6a6ff' opacity='0.5'/%3E%3Cpolygon points='122,20 158,16 148,38 108,40' fill='%238fb8ec' opacity='0.35'/%3E%3Cpolygon points='158,16 200,18 200,40 148,38' fill='%23ecc2ff' opacity='0.45'/%3E%3Cpolygon points='0,30 42,42 30,60 0,60' fill='%23a679d1' opacity='0.35'/%3E%3Cpolygon points='42,42 78,38 70,60 30,60' fill='%23f0d4ff' opacity='0.55'/%3E%3Cpolygon points='78,38 108,40 100,60 70,60' fill='%2385c9e6' opacity='0.35'/%3E%3Cpolygon points='108,40 148,38 138,60 100,60' fill='%23d9a6ff' opacity='0.5'/%3E%3Cpolygon points='148,38 200,40 200,60 138,60' fill='%23b98be0' opacity='0.4'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
 }
 
 .nav-sweep {
   position: absolute;
-  top: -30%;
-  bottom: -30%;
-  width: 20%;
-  left: -45%;
-  transform: skewX(-18deg);
+  top: -60%;
+  bottom: -60%;
+  width: 22%;
   pointer-events: none;
   mix-blend-mode: screen;
+  filter: blur(1.5px);
+  transform: skewX(-18deg);
   background: linear-gradient(
     100deg,
     transparent 0%,
-    rgba(216, 122, 255, 0.35) 34%,
-    rgba(255, 255, 255, 0.9) 48%,
-    rgba(122, 210, 255, 0.4) 62%,
+    rgba(216, 122, 255, 0.4) 32%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(122, 210, 255, 0.4) 68%,
     transparent 100%
   );
-  animation: navCrystalSweep 3.6s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation: navSweepMove 2.4s linear infinite;
 }
-
 .nav-sweep-secondary {
-  width: 9%;
-  opacity: 0.55;
-  animation-delay: 1.5s;
-  animation-duration: 3.6s;
+  width: 10%;
+  opacity: 0.5;
+  animation-delay: -1.2s;
 }
 
-@keyframes navCrystalSweep {
-  0%   { left: -50%; opacity: 0; }
-  6%   { opacity: 1; }
-  18%  { left: -10%; opacity: 1; }
-  30%  { left: 25%;  opacity: 1; }
-  42%  { left: 60%;  opacity: 1; }
-  54%  { left: 95%;  opacity: 1; }
-  62%  { left: 125%; opacity: 0; }
-  100% { left: 125%; opacity: 0; }
+/* Travels the full width plus overshoot on both sides at a constant
+   rate — always visibly moving, the wrap at 100%→0% happens while the
+   band is fully off-screen so no pause is perceptible. */
+@keyframes navSweepMove {
+  from { left: -40%; }
+  to   { left: 120%; }
 }
 
 /* Liquid chrome card surface: one directional light-source gradient
