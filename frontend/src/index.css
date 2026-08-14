@@ -236,17 +236,21 @@ body {
    a rounded glass surface, plus one brighter streak reflection near
    the top-right — same layered-highlight technique as .chrome-surface,
    just in a dark register instead of a light metallic one. */
+/* Glossy black glass surface (login/auth card): mostly flat near-black
+   with very subtle, tightly-confined highlights along the edges only —
+   the earlier version's broad soft ovals read as pasted-on blobs rather
+   than real light behavior. Real glossy black surfaces are mostly dark
+   with thin, sharp catches of light at the rim, not big soft glows
+   spreading across the middle. */
 .glass-surface {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(50% 35% at 20% 8%, rgba(255,255,255,0.10), transparent 65%),
-    radial-gradient(35% 60% at 92% 15%, rgba(255,255,255,0.14), transparent 60%),
-    radial-gradient(45% 30% at 12% 95%, rgba(255,255,255,0.05), transparent 65%),
-    radial-gradient(60% 40% at 60% 100%, rgba(60,50,70,0.25), transparent 70%),
-    linear-gradient(160deg, #0e0f11 0%, #08090a 40%, #0a0b0d 70%, #101113 100%);
+    radial-gradient(70% 18% at 50% 0%, rgba(255,255,255,0.05), transparent 100%),
+    radial-gradient(50% 14% at 50% 100%, rgba(255,255,255,0.02), transparent 100%),
+    linear-gradient(160deg, #0d0e10 0%, #08090a 45%, #0a0b0d 75%, #0f1012 100%);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 1px 0 rgba(255,255,255,0.05) inset,
     0 -1px 0 rgba(0,0,0,0.6) inset,
     0 24px 50px rgba(0,0,0,0.5),
     0 6px 16px rgba(0,0,0,0.4);
@@ -258,7 +262,7 @@ body {
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 130px 130px;
-  opacity: 0.05;
+  opacity: 0.04;
   mix-blend-mode: overlay;
   pointer-events: none;
   z-index: 0;
@@ -269,9 +273,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(10% 22% at 88% 6%, rgba(255,255,255,0.55), transparent 70%),
-    radial-gradient(6% 14% at 6% 85%, rgba(255,255,255,0.18), transparent 70%);
-  mix-blend-mode: screen;
+    linear-gradient(90deg, rgba(255,255,255,0.06) 0%, transparent 4%),
+    linear-gradient(-90deg, rgba(255,255,255,0.05) 0%, transparent 4%);
   pointer-events: none;
   z-index: 0;
 }
