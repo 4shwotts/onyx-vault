@@ -32,27 +32,6 @@ function getEmailError(rawEmail) {
   return '';
 }
 
-// Small angular shard accents at each corner, extending slightly beyond
-// the card edge — a subtle nod to the cut-gem motif without becoming a
-// decorative distraction. Thin, low-opacity, and small enough to read
-// as a refined detail rather than a graphic element competing with the
-// form itself.
-function CornerShard({ top, bottom, left, right, rotate }) {
-  return (
-    <div style={{
-      position: 'absolute',
-      top, bottom, left, right,
-      width: 13, height: 13,
-      transform: `rotate(${rotate}deg)`,
-      pointerEvents: 'none',
-      zIndex: 2,
-    }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 13, height: 1, background: 'rgba(150,140,170,0.55)' }} />
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 13, background: 'rgba(150,140,170,0.55)' }} />
-    </div>
-  );
-}
-
 export default function Login() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
@@ -120,18 +99,12 @@ export default function Login() {
       alignItems: 'center', justifyContent: 'center', padding: 24,
       position: 'relative', zIndex: 1,
     }}>
-      <div style={{
-        background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, height: 480, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+      <div className="glass-surface" style={{
+        borderRadius: 12, padding: '36px 32px',
+        width: 300, height: 480, border: '0.5px solid #2a2b2e',
         position: 'relative', zIndex: 1, boxSizing: 'border-box',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
       }}>
-        <CornerShard top={-6} left={-6} rotate={0} />
-        <CornerShard top={-6} right={-6} rotate={90} />
-        <CornerShard bottom={-6} left={-6} rotate={-90} />
-        <CornerShard bottom={-6} right={-6} rotate={180} />
-
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 10, background: 'var(--nav-bg)',
             border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
@@ -149,7 +122,7 @@ export default function Login() {
         </div>
 
         {registered ? (
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: 300 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: 300, position: 'relative', zIndex: 1 }}>
             <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
               Account created. Check your email for a verification link before signing in.
             </p>
@@ -162,12 +135,7 @@ export default function Login() {
             </button>
           </div>
         ) : (
-          // Fixed-height slots for every row, present in BOTH modes
-          // regardless of whether their content is shown — this is what
-          // keeps login and register at identical vertical rhythm and
-          // stops the email warning from shoving everything below it
-          // down when it appears.
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
             <input
               type="email"
               placeholder="Email"
