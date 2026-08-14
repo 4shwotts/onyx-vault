@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
 import { BASE_CATEGORIES } from '../constants/categories';
+import { CategoryIcon } from '../components/Icon';
+
+const PAGE_SIZE = 20;
 
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
@@ -51,6 +54,7 @@ export default function Transactions() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [appliedUrlFilters, setAppliedUrlFilters] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [showForm, setShowForm] = useState(false);
   const [accountId, setAccountId] = useState('');
@@ -63,11 +67,27 @@ export default function Transactions() {
   const [frequency, setFrequency] = useState('monthly');
   const [submitting, setSubmitting] = useState(false);
 
+  // The filter dropdown shows every category in BASE_CATEGORIES, not
+  // just ones that already have a real row in the database — a
+  // category with zero transactions so far should still be selectable
+  // (it'll correctly show "no transactions"), not silently missing
+  // from the list. Categories with a real id filter normally on the
+  // backend; ones with no id yet are virtual and always resolve to an
+  // empty result client-side, since there's genuinely nothing to fetch.
+  const mergedFilterCategories = useMemo(() => {
+    const realNames = new Set(categories.map((c) => c.name));
+    const virtualOnes = BASE_CATEGORIES
+      .filter((name) => !realNames.has(name))
+      .map((name) => ({ id: `virtual-${name}`, name }));
+    return [...categories, ...virtualOnes].sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories]);
+
   async function loadAll() {
     try {
+      const isVirtualCategory = filterCategory.startsWith('virtual-');
       const params = new URLSearchParams();
       if (filterAccount) params.append('account_id', filterAccount);
-      if (filterCategory) params.append('category_id', filterCategory);
+      if (filterCategory && !isVirtualCategory) params.append('category_id', filterCategory);
       if (filterMonth) {
         const [year, month] = filterMonth.split('-').map(Number);
         const from = new Date(year, month - 1, 1).toISOString().slice(0, 10);
@@ -85,7 +105,9 @@ export default function Transactions() {
         api.getRecurring(),
         api.getTransactions(),
       ]);
-      setTransactions(txs);
+      // A virtual category (no real DB rows yet) is always empty —
+      // skip trusting the unfiltered response and show nothing.
+      setTransactions(isVirtualCategory ? [] : txs);
       setAccounts(accs);
       setCategories(cats);
       setRecurring(recs);
@@ -101,6 +123,13 @@ export default function Transactions() {
 
   useEffect(() => {
     loadAll();
+  }, [filterAccount, filterCategory, filterMonth]);
+
+  // Reset to page 1 whenever the filtered set changes, otherwise
+  // narrowing a filter could leave the view stranded on a now
+  // out-of-range page.
+  useEffect(() => {
+    setPage(1);
   }, [filterAccount, filterCategory, filterMonth]);
 
   // Applies ?category=, ?account=, and ?month= from the URL (set by the
@@ -247,6 +276,8 @@ export default function Transactions() {
   }
 
   const displayTransactions = transactions.length === 0 ? FAKE_TRANSACTIONS : transactions;
+  const totalPages = Math.max(1, Math.ceil(displayTransactions.length / PAGE_SIZE));
+  const pagedTransactions = displayTransactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
@@ -267,7 +298,7 @@ export default function Transactions() {
           </select>
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="font-mono" style={chipStyle}>
             <option value="">Category</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {mergedFilterCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <MonthPicker months={getAvailableMonths(allTransactionsForMonths)} value={filterMonth} onChange={setFilterMonth} allowAll />
         </div>
@@ -340,48 +371,72 @@ export default function Transactions() {
         {loading ? (
           <p style={{ color: '#888', fontSize: 14 }}>Loading transactions...</p>
         ) : (
-          <div style={{ position: 'relative' }}>
-            <div className="chrome-surface" style={{
-              borderRadius: 14, padding: '10px 8px',
-              filter: transactions.length === 0 ? 'blur(3px)' : 'none',
-              opacity: transactions.length === 0 ? 0.55 : 1,
-              pointerEvents: transactions.length === 0 ? 'none' : 'auto',
-            }}>
-              {displayTransactions.map((t, i) => (
-                <div key={t.id} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
-                  borderBottom: i < displayTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 9, background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ color: '#9a9a9a', fontSize: 15 }}>{(t.category_name || '?')[0]?.toUpperCase()}</span>
+          <>
+            <div style={{ position: 'relative' }}>
+              <div className="chrome-surface" style={{
+                borderRadius: 14, padding: '10px 8px',
+                filter: transactions.length === 0 ? 'blur(3px)' : 'none',
+                opacity: transactions.length === 0 ? 0.55 : 1,
+                pointerEvents: transactions.length === 0 ? 'none' : 'auto',
+              }}>
+                {pagedTransactions.map((t, i) => (
+                  <div key={t.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
+                    borderBottom: i < pagedTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <CategoryIcon name={t.category_name} size={46} />
+                      <div>
+                        <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {t.description || '(no description)'}
+                          {t.is_recurring && <span className="font-mono" style={{ fontSize: 12, color: '#333', border: '1px solid #333', borderRadius: 4, padding: '1px 6px' }}>RECURRING</span>}
+                          {t.is_anomaly && (
+                            <span className="font-mono" style={{ fontSize: 12, color: 'var(--expense)', border: '1px solid var(--expense)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <span style={{ fontSize: 15, position: 'relative', top: -1 }}>⚠</span> UNUSUAL
+                            </span>
+                          )}
+                        </p>
+                        <p className="font-mono" style={{ fontSize: 13, color: '#3a3a3a', margin: 0 }}>
+                          {t.account_name} · {t.category_name || 'Other'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {t.description || '(no description)'}
-                        {t.is_recurring && <span className="font-mono" style={{ fontSize: 12, color: '#333', border: '1px solid #333', borderRadius: 4, padding: '1px 6px' }}>RECURRING</span>}
-                        {t.is_anomaly && (
-                          <span className="font-mono" style={{ fontSize: 12, color: 'var(--expense)', border: '1px solid var(--expense)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                            <span style={{ fontSize: 15, position: 'relative', top: -1 }}>⚠</span> UNUSUAL
-                          </span>
-                        )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <p className="font-mono" style={{ fontSize: 17, fontWeight: 700, margin: 0, color: Number(t.amount) < 0 ? '#b83232' : '#1f8a52' }}>
+                        {Number(t.amount) < 0 ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
                       </p>
-                      <p className="font-mono" style={{ fontSize: 13, color: '#3a3a3a', margin: 0 }}>
-                        {t.account_name} · {t.category_name || 'Other'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </p>
+                      <span onClick={() => handleDelete(t.id)} style={{ cursor: 'pointer', color: '#00000066', fontSize: 16 }}>×</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <p className="font-mono" style={{ fontSize: 17, fontWeight: 700, margin: 0, color: Number(t.amount) < 0 ? '#b83232' : '#1f8a52' }}>
-                      {Number(t.amount) < 0 ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
-                    </p>
-                    <span onClick={() => handleDelete(t.id)} style={{ cursor: 'pointer', color: '#00000066', fontSize: 16 }}>×</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {transactions.length === 0 && <EmptyOverlay message="No transactions yet." />}
             </div>
-            {transactions.length === 0 && <EmptyOverlay message="No transactions yet." />}
-          </div>
+
+            {transactions.length > PAGE_SIZE && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 16 }}>
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="font-mono"
+                  style={{ ...pageButtonStyle, opacity: page === 1 ? 0.4 : 1, cursor: page === 1 ? 'default' : 'pointer' }}
+                >
+                  Previous
+                </button>
+                <p className="font-mono" style={{ fontSize: 13, color: '#555', margin: 0 }}>
+                  Page {page} of {totalPages}
+                </p>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="font-mono"
+                  style={{ ...pageButtonStyle, opacity: page === totalPages ? 0.4 : 1, cursor: page === totalPages ? 'default' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -421,5 +476,9 @@ const chipStyle = {
 const buttonStyle = {
   background: '#141414', color: '#fff', border: 'none', borderRadius: 8,
   padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+};
+const pageButtonStyle = {
+  background: '#141414', color: '#e5e5e5', border: '0.5px solid #333', borderRadius: 8,
+  padding: '9px 16px', fontSize: 13, fontWeight: 600,
 };
 const formStyle = { background: '#141414', borderRadius: 12, padding: 22, marginBottom: 22, maxWidth: 360 };

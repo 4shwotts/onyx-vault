@@ -41,13 +41,19 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-const CARD_HEIGHT = 260;
+const BASE_CARD_HEIGHT = 300;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
-// Roughly matches the donut's own height, so the legend never grows
-// taller than the visual it sits beside.
-const LEGEND_MAX_HEIGHT = 175;
+
+// Grows the card's own height as more categories appear, rather than
+// keeping a fixed height and letting content scroll inside it — a
+// nested internal scrollbar reads as broken/cramped, a taller card
+// reads as the UI simply accommodating more data.
+function getCardHeight(count) {
+  if (count <= 6) return BASE_CARD_HEIGHT;
+  return Math.min(460, BASE_CARD_HEIGHT + (count - 6) * 26);
+}
 
 // Shared donut-arc math, pulled out so it can run once on real data and
 // once on placeholder data for the empty state, without duplicating the
@@ -79,15 +85,15 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
 }
 
 // Every category with spend this month is shown — nothing is hidden or
-// folded into an aggregate bucket. Instead, text size and row spacing
-// shrink automatically as the count grows, so any realistic number of
-// categories fits within LEGEND_MAX_HEIGHT without ever overflowing or
-// clipping inside the fixed-height card.
+// folded into an aggregate bucket. Text size and row spacing shrink as
+// the count grows, and the card itself grows taller (see
+// getCardHeight), so any realistic number of categories fits with no
+// internal scrolling at all.
 function getLegendSizing(count) {
   if (count <= 4) return { fontSize: 15, gap: 13, swatch: 14 };
-  if (count <= 6) return { fontSize: 13, gap: 9, swatch: 12 };
-  if (count <= 8) return { fontSize: 12, gap: 6, swatch: 11 };
-  return { fontSize: 10.5, gap: 4, swatch: 9 };
+  if (count <= 6) return { fontSize: 13, gap: 10, swatch: 12 };
+  if (count <= 8) return { fontSize: 12, gap: 8, swatch: 11 };
+  return { fontSize: 11, gap: 6, swatch: 10 };
 }
 
 // Placeholder content shown, lightly blurred, behind an overlay message
@@ -180,7 +186,7 @@ function DashboardSkeleton() {
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ height: CARD_HEIGHT, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: BASE_CARD_HEIGHT, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 10 }} />
@@ -277,6 +283,7 @@ export default function Dashboard() {
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
+  const cardHeight = getCardHeight(categoryList.length || FAKE_CATEGORY_LIST.length);
 
   // --- Previous-month comparison data, computed directly from the
   // selected month via date math (not array adjacency), so it's correct
@@ -377,7 +384,7 @@ export default function Dashboard() {
   const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
   return (
-    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
@@ -385,7 +392,7 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
 
           <div>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -460,7 +467,7 @@ export default function Dashboard() {
             )}
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: '24px 28px', height: CARD_HEIGHT,
+              borderRadius: 16, padding: '24px 28px', height: cardHeight,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
               <div style={{
@@ -474,7 +481,7 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 26 }}>
                     <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -503,7 +510,7 @@ export default function Dashboard() {
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: legendSizing.gap, maxHeight: LEGEND_MAX_HEIGHT, overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: legendSizing.gap }}>
                       {displayArcs.map((arc) => (
                         <div key={arc.name} style={{
                           display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
@@ -533,7 +540,7 @@ export default function Dashboard() {
                           <span>
                             {arc.pct !== null && (
                               <span className="font-mono" style={{
-                                fontSize: legendSizing.fontSize - 2, fontWeight: 700,
+                                fontSize: Math.max(10, legendSizing.fontSize - 2), fontWeight: 700,
                                 color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                               }}>
                                 {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
@@ -583,7 +590,7 @@ export default function Dashboard() {
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 3: this month vs last month bars */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: Math.max(6, legendSizing.gap - 2), position: 'relative', zIndex: 1, minWidth: 0, overflowY: 'auto' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: Math.max(8, legendSizing.gap - 2), position: 'relative', zIndex: 1, minWidth: 0 }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 2px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     This Month vs Last
                   </p>
