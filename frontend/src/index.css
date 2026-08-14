@@ -187,42 +187,6 @@ body {
     inset 0 -2px 5px rgba(0, 0, 0, 0.4);
 }
 
-/* Spinning logo mark (see SpinningGem.jsx). A real 3D solid built from
-   8 flat triangular panels (a square bipyramid), not a flat image —
-   backface-visibility hidden on each face means only the panels
-   currently facing the viewer render, which is what lets this rotate a
-   genuine 360° and look solid instead of a flat plane going edge-on. */
-.gem-solid-wrap {
-  perspective: 380px;
-  position: relative;
-}
-@keyframes gemFullSpin {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(360deg); }
-}
-.gem-solid-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  animation: gemFullSpin 5s linear infinite;
-}
-.gem-face-top,
-.gem-face-bottom {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  backface-visibility: hidden;
-}
-.gem-face-top {
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  transform-origin: 50% 100%;
-}
-.gem-face-bottom {
-  clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
-  transform-origin: 50% 0%;
-}
-
 /* Liquid chrome card surface: one directional light-source gradient
    (bottom-right hotspot falling off to a dark corner), soft vertical
    fold bands for undulation, fine random noise for roughness, and a
