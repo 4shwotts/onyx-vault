@@ -153,15 +153,15 @@ export default function Transactions() {
   // Categories are created on the fly here rather than requiring the
   // user to pre-create them: if the typed name matches an existing
   // category (case-insensitive), reuse its id; otherwise create a new one.
-  async function resolveCategoryId() {
-    if (!categoryName.trim()) return null;
-    const existing = categories.find(
-      (c) => c.name.toLowerCase() === categoryName.trim().toLowerCase()
-    );
-    if (existing) return existing.id;
-    const created = await api.createCategory(categoryName.trim());
-    return created.id;
-  }
+    async function resolveCategoryId() {
+      const typed = categoryName.trim() || 'Other';
+      const existing = categories.find(
+        (c) => c.name.toLowerCase() === typed.toLowerCase()
+      );
+      if (existing) return existing.id;
+      const created = await api.createCategory(typed);
+      return created.id;
+    }
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -363,7 +363,7 @@ export default function Transactions() {
                         )}
                       </p>
                       <p className="font-mono" style={{ fontSize: 13, color: '#3a3a3a', margin: 0 }}>
-                        {t.account_name} · {t.category_name || 'Uncategorized'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        {t.account_name} · {t.category_name || 'Other'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                   </div>

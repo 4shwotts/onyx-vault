@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
-// Category icons load from /public/icons/*.svg by convention. Several
-// category names map to the same file (Dining and Eating Out both use
-// EatingOut.svg, Utilities shares Bills.svg). A transaction with NO
-// category at all (the closest proxy the data model has for "paid a
-// person" rather than a categorized business expense) uses the person
-// icon; a transaction with a category name that just isn't in the map
-// falls back to Other.svg. If even that fails to load, falls back
-// further to the original letter-in-a-circle treatment.
+// Category icons load from /public/icons/*.svg by convention. "Other"
+// (the real category every uncategorised transaction now gets assigned
+// to server-side, never left null) and "Individual" (a real selectable
+// category for payments to a person rather than a business) both use
+// the same Individual.svg — a person represents "unspecified/personal"
+// better than a generic folder icon. Anything else unmapped falls back
+// to Individual.svg too, and if even that fails to load, back to the
+// original letter-in-a-circle treatment.
 const CATEGORY_ICON_MAP = {
   groceries: 'Groceries',
   transport: 'Transport',
@@ -19,13 +19,14 @@ const CATEGORY_ICON_MAP = {
   bills: 'Bills',
   shopping: 'Shopping',
   income: 'Income',
+  individual: 'Individual',
+  other: 'Individual',
 };
 
 function resolveCategoryFile(name) {
   const trimmed = (name || '').trim();
-  if (!trimmed) return 'Individual';
-  const key = trimmed.toLowerCase();
-  return CATEGORY_ICON_MAP[key] || 'Other';
+  const key = trimmed ? trimmed.toLowerCase() : 'other';
+  return CATEGORY_ICON_MAP[key] || 'Individual';
 }
 
 export function CategoryIcon({ name, size = 46 }) {

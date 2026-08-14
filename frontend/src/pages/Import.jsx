@@ -11,7 +11,10 @@ const CATEGORY_RULES = [
   { keywords: ['restaurant', 'cafe', 'coffee', 'mcdonald', 'kfc', 'deliveroo', 'just eat'], category: 'Eating Out' },
 ];
 
-const BASE_CATEGORIES = ['Uncategorised', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'];
+// "Uncategorised" is never a real option — anything that doesn't match
+// a rule above defaults to "Other", a real category rather than a null
+// placeholder.
+const BASE_CATEGORIES = ['Other', 'Individual', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'];
 const CUSTOM_OPTION = '__custom__';
 
 function guessCategory(description) {
@@ -21,7 +24,7 @@ function guessCategory(description) {
       return rule.category;
     }
   }
-  return 'Uncategorized';
+  return 'Other';
 }
 
 export default function Import() {
@@ -88,7 +91,7 @@ export default function Import() {
   }
 
   function revertToDropdown(id) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: 'Uncategorized', isCustom: false } : r)));
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: 'Other', isCustom: false } : r)));
   }
 
   async function handleConfirm() {
@@ -106,18 +109,18 @@ export default function Import() {
       existingCategories.forEach((c) => { categoryCache[c.name.toLowerCase()] = c.id; });
 
       for (const row of rows) {
-        let categoryId = null;
-        const trimmedCategory = row.category.trim();
+        // Every row always gets a real category now — "Other" if
+        // nothing more specific was picked — never left null.
+        const trimmedCategory = (row.category.trim() || 'Other');
         const key = trimmedCategory.toLowerCase();
 
-        if (trimmedCategory && key !== 'uncategorized') {
-          if (categoryCache[key]) {
-            categoryId = categoryCache[key];
-          } else {
-            const created = await api.createCategory(trimmedCategory);
-            categoryCache[key] = created.id;
-            categoryId = created.id;
-          }
+        let categoryId;
+        if (categoryCache[key]) {
+          categoryId = categoryCache[key];
+        } else {
+          const created = await api.createCategory(trimmedCategory);
+          categoryCache[key] = created.id;
+          categoryId = created.id;
         }
 
         await api.createTransaction({
