@@ -100,11 +100,15 @@ export default function Login() {
       position: 'relative', zIndex: 1,
     }}>
       <div className="glass-surface" style={{
-        borderRadius: 12, padding: '36px 32px',
-        width: 300, height: 480, border: '0.5px solid #2a2b2e',
-        position: 'relative', zIndex: 1, boxSizing: 'border-box',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
+              borderRadius: 12, padding: '36px 32px',
+              width: 300, height: 480, border: '0.5px solid #2a2b2e',
+              position: 'relative', zIndex: 1, boxSizing: 'border-box',
+            }}>
+              <div className="glass-sheen" />
+              <div className="glass-corner-glow glass-corner-glow--tl" />
+              <div className="glass-corner-glow glass-corner-glow--br" />
+
+              <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 10, background: 'var(--nav-bg)',
             border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
