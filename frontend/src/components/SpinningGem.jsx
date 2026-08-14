@@ -40,11 +40,10 @@ function GemMesh() {
 }
 
 // Three-point lighting so adjacent facets genuinely shade differently
-// as the mesh turns: a strong key light, a softer fill from the
-// opposite side, and a subtle purple rim light tying it back to the
-// app's accent color, plus low ambient so no facet ever goes fully
-// black. This is real per-pixel lighting computed by the GPU, the
-// thing no flat-image/CSS-mask approach could produce.
+// as the mesh turns. Fill and ambient are kept deliberately low — with
+// them too bright, the two faces angled away from the key light were
+// nearly as bright as the two facing it, killing the contrast between
+// lit and shadowed facets that's the whole point of real 3D shading.
 export default function SpinningGem({ size = 36 }) {
   return (
     <div style={{ width: size, height: size }}>
@@ -54,10 +53,10 @@ export default function SpinningGem({ size = 36 }) {
         dpr={[1, 2]}
         style={{ width: '100%', height: '100%', display: 'block' }}
       >
-        <ambientLight intensity={0.25} />
-        <directionalLight position={[-3, 2, 4]} intensity={1.6} />
-        <directionalLight position={[3, -1, 2]} intensity={0.6} />
-        <directionalLight position={[0, 3, -4]} intensity={0.5} color="#8e44ad" />
+        <ambientLight intensity={0.12} />
+        <directionalLight position={[-3, 2, 4]} intensity={2} />
+        <directionalLight position={[3, -1, 2]} intensity={0.25} />
+        <directionalLight position={[0, 3, -4]} intensity={0.3} color="#8e44ad" />
         <GemMesh />
       </Canvas>
     </div>
