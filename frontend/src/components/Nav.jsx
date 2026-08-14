@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 
@@ -12,6 +13,7 @@ const links = [
 // line. Drawn twice — a faint light duplicate offset slightly below-right
 // underneath, then the dark line on top — that offset pair is what reads
 // as etched/engraved into the chrome rather than printed on top of it.
+// Used only as a fallback if OnyxGem.svg fails to load.
 function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,255,255,0.6)' }) {
   const gemPath = 'M12 3 L22 9 L12 21 L2 9 Z';
   const facetLine = 'M2 9 L22 9';
@@ -24,6 +26,30 @@ function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,25
       <path d={gemPath} stroke={lineColor} strokeWidth="2" strokeLinejoin="round" />
       <path d={facetLine} stroke={lineColor} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
+  );
+}
+
+// Spinning logo mark: OnyxGem.svg rotating around a vertical axis via
+// CSS 3D transform. Falls back to the original flat OnyxMark (no spin)
+// if the file is missing, same graceful-degradation pattern as the
+// category/account icons.
+function SpinningGem({ size = 36 }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <OnyxMark size={size} />;
+  }
+
+  return (
+    <div className="gem-spin-wrap" style={{ width: size, height: size }}>
+      <img
+        src="/icons/OnyxGem.svg"
+        alt=""
+        onError={() => setFailed(true)}
+        className="gem-spin"
+        style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+      />
+    </div>
   );
 }
 
@@ -49,7 +75,7 @@ export default function Nav() {
         padding: '8px 22px', height: 52, boxSizing: 'border-box',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, flexShrink: 0 }}>
-          <OnyxMark size={36} />
+          <SpinningGem size={36} />
         </div>
         <div style={{ width: 1, height: 26, background: 'rgba(0,0,0,0.22)', margin: '0 16px', position: 'relative', zIndex: 1 }} />
         <p className="font-mono" style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#101112', position: 'relative', zIndex: 1, whiteSpace: 'nowrap' }}>

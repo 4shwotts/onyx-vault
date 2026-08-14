@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Nav from '../components/Nav';
 import { api } from '../api/client';
+import { AccountTypeIcon } from '../components/Icon';
 
 const ACCOUNT_TYPES = ['current', 'savings', 'credit'];
 

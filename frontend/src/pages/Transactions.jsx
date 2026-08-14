@@ -4,6 +4,7 @@ import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
+import { CategoryIcon } from '../components/Icon';
 
 // Placeholder rows shown, lightly blurred, behind an overlay message when
 // there are no real transactions yet — keeps the chrome card at its
@@ -349,10 +350,8 @@ export default function Transactions() {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
                   borderBottom: i < displayTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 9, background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ color: '#9a9a9a', fontSize: 15 }}>{(t.category_name || '?')[0]?.toUpperCase()}</span>
-                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <CategoryIcon name={t.category_name} size={38} />
                     <div>
                       <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                         {t.description || '(no description)'}
