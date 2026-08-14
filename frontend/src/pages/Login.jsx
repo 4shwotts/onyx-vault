@@ -5,10 +5,6 @@ import SpinningGem from '../components/SpinningGem';
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// A broader list of well known consumer providers rather than just the
-// two or three biggest — anyone on a real personal mailbox from any of
-// these should get through, only unrecognized/disposable-looking
-// domains get blocked.
 const ALLOWED_DOMAINS = [
   'gmail.com', 'googlemail.com',
   'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.co.uk', 'msn.com',
@@ -34,6 +30,27 @@ function getEmailError(rawEmail) {
     return 'Please use a verified email, such as Gmail.';
   }
   return '';
+}
+
+// Small angular shard accents at each corner, extending slightly beyond
+// the card edge — a subtle nod to the cut-gem motif without becoming a
+// decorative distraction. Thin, low-opacity, and small enough to read
+// as a refined detail rather than a graphic element competing with the
+// form itself.
+function CornerShard({ top, bottom, left, right, rotate }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      top, bottom, left, right,
+      width: 13, height: 13,
+      transform: `rotate(${rotate}deg)`,
+      pointerEvents: 'none',
+      zIndex: 2,
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 13, height: 1, background: 'rgba(150,140,170,0.55)' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 13, background: 'rgba(150,140,170,0.55)' }} />
+    </div>
+  );
 }
 
 export default function Login() {
@@ -72,9 +89,6 @@ export default function Login() {
     try {
       if (mode === 'register') {
         await api.register(email, password);
-        // No cookie is set on register anymore, accounts are inactive
-        // until the verification link is clicked, so there's nothing
-        // to navigate to yet, show the "check your email" message instead.
         setRegistered(true);
       } else {
         await api.login(email, password);
@@ -96,8 +110,6 @@ export default function Login() {
       await api.resendVerification(email);
       setResendStatus('sent');
     } catch {
-      // Backend always returns a generic success message, so this
-      // branch shouldn't normally fire, but fall back gracefully if it does.
       setResendStatus('sent');
     }
   }
@@ -111,8 +123,14 @@ export default function Login() {
       <div style={{
         background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
         width: 300, height: 480, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
-        position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+        position: 'relative', zIndex: 1, boxSizing: 'border-box',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
       }}>
+        <CornerShard top={-6} left={-6} rotate={0} />
+        <CornerShard top={-6} right={-6} rotate={90} />
+        <CornerShard bottom={-6} left={-6} rotate={-90} />
+        <CornerShard bottom={-6} right={-6} rotate={180} />
+
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 10, background: 'var(--nav-bg)',
@@ -130,96 +148,105 @@ export default function Login() {
           </p>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 0 }}>
-          {registered ? (
-            <>
-              <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
-                Account created. Check your email for a verification link before signing in.
+        {registered ? (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: 300 }}>
+            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
+              Account created. Check your email for a verification link before signing in.
+            </p>
+            <button
+              onClick={() => { setRegistered(false); setMode('login'); setEmail(''); setPassword(''); }}
+              className="font-mono"
+              style={buttonStyle}
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : (
+          // Fixed-height slots for every row, present in BOTH modes
+          // regardless of whether their content is shown — this is what
+          // keeps login and register at identical vertical rhythm and
+          // stops the email warning from shoving everything below it
+          // down when it appears.
+          <form onSubmit={handleSubmit}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); if (emailWarning) setEmailWarning(''); }}
+              onBlur={handleEmailBlur}
+              required
+              className="font-mono"
+              style={{
+                ...inputStyle,
+                border: emailWarning ? '0.5px solid var(--expense)' : inputStyle.border,
+                marginBottom: 4,
+              }}
+            />
+            <div style={{ height: 30, marginBottom: 4 }}>
+              {emailWarning && (
+                <p style={{ color: 'var(--expense)', fontSize: 11, lineHeight: 1.35, margin: 0 }}>{emailWarning}</p>
+              )}
+            </div>
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              className="font-mono"
+              style={{ ...inputStyle, marginBottom: 8 }}
+            />
+
+            <div style={{ height: 24, marginBottom: 10, textAlign: 'right' }}>
+              <p className="font-mono" style={{
+                fontSize: 12, margin: 0,
+                opacity: mode === 'login' ? 1 : 0,
+                pointerEvents: mode === 'login' ? 'auto' : 'none',
+              }}>
+                <Link to="/forgot-password" style={{ color: '#7d3c98' }}>Forgot password?</Link>
               </p>
-              <button
-                onClick={() => { setRegistered(false); setMode('login'); setEmail(''); setPassword(''); }}
-                className="font-mono"
-                style={buttonStyle}
-              >
-                Back to sign in
-              </button>
-            </>
-          ) : (
-            <>
-              <form onSubmit={handleSubmit}>
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); if (emailWarning) setEmailWarning(''); }}
-                  onBlur={handleEmailBlur}
-                  required
-                  className="font-mono"
-                  style={{
-                    ...inputStyle,
-                    border: emailWarning ? '0.5px solid var(--expense)' : inputStyle.border,
-                    marginBottom: emailWarning ? 6 : 10,
-                  }}
-                />
-                {emailWarning && (
-                  <p style={{ color: 'var(--expense)', fontSize: 12, margin: '0 0 10px' }}>{emailWarning}</p>
-                )}
+            </div>
 
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="font-mono"
-                  style={{ ...inputStyle, marginBottom: mode === 'login' ? 8 : 18 }}
-                />
+            <div style={{ minHeight: error ? 20 : 0, marginBottom: error ? 10 : 0 }}>
+              {error && <p style={{ color: 'var(--expense)', fontSize: 13, margin: 0 }}>{error}</p>}
+            </div>
 
-                {mode === 'login' && (
-                  <p className="font-mono" style={{ textAlign: 'right', fontSize: 12, marginBottom: 18 }}>
-                    <Link to="/forgot-password" style={{ color: '#7d3c98' }}>Forgot password?</Link>
+            {unverified && (
+              <div style={{ marginBottom: 10 }}>
+                {resendStatus === 'sent' ? (
+                  <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                    If that account exists and isn't verified, a new link has been sent.
+                  </p>
+                ) : (
+                  <p className="font-mono" style={{ fontSize: 12, margin: 0 }}>
+                    <span
+                      onClick={resendStatus === 'sending' ? undefined : handleResend}
+                      style={{ color: '#7d3c98', cursor: resendStatus === 'sending' ? 'default' : 'pointer' }}
+                    >
+                      {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
+                    </span>
                   </p>
                 )}
+              </div>
+            )}
 
-                {error && (
-                  <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: unverified ? 8 : 14 }}>{error}</p>
-                )}
+            <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
+              {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+            </button>
 
-                {unverified && (
-                  resendStatus === 'sent' ? (
-                    <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
-                      If that account exists and isn't verified, a new link has been sent.
-                    </p>
-                  ) : (
-                    <p className="font-mono" style={{ fontSize: 12, marginBottom: 14 }}>
-                      <span
-                        onClick={resendStatus === 'sending' ? undefined : handleResend}
-                        style={{ color: '#7d3c98', cursor: resendStatus === 'sending' ? 'default' : 'pointer' }}
-                      >
-                        {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
-                      </span>
-                    </p>
-                  )
-                )}
-
-                <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
-                  {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
-                </button>
-              </form>
-
-              <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
-                {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-                <span
-                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); setEmailWarning(''); }}
-                  style={{ color: '#7d3c98', cursor: 'pointer' }}
-                >
-                  {mode === 'login' ? 'Register' : 'Sign in'}
-                </span>
-              </p>
-            </>
-          )}
-        </div>
+            <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
+              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+              <span
+                onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); setEmailWarning(''); }}
+                style={{ color: '#7d3c98', cursor: 'pointer' }}
+              >
+                {mode === 'login' ? 'Register' : 'Sign in'}
+              </span>
+            </p>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -234,7 +261,6 @@ const inputStyle = {
   padding: '11px 12px',
   fontSize: 14,
   color: 'var(--text-primary)',
-  marginBottom: 10,
 };
 
 const buttonStyle = {
