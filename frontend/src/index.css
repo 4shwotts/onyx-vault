@@ -138,42 +138,52 @@ body {
   animation: skeletonPulse 1.4s ease-in-out infinite;
 }
 
-/* Dark surface treatment: same idea as .chrome-surface but for the
-   near-black cards (account balances, transaction lists, the nav bar).
-   Layered box-shadow gives real thickness — outer drop shadow for
-   lift off the page, inset top highlight for a catching-light edge,
-   inset bottom shadow for a receding lower lip — plus a faint grain
-   texture so the fill isn't perfectly flat/plastic. No gradients. */
-.dark-surface {
+/* Glossy black glass surface — the single shared treatment for every
+   dark card in the app (account balances, transaction lists, the nav
+   bar, the login card), the same way .chrome-surface is reused across
+   every light metal card. Mostly flat near-black with subtle,
+   tightly-confined highlights along the top/bottom edges only, plus
+   thin side catches of light — real glossy black surfaces stay mostly
+   dark with sharp thin rim highlights, not broad soft glows in the
+   middle. .dark-surface and .glass-surface are the same treatment
+   under two names, both used across the app so either class works. */
+.dark-surface,
+.glass-surface {
   position: relative;
   overflow: hidden;
-  background: #141414;
-  border: 0.5px solid #262626;
-  border-top: 0.5px solid #3a3a3a;
+  background:
+    radial-gradient(70% 18% at 50% 0%, rgba(255,255,255,0.05), transparent 100%),
+    radial-gradient(50% 14% at 50% 100%, rgba(255,255,255,0.02), transparent 100%),
+    linear-gradient(160deg, #0d0e10 0%, #08090a 45%, #0a0b0d 75%, #0f1012 100%);
+  border: 0.5px solid #2a2b2e;
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.45),
-    0 2px 6px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 -14px 22px rgba(0, 0, 0, 0.35);
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 -1px 0 rgba(0,0,0,0.6) inset,
+    0 24px 50px rgba(0,0,0,0.5),
+    0 6px 16px rgba(0,0,0,0.4);
 }
 
-.dark-surface::before {
+.dark-surface::before,
+.glass-surface::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 110px 110px;
-  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 130px 130px;
+  opacity: 0.04;
   mix-blend-mode: overlay;
   pointer-events: none;
   z-index: 0;
 }
 
-.dark-surface::after {
+.dark-surface::after,
+.glass-surface::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(60% 40% at 15% 0%, rgba(255,255,255,0.05), transparent 70%);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.06) 0%, transparent 4%),
+    linear-gradient(-90deg, rgba(255,255,255,0.05) 0%, transparent 4%);
   pointer-events: none;
   z-index: 0;
 }
@@ -227,54 +237,6 @@ body {
   inset: 0;
   background: radial-gradient(14% 20% at 80% 86%, rgba(255,255,255,0.9), transparent 68%);
   mix-blend-mode: screen;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Glossy black glass surface (login/auth card): near-black base with
-   several soft radial highlights positioned like light curving across
-   a rounded glass surface, plus one brighter streak reflection near
-   the top-right — same layered-highlight technique as .chrome-surface,
-   just in a dark register instead of a light metallic one. */
-/* Glossy black glass surface (login/auth card): mostly flat near-black
-   with very subtle, tightly-confined highlights along the edges only —
-   the earlier version's broad soft ovals read as pasted-on blobs rather
-   than real light behavior. Real glossy black surfaces are mostly dark
-   with thin, sharp catches of light at the rim, not big soft glows
-   spreading across the middle. */
-.glass-surface {
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(70% 18% at 50% 0%, rgba(255,255,255,0.05), transparent 100%),
-    radial-gradient(50% 14% at 50% 100%, rgba(255,255,255,0.02), transparent 100%),
-    linear-gradient(160deg, #0d0e10 0%, #08090a 45%, #0a0b0d 75%, #0f1012 100%);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.05) inset,
-    0 -1px 0 rgba(0,0,0,0.6) inset,
-    0 24px 50px rgba(0,0,0,0.5),
-    0 6px 16px rgba(0,0,0,0.4);
-}
-
-.glass-surface::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 130px 130px;
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.glass-surface::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.06) 0%, transparent 4%),
-    linear-gradient(-90deg, rgba(255,255,255,0.05) 0%, transparent 4%);
   pointer-events: none;
   z-index: 0;
 }
