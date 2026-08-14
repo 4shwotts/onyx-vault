@@ -3,12 +3,27 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import SpinningGem from '../components/SpinningGem';
 
-// Basic shape check only (has an @, something before it, a domain with
-// a dot) — this catches typos and obviously malformed input, it does
-// NOT confirm the address is real or deliverable. That would need a
-// live lookup against a third-party verification API, a separate
-// thing from this.
+// Basic shape check (has an @, something before it, a domain with a
+// dot) plus a domain allowlist restricting to well-known consumer
+// providers. Note: this also blocks real work/company emails, which is
+// a real tradeoff for an app like this, but matches what was asked for.
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_DOMAINS = [
+  'gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com',
+  'icloud.com', 'live.com', 'protonmail.com', 'aol.com', 'msn.com',
+];
+
+function getEmailError(rawEmail) {
+  const value = rawEmail.trim();
+  if (!EMAIL_SHAPE.test(value)) {
+    return 'That doesn\'t look like a valid email address.';
+  }
+  const domain = value.split('@')[1]?.toLowerCase();
+  if (!ALLOWED_DOMAINS.includes(domain)) {
+    return 'Please use an email from a recognized provider like Gmail or Outlook.';
+  }
+  return '';
+}
 
 export default function Login() {
   const [mode, setMode] = useState('login');
@@ -23,11 +38,11 @@ export default function Login() {
   const navigate = useNavigate();
 
   function handleEmailBlur() {
-    if (email && !EMAIL_SHAPE.test(email.trim())) {
-      setEmailWarning('That doesn\'t look like a valid email address.');
-    } else {
+    if (!email) {
       setEmailWarning('');
+      return;
     }
+    setEmailWarning(getEmailError(email));
   }
 
   async function handleSubmit(e) {
@@ -35,8 +50,9 @@ export default function Login() {
     setError('');
     setUnverified(false);
 
-    if (!EMAIL_SHAPE.test(email.trim())) {
-      setEmailWarning('That doesn\'t look like a valid email address.');
+    const emailError = getEmailError(email);
+    if (emailError) {
+      setEmailWarning(emailError);
       return;
     }
     setEmailWarning('');
@@ -103,7 +119,7 @@ export default function Login() {
           </p>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 0 }}>
           {registered ? (
             <>
               <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
@@ -125,7 +141,7 @@ export default function Login() {
                     <div style={{
                       position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6,
                       background: '#2a1418', border: '0.5px solid var(--expense)', borderRadius: 6,
-                      padding: '6px 10px', fontSize: 11, color: '#ff9a9a', zIndex: 2,
+                      padding: '6px 10px', fontSize: 11, color: '#ff9a9a', zIndex: 5,
                     }}>
                       {emailWarning}
                     </div>
@@ -138,7 +154,10 @@ export default function Login() {
                     onBlur={handleEmailBlur}
                     required
                     className="font-mono"
-                    style={{ ...inputStyle, borderColor: emailWarning ? 'var(--expense)' : inputStyle.border.split(' ')[2] }}
+                    style={{
+                      ...inputStyle,
+                      border: emailWarning ? '0.5px solid var(--expense)' : inputStyle.border,
+                    }}
                   />
                 </div>
                 <input
