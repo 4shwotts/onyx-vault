@@ -1,24 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
-
-// Same mark as Nav.jsx, duplicated locally rather than imported from a
-// shared file — both pages need it, but neither should break if the
-// other's import path changes.
-function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,255,255,0.6)' }) {
-  const gemPath = 'M12 3 L22 9 L12 21 L2 9 Z';
-  const facetLine = 'M2 9 L22 9';
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
-      <g transform="translate(0.6,0.8)">
-        <path d={gemPath} stroke={offsetColor} strokeWidth="2" strokeLinejoin="round" />
-        <path d={facetLine} stroke={offsetColor} strokeWidth="1.8" strokeLinecap="round" />
-      </g>
-      <path d={gemPath} stroke={lineColor} strokeWidth="2" strokeLinejoin="round" />
-      <path d={facetLine} stroke={lineColor} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
+import SpinningGem from '../components/SpinningGem';
 
 export default function Login() {
   const [mode, setMode] = useState('login');
@@ -87,7 +70,7 @@ export default function Login() {
             border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
             margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <OnyxMark size={26} lineColor="#eef1f3" offsetColor="rgba(0,0,0,0.5)" />
+            <SpinningGem size={26} />
           </div>
           <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
             <span style={{ fontWeight: 700 }}>Onyx</span>{' '}

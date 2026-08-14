@@ -187,13 +187,11 @@ body {
     inset 0 -2px 5px rgba(0, 0, 0, 0.4);
 }
 
-/* Nav logo: OnyxGem.svg rendered twice via CSS mask-image (not <img>,
-   which can't be recolored or layered with pseudo-elements) — a dark
-   front layer plus a lighter layer offset slightly behind it, the same
-   two-tone trick the original flat OnyxMark used for an "etched into
-   chrome" look. Both layers rotate together around a vertical axis,
-   and a separate highlight sweep layer brightens on a matching cycle
-   so it reads as catching light mid-turn rather than just flattening. */
+/* Spinning logo mark (see SpinningGem.jsx). Six copies of the etched
+   OnyxGem mask are arranged around a small hexagonal drum via
+   translateZ, rather than spinning a single flat plane — a flat plane
+   goes edge-on and disappears at 90°, this keeps at least one face
+   turned toward the viewer at all times so it reads as a solid object. */
 .gem-spin-wrap {
   perspective: 420px;
   position: relative;
@@ -208,6 +206,10 @@ body {
   height: 100%;
   animation: gemSpin 4.5s linear infinite;
   transform-style: preserve-3d;
+}
+.gem-face {
+  position: absolute;
+  inset: 0;
 }
 .gem-mask-layer {
   position: absolute;

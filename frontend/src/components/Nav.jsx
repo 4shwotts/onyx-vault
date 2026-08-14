@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import SpinningGem from './SpinningGem';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -8,60 +8,6 @@ const links = [
   { to: '/accounts', label: 'Accounts' },
   { to: '/import', label: 'Import' },
 ];
-
-// Gem-cut diamond mark: outer rhombus outline + one horizontal facet
-// line. Drawn twice — a faint light duplicate offset slightly below-right
-// underneath, then the dark line on top — that offset pair is what reads
-// as etched/engraved into the chrome rather than printed on top of it.
-// Used only as a fallback if OnyxGem.svg fails to load.
-function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,255,255,0.6)' }) {
-  const gemPath = 'M12 3 L22 9 L12 21 L2 9 Z';
-  const facetLine = 'M2 9 L22 9';
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
-      <g transform="translate(0.6,0.8)">
-        <path d={gemPath} stroke={offsetColor} strokeWidth="2" strokeLinejoin="round" />
-        <path d={facetLine} stroke={offsetColor} strokeWidth="1.8" strokeLinecap="round" />
-      </g>
-      <path d={gemPath} stroke={lineColor} strokeWidth="2" strokeLinejoin="round" />
-      <path d={facetLine} stroke={lineColor} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// Spinning logo mark: OnyxGem.svg used as a CSS mask (not an <img>) so
-// it can be rendered in two tones — a dark front layer and a lighter
-// layer offset slightly behind it — for the same etched look as the
-// original flat mark, plus a highlight sweep layer that brightens once
-// per rotation. Detects load failure via a plain fetch HEAD-style probe
-// on an Image object, falling back to the flat OnyxMark if the file is
-// missing.
-function SpinningGem({ size = 36 }) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return <OnyxMark size={size} />;
-  }
-
-  return (
-    <div
-      className="gem-spin-wrap"
-      style={{ width: size, height: size, '--gem-mask': "url('/icons/OnyxGem.svg')" }}
-    >
-      <img
-        src="/icons/OnyxGem.svg"
-        alt=""
-        onError={() => setFailed(true)}
-        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-      />
-      <div className="gem-spin-inner">
-        <div className="gem-mask-layer gem-mask-back" />
-        <div className="gem-mask-layer gem-mask-front" />
-        <div className="gem-mask-layer gem-shine" />
-      </div>
-    </div>
-  );
-}
 
 export default function Nav() {
   const navigate = useNavigate();
