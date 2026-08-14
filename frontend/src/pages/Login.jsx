@@ -3,14 +3,25 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import SpinningGem from '../components/SpinningGem';
 
-// Basic shape check (has an @, something before it, a domain with a
-// dot) plus a domain allowlist restricting to well-known consumer
-// providers. Note: this also blocks real work/company emails, which is
-// a real tradeoff for an app like this, but matches what was asked for.
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// A broader list of well known consumer providers rather than just the
+// two or three biggest — anyone on a real personal mailbox from any of
+// these should get through, only unrecognized/disposable-looking
+// domains get blocked.
 const ALLOWED_DOMAINS = [
-  'gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com',
-  'icloud.com', 'live.com', 'protonmail.com', 'aol.com', 'msn.com',
+  'gmail.com', 'googlemail.com',
+  'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.co.uk', 'msn.com',
+  'yahoo.com', 'yahoo.co.uk', 'ymail.com', 'rocketmail.com',
+  'icloud.com', 'me.com', 'mac.com',
+  'aol.com',
+  'protonmail.com', 'proton.me', 'pm.me',
+  'zoho.com', 'zohomail.com',
+  'gmx.com', 'gmx.us',
+  'mail.com',
+  'yandex.com', 'yandex.ru',
+  'fastmail.com', 'fastmail.fm',
+  'tutanota.com', 'tuta.io',
 ];
 
 function getEmailError(rawEmail) {
@@ -20,7 +31,7 @@ function getEmailError(rawEmail) {
   }
   const domain = value.split('@')[1]?.toLowerCase();
   if (!ALLOWED_DOMAINS.includes(domain)) {
-    return 'Please use an email from a recognized provider like Gmail or Outlook.';
+    return 'Please use a verified email, such as Gmail.';
   }
   return '';
 }
@@ -99,7 +110,7 @@ export default function Login() {
     }}>
       <div style={{
         background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, height: 420, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+        width: 300, height: 480, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
         position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -136,30 +147,24 @@ export default function Login() {
           ) : (
             <>
               <form onSubmit={handleSubmit}>
-                <div style={{ position: 'relative' }}>
-                  {emailWarning && (
-                    <div style={{
-                      position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6,
-                      background: '#2a1418', border: '0.5px solid var(--expense)', borderRadius: 6,
-                      padding: '6px 10px', fontSize: 11, color: '#ff9a9a', zIndex: 5,
-                    }}>
-                      {emailWarning}
-                    </div>
-                  )}
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); if (emailWarning) setEmailWarning(''); }}
-                    onBlur={handleEmailBlur}
-                    required
-                    className="font-mono"
-                    style={{
-                      ...inputStyle,
-                      border: emailWarning ? '0.5px solid var(--expense)' : inputStyle.border,
-                    }}
-                  />
-                </div>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); if (emailWarning) setEmailWarning(''); }}
+                  onBlur={handleEmailBlur}
+                  required
+                  className="font-mono"
+                  style={{
+                    ...inputStyle,
+                    border: emailWarning ? '0.5px solid var(--expense)' : inputStyle.border,
+                    marginBottom: emailWarning ? 6 : 10,
+                  }}
+                />
+                {emailWarning && (
+                  <p style={{ color: 'var(--expense)', fontSize: 12, margin: '0 0 10px' }}>{emailWarning}</p>
+                )}
+
                 <input
                   type="password"
                   placeholder="Password"
