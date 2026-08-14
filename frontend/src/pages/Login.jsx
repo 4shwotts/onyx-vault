@@ -3,23 +3,45 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import SpinningGem from '../components/SpinningGem';
 
+// Basic shape check only (has an @, something before it, a domain with
+// a dot) — this catches typos and obviously malformed input, it does
+// NOT confirm the address is real or deliverable. That would need a
+// live lookup against a third-party verification API, a separate
+// thing from this.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function Login() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [emailWarning, setEmailWarning] = useState('');
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [unverified, setUnverified] = useState(false);
   const [resendStatus, setResendStatus] = useState('idle'); // idle | sending | sent
   const navigate = useNavigate();
 
+  function handleEmailBlur() {
+    if (email && !EMAIL_SHAPE.test(email.trim())) {
+      setEmailWarning('That doesn\'t look like a valid email address.');
+    } else {
+      setEmailWarning('');
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setUnverified(false);
-    setLoading(true);
 
+    if (!EMAIL_SHAPE.test(email.trim())) {
+      setEmailWarning('That doesn\'t look like a valid email address.');
+      return;
+    }
+    setEmailWarning('');
+
+    setLoading(true);
     try {
       if (mode === 'register') {
         await api.register(email, password);
@@ -61,8 +83,8 @@ export default function Login() {
     }}>
       <div style={{
         background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, minHeight: 380, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
-        position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
+        width: 300, height: 420, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
+        position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
@@ -70,7 +92,7 @@ export default function Login() {
             border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
             margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-             <SpinningGem size={26} variant="dark" />
+            <SpinningGem size={26} variant="dark" />
           </div>
           <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
             <span style={{ fontWeight: 700 }}>Onyx</span>{' '}
@@ -81,7 +103,7 @@ export default function Login() {
           </p>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 0, overflow: 'hidden' }}>
           {registered ? (
             <>
               <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
@@ -98,15 +120,27 @@ export default function Login() {
           ) : (
             <>
               <form onSubmit={handleSubmit}>
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); }}
-                  required
-                  className="font-mono"
-                  style={inputStyle}
-                />
+                <div style={{ position: 'relative' }}>
+                  {emailWarning && (
+                    <div style={{
+                      position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6,
+                      background: '#2a1418', border: '0.5px solid var(--expense)', borderRadius: 6,
+                      padding: '6px 10px', fontSize: 11, color: '#ff9a9a', zIndex: 2,
+                    }}>
+                      {emailWarning}
+                    </div>
+                  )}
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setUnverified(false); setResendStatus('idle'); if (emailWarning) setEmailWarning(''); }}
+                    onBlur={handleEmailBlur}
+                    required
+                    className="font-mono"
+                    style={{ ...inputStyle, borderColor: emailWarning ? 'var(--expense)' : inputStyle.border.split(' ')[2] }}
+                  />
+                </div>
                 <input
                   type="password"
                   placeholder="Password"
@@ -153,7 +187,7 @@ export default function Login() {
               <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
                 {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
                 <span
-                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); }}
+                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); setEmailWarning(''); }}
                   style={{ color: '#7d3c98', cursor: 'pointer' }}
                 >
                   {mode === 'login' ? 'Register' : 'Sign in'}
