@@ -351,7 +351,7 @@ export default function Transactions() {
                   borderBottom: i < displayTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <CategoryIcon name={t.category_name} size={38} />
+                    <CategoryIcon name={t.category_name} size={46} />
                     <div>
                       <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                         {t.description || '(no description)'}

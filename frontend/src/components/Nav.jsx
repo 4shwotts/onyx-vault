@@ -29,10 +29,13 @@ function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,25
   );
 }
 
-// Spinning logo mark: OnyxGem.svg rotating around a vertical axis via
-// CSS 3D transform. Falls back to the original flat OnyxMark (no spin)
-// if the file is missing, same graceful-degradation pattern as the
-// category/account icons.
+// Spinning logo mark: OnyxGem.svg used as a CSS mask (not an <img>) so
+// it can be rendered in two tones — a dark front layer and a lighter
+// layer offset slightly behind it — for the same etched look as the
+// original flat mark, plus a highlight sweep layer that brightens once
+// per rotation. Detects load failure via a plain fetch HEAD-style probe
+// on an Image object, falling back to the flat OnyxMark if the file is
+// missing.
 function SpinningGem({ size = 36 }) {
   const [failed, setFailed] = useState(false);
 
@@ -41,14 +44,21 @@ function SpinningGem({ size = 36 }) {
   }
 
   return (
-    <div className="gem-spin-wrap" style={{ width: size, height: size }}>
+    <div
+      className="gem-spin-wrap"
+      style={{ width: size, height: size, '--gem-mask': "url('/icons/OnyxGem.svg')" }}
+    >
       <img
         src="/icons/OnyxGem.svg"
         alt=""
         onError={() => setFailed(true)}
-        className="gem-spin"
-        style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
       />
+      <div className="gem-spin-inner">
+        <div className="gem-mask-layer gem-mask-back" />
+        <div className="gem-mask-layer gem-mask-front" />
+        <div className="gem-mask-layer gem-shine" />
+      </div>
     </div>
   );
 }

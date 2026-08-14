@@ -28,7 +28,7 @@ function resolveCategoryFile(name) {
   return CATEGORY_ICON_MAP[key] || 'Other';
 }
 
-export function CategoryIcon({ name, size = 38 }) {
+export function CategoryIcon({ name, size = 46 }) {
   const [failed, setFailed] = useState(false);
   const filename = resolveCategoryFile(name);
   const src = `/icons/${filename}.svg`;
@@ -53,7 +53,7 @@ export function CategoryIcon({ name, size = 38 }) {
         src={src}
         alt=""
         onError={() => setFailed(true)}
-        style={{ width: size * 0.55, height: size * 0.55, objectFit: 'contain' }}
+        style={{ width: size * 0.66, height: size * 0.66, objectFit: 'contain' }}
       />
     </div>
   );
