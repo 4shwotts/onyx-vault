@@ -1,3 +1,236 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
+
+:root {
+  --page-bg: #c6c9cc;
+  --shell-bg: #0d0d0d;
+  --card-bg: #111111;
+  --card-border: #24282b;
+  --card-border-top: #454b50;
+  --nav-bg: #141414;
+  --text-primary: #eef1f3;
+  --text-secondary: #9a9a9a;
+  --accent: #8e44ad;
+  --accent-text: #f5eaf9;
+  --expense: #e05a5a;
+  --income: #3fbf7f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+.font-display { font-family: 'Space Grotesk', sans-serif; }
+
+/* Small labels ONLY (account names, card numbers, section tags, page
+   headings) — futuristic/edgy Orbitron for the HUD direction. */
+.font-mono {
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
+
+.page-container {
+  width: 100%;
+}
+
+/* App-wide backdrop, mounted once by <PageBackground>: a hand-built
+   cluster of thin rings reading as a vault mechanism, each spinning
+   independently at its own speed via the @keyframes below, layered over
+   a matte grey chrome base with localized sheen patches, fine brushed
+   grain, and a soft vignette. */
+.page-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--page-bg);
+}
+
+/* Matte grey chrome — soft banding for the base tone, plus a few
+   localized sheen patches (radial highlights + one subtle darker patch)
+   so the surface reads as metal catching light unevenly. */
+.page-background__base {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(30% 22% at 12% 8%, rgba(255,255,255,0.55), transparent 65%),
+    radial-gradient(26% 20% at 88% 20%, rgba(255,255,255,0.5), transparent 68%),
+    radial-gradient(34% 26% at 68% 88%, rgba(255,255,255,0.42), transparent 65%),
+    radial-gradient(28% 22% at 6% 84%, rgba(15,17,20,0.18), transparent 62%),
+    linear-gradient(
+      160deg,
+      #d4d6d9 0%,
+      #c6c9cc 22%,
+      #b7bbbe 42%,
+      #cdd0d3 58%,
+      #bcbfc2 76%,
+      #d1d4d7 100%
+    );
+}
+
+/* Fine brushed-metal grain — a single subtle direction, low opacity. */
+.page-background__base::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(255,255,255,0.05) 0px,
+    rgba(255,255,255,0.05) 1px,
+    rgba(10,12,14,0.035) 2px,
+    rgba(10,12,14,0.035) 3px,
+    transparent 4px,
+    transparent 6px
+  );
+  mix-blend-mode: overlay;
+}
+
+/* Soft vignette — gives the surface weight/edges. */
+.page-background__base::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(10,12,14,0.12) 100%);
+}
+
+.page-background__circles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes pageBgSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Account carousel fade — plays whenever the Dashboard's account page
+   rotates, so the new set of cards eases in rather than popping in. */
+@keyframes accountPageFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.account-page-fade { animation: accountPageFade 0.45s ease; }
+
+/* Skeleton loading — a soft pulsing opacity sweep on placeholder shapes
+   that match the real layout, so the page reads as "about to appear"
+   rather than a blank screen with a loading string. */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.skeleton-block {
+  background: #d8dadd;
+  border-radius: 8px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+.skeleton-block-dark {
+  background: #1c1c1c;
+  border-radius: 8px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+/* Dark surface treatment: same idea as .chrome-surface but for the
+   near-black cards (account balances, transaction lists, the nav bar).
+   Layered box-shadow gives real thickness — outer drop shadow for
+   lift off the page, inset top highlight for a catching-light edge,
+   inset bottom shadow for a receding lower lip — plus a faint grain
+   texture so the fill isn't perfectly flat/plastic. No gradients. */
+.dark-surface {
+  position: relative;
+  overflow: hidden;
+  background: #141414;
+  border: 0.5px solid #262626;
+  border-top: 0.5px solid #3a3a3a;
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -14px 22px rgba(0, 0, 0, 0.35);
+}
+
+.dark-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 110px 110px;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 40% at 15% 0%, rgba(255,255,255,0.05), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Nav's active tab: same principle at a smaller scale — a pressed-in
+   inset shadow plus a thin top highlight, so it reads as a raised
+   selected chip rather than a flat color swap. */
+.nav-tab-active {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.4);
+}
+
+/* Liquid chrome card surface: one directional light-source gradient
+   (bottom-right hotspot falling off to a dark corner), soft vertical
+   fold bands for undulation, fine random noise for roughness, and a
+   tight specular hotspot layered on top for a real reflection point. */
+.chrome-surface {
+  position: relative;
+  overflow: hidden;
+  border: 0.5px solid rgba(255, 255, 255, 0.4);
+  background:
+    radial-gradient(55% 140% at 8% 50%, rgba(255,255,255,0.28), transparent 62%),
+    radial-gradient(48% 140% at 28% 50%, rgba(0,0,0,0.08), transparent 64%),
+    radial-gradient(52% 140% at 52% 50%, rgba(255,255,255,0.2), transparent 62%),
+    radial-gradient(48% 140% at 74% 50%, rgba(0,0,0,0.07), transparent 64%),
+    radial-gradient(55% 140% at 94% 50%, rgba(255,255,255,0.24), transparent 62%),
+    radial-gradient(130% 130% at 85% 92%, #f4f5f6 0%, #d9dbdd 20%, #aeb1b5 42%, #74777b 66%, #46484c 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.35) inset,
+    0 20px 44px rgba(0, 0, 0, 0.34),
+    0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+.chrome-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  opacity: 0.15;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chrome-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(14% 20% at 80% 86%, rgba(255,255,255,0.9), transparent 68%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Glossy black glass surface (login/auth card): near-black base with
    several soft radial highlights positioned like light curving across
    a rounded glass surface, plus one brighter streak reflection near
