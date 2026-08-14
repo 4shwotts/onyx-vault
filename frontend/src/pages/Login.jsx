@@ -70,7 +70,7 @@ export default function Login() {
             border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
             margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <SpinningGem size={26} />
+             <SpinningGem size={26} variant="dark" />
           </div>
           <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
             <span style={{ fontWeight: 700 }}>Onyx</span>{' '}

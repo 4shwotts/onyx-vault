@@ -6,9 +6,15 @@ import * as THREE from 'three';
 // low-poly cones (4 radial segments, so the sides read as flat faceted
 // planes rather than a smooth cone) joined base-to-base, rotated 45°
 // so the square cross-section reads as a diamond outline matching the
-// original flat mark. Sized slightly larger than before so it fills
-// more of its bounding box at small icon sizes.
-function GemMesh() {
+// original flat mark.
+//
+// variant controls shading so the gem stays legible against whichever
+// background it sits on: "light" (the chrome nav pill) can afford deep
+// shadow facets since the light backdrop keeps them readable; "dark"
+// (the near-black login card) needs a brighter base tone plus a touch
+// of emissive self-glow, otherwise shadowed facets sink to the same
+// near-black as the card itself and the shape disappears.
+function GemMesh({ variant }) {
   const groupRef = useRef();
 
   const { topGeometry, bottomGeometry } = useMemo(() => {
@@ -21,34 +27,49 @@ function GemMesh() {
     return { topGeometry: topCone, bottomGeometry: bottomCone };
   }, []);
 
-  // Real full 360° rotation, driven every frame — this is genuine
-  // geometry turning in 3D space, not a flat image faking depth, so
-  // there's no edge-on disappearing point anywhere in the cycle.
   useFrame(() => {
     if (groupRef.current) groupRef.current.rotation.y += 0.012;
   });
 
+  const isDark = variant === 'dark';
+  const baseColor = isDark ? '#d6d8db' : '#aaaeb3';
+  const emissive = isDark ? '#3a3d42' : '#000000';
+  const emissiveIntensity = isDark ? 0.5 : 0;
+
   return (
     <group ref={groupRef}>
       <mesh geometry={topGeometry} position={[0, 0.775, 0]}>
-        <meshStandardMaterial color="#aaaeb3" metalness={0.8} roughness={0.25} flatShading />
+        <meshStandardMaterial
+          color={baseColor}
+          metalness={0.8}
+          roughness={0.25}
+          flatShading
+          emissive={emissive}
+          emissiveIntensity={emissiveIntensity}
+        />
       </mesh>
       <mesh geometry={bottomGeometry} position={[0, 0.775, 0]}>
-        <meshStandardMaterial color="#aaaeb3" metalness={0.8} roughness={0.25} flatShading />
+        <meshStandardMaterial
+          color={baseColor}
+          metalness={0.8}
+          roughness={0.25}
+          flatShading
+          emissive={emissive}
+          emissiveIntensity={emissiveIntensity}
+        />
       </mesh>
     </group>
   );
 }
 
-// Lighting rebalanced from the previous pass: that version dropped
-// ambient/fill so low that shadowed faces went nearly black and merged
-// visually into the background, leaving only a couple of thin lit
-// edges visible (which is why it read as a tiny plus-sign rather than
-// a solid diamond). A hemisphere light adds soft, direction-independent
-// fill (sky tone above, ground tone below) so every face stays legible
-// as a distinct grey, while the key light still stays strong enough
-// that lit vs shadowed facets clearly contrast against each other.
-export default function SpinningGem({ size = 36 }) {
+// variant: "light" (default) for use on the chrome nav pill's light
+// metal background; "dark" for use on the near-black login card. Both
+// use the same geometry/rotation, only material brightness, emissive
+// glow, and ambient/hemisphere fill differ, tuned so shadowed facets
+// stay visibly lighter than whatever backdrop they sit on.
+export default function SpinningGem({ size = 36, variant = 'light' }) {
+  const isDark = variant === 'dark';
+
   return (
     <div style={{ width: size, height: size }}>
       <Canvas
@@ -57,12 +78,16 @@ export default function SpinningGem({ size = 36 }) {
         dpr={[1, 2]}
         style={{ width: '100%', height: '100%', display: 'block' }}
       >
-        <hemisphereLight skyColor="#e8e9eb" groundColor="#3a3a3d" intensity={0.55} />
-        <ambientLight intensity={0.22} />
-        <directionalLight position={[-3, 2, 4]} intensity={1.9} />
-        <directionalLight position={[3, -1, 2]} intensity={0.4} />
+        <hemisphereLight
+          skyColor={isDark ? '#f5f5f6' : '#e8e9eb'}
+          groundColor={isDark ? '#6a6a6e' : '#3a3a3d'}
+          intensity={isDark ? 0.75 : 0.55}
+        />
+        <ambientLight intensity={isDark ? 0.4 : 0.22} />
+        <directionalLight position={[-3, 2, 4]} intensity={isDark ? 1.6 : 1.9} />
+        <directionalLight position={[3, -1, 2]} intensity={isDark ? 0.55 : 0.4} />
         <directionalLight position={[0, 3, -4]} intensity={0.35} color="#8e44ad" />
-        <GemMesh />
+        <GemMesh variant={variant} />
       </Canvas>
     </div>
   );
