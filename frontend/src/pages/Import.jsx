@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import Nav from '../components/Nav';
 import { api } from '../api/client';
+import { BASE_CATEGORIES } from '../constants/categories';
 
 const CATEGORY_RULES = [
   { keywords: ['tesco', 'waitrose', 'sainsbury', 'asda', 'aldi', 'lidl', 'grocery'], category: 'Groceries' },
@@ -10,12 +11,6 @@ const CATEGORY_RULES = [
   { keywords: ['salary', 'wage', 'payroll'], category: 'Income' },
   { keywords: ['restaurant', 'cafe', 'coffee', 'mcdonald', 'kfc', 'deliveroo', 'just eat'], category: 'Eating Out' },
 ];
-
-// "Uncategorised" is never a real option — anything that doesn't match
-// a rule above defaults to "Other", a real category rather than a null
-// placeholder.
-const BASE_CATEGORIES = ['Other', 'Individual', 'Groceries', 'Subscriptions', 'Transport', 'Income', 'Eating Out'];
-const CUSTOM_OPTION = '__custom__';
 
 function guessCategory(description) {
   const lower = (description || '').toLowerCase();
@@ -63,10 +58,6 @@ export default function Import() {
               amount: isNaN(amount) ? 0 : amount,
               date,
               category: guessCategory(description),
-              // Whether this row is showing a free-text input instead of
-              // the dropdown, so custom category names aren't limited to
-              // the fixed list.
-              isCustom: false,
             };
           });
           setRows(parsed);
@@ -78,20 +69,8 @@ export default function Import() {
     });
   }
 
-  function handleCategorySelect(id, value) {
-    if (value === CUSTOM_OPTION) {
-      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: '', isCustom: true } : r)));
-    } else {
-      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: value, isCustom: false } : r)));
-    }
-  }
-
-  function handleCategoryText(id, value) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: value } : r)));
-  }
-
-  function revertToDropdown(id) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category: 'Other', isCustom: false } : r)));
+  function updateRowCategory(id, category) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, category } : r)));
   }
 
   async function handleConfirm() {
@@ -109,9 +88,7 @@ export default function Import() {
       existingCategories.forEach((c) => { categoryCache[c.name.toLowerCase()] = c.id; });
 
       for (const row of rows) {
-        // Every row always gets a real category now — "Other" if
-        // nothing more specific was picked — never left null.
-        const trimmedCategory = (row.category.trim() || 'Other');
+        const trimmedCategory = row.category.trim() || 'Other';
         const key = trimmedCategory.toLowerCase();
 
         let categoryId;
@@ -196,33 +173,12 @@ export default function Import() {
                     {row.description}
                   </p>
 
-                  {row.isCustom ? (
-                    <div style={{ width: 160, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      <input
-                        type="text"
-                        placeholder="Type category"
-                        value={row.category}
-                        onChange={(e) => handleCategoryText(row.id, e.target.value)}
-                        className="font-mono"
-                        style={customCategoryInputStyle}
-                      />
-                      <span
-                        onClick={() => revertToDropdown(row.id)}
-                        className="font-mono"
-                        style={{ fontSize: 10, color: '#7a7a7a', cursor: 'pointer' }}
-                      >
-                        Use list instead
-                      </span>
-                    </div>
-                  ) : (
-                    <select value={row.category} onChange={(e) => handleCategorySelect(row.id, e.target.value)}
-                      className="font-mono" style={categorySelectStyle}>
-                      {BASE_CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                      <option value={CUSTOM_OPTION}>Other (type your own)</option>
-                    </select>
-                  )}
+                  <select value={row.category} onChange={(e) => updateRowCategory(row.id, e.target.value)}
+                    className="font-mono" style={categorySelectStyle}>
+                    {BASE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
 
                   <p className="font-mono" style={{
                     fontSize: 15, fontWeight: 700, margin: 0, width: 100,
@@ -270,10 +226,6 @@ const categorySelectStyle = {
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right 8px center',
   backgroundSize: '11px',
-};
-const customCategoryInputStyle = {
-  background: '#1a1a1a', border: '0.5px solid #333', borderRadius: 6, color: '#e5e5e5',
-  width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: 13,
 };
 const dropZoneStyle = {
   display: 'block', border: '0.5px dashed #3a3a3a', borderRadius: 12, padding: 48,

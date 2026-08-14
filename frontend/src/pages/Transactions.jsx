@@ -4,20 +4,17 @@ import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
-import { CategoryIcon } from '../components/Icon';
+import { BASE_CATEGORIES } from '../constants/categories';
 
-// Placeholder rows shown, lightly blurred, behind an overlay message when
-// there are no real transactions yet — keeps the chrome card at its
-// normal size instead of collapsing down to a single line of text.
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
   { id: 'ghost-2', description: 'Salary', category_name: 'Income', account_name: 'Current', date: '2026-08-01', amount: 2400, is_recurring: true, is_anomaly: false },
   { id: 'ghost-3', description: 'Netflix', category_name: 'Entertainment', account_name: 'Current', date: '2026-07-29', amount: -11.99, is_recurring: true, is_anomaly: false },
   { id: 'ghost-4', description: 'Amazon', category_name: 'Shopping', account_name: 'Current', date: '2026-07-27', amount: -58.40, is_recurring: false, is_anomaly: false },
-  { id: 'ghost-5', description: 'Costa Coffee', category_name: 'Dining', account_name: 'Current', date: '2026-07-25', amount: -4.50, is_recurring: false, is_anomaly: false },
+  { id: 'ghost-5', description: 'Costa Coffee', category_name: 'Eating Out', account_name: 'Current', date: '2026-07-25', amount: -4.50, is_recurring: false, is_anomaly: false },
   { id: 'ghost-6', description: 'Uber', category_name: 'Transport', account_name: 'Current', date: '2026-07-24', amount: -14.30, is_recurring: false, is_anomaly: false },
-  { id: 'ghost-7', description: 'British Gas', category_name: 'Utilities', account_name: 'Current', date: '2026-07-21', amount: -68.00, is_recurring: true, is_anomaly: false },
-  { id: 'ghost-8', description: 'Spotify', category_name: 'Entertainment', account_name: 'Current', date: '2026-07-19', amount: -9.99, is_recurring: true, is_anomaly: false },
+  { id: 'ghost-7', description: 'British Gas', category_name: 'Bills', account_name: 'Current', date: '2026-07-21', amount: -68.00, is_recurring: true, is_anomaly: false },
+  { id: 'ghost-8', description: 'Spotify', category_name: 'Subscriptions', account_name: 'Current', date: '2026-07-19', amount: -9.99, is_recurring: true, is_anomaly: false },
 ];
 
 function EmptyOverlay({ message }) {
@@ -107,7 +104,7 @@ export default function Transactions() {
   }, [filterAccount, filterCategory, filterMonth]);
 
   // Applies ?category=, ?account=, and ?month= from the URL (set by the
-  // Dashboard's clickable donut/legend, or the command palette) once
+  // Dashboard's clickable category legend, or the command palette) once
   // categories/accounts are available to resolve names to ids. Runs
   // only once, so manually changing filters afterward isn't overridden.
   useEffect(() => {
@@ -152,16 +149,19 @@ export default function Transactions() {
 
   // Categories are created on the fly here rather than requiring the
   // user to pre-create them: if the typed name matches an existing
-  // category (case-insensitive), reuse its id; otherwise create a new one.
-    async function resolveCategoryId() {
-      const typed = categoryName.trim() || 'Other';
-      const existing = categories.find(
-        (c) => c.name.toLowerCase() === typed.toLowerCase()
-      );
-      if (existing) return existing.id;
-      const created = await api.createCategory(typed);
-      return created.id;
-    }
+  // category (case-insensitive), reuse its id; otherwise create a new
+  // one. An empty category field always resolves to the real "Other"
+  // category rather than leaving category_id null — every transaction
+  // gets a genuine category, nothing is left "uncategorised."
+  async function resolveCategoryId() {
+    const typed = categoryName.trim() || 'Other';
+    const existing = categories.find(
+      (c) => c.name.toLowerCase() === typed.toLowerCase()
+    );
+    if (existing) return existing.id;
+    const created = await api.createCategory(typed);
+    return created.id;
+  }
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -280,8 +280,10 @@ export default function Transactions() {
             </select>
             <input type="text" placeholder="Description (e.g. Waitrose)" value={description}
               onChange={(e) => setDescription(e.target.value)} className="font-mono" style={inputStyle} />
-            <input type="text" placeholder="Category (e.g. Groceries)" value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)} className="font-mono" style={inputStyle} />
+            <select value={categoryName} onChange={(e) => setCategoryName(e.target.value)} className="font-mono" style={selectStyle}>
+              <option value="">Category</option>
+              {BASE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <input type="number" step="0.01" min="0" placeholder="Amount" value={amount}
                 onChange={(e) => setAmount(e.target.value)} required className="font-mono" style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
@@ -350,8 +352,10 @@ export default function Transactions() {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
                   borderBottom: i < displayTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <CategoryIcon name={t.category_name} size={46} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ color: '#9a9a9a', fontSize: 15 }}>{(t.category_name || '?')[0]?.toUpperCase()}</span>
+                    </div>
                     <div>
                       <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                         {t.description || '(no description)'}

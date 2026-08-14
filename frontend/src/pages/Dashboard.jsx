@@ -45,15 +45,9 @@ const CARD_HEIGHT = 260;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
-// Total rows shown in the donut/legend/bars, INCLUDING the pinned
-// category and the aggregate "More" row if one is needed — this is a
-// hard cap, never exceeded, which is what keeps the card from
-// overflowing its fixed height as more categories get added over time.
-const MAX_VISIBLE_CATEGORIES = 5;
-// "Bills" always gets one of the visible slots when it has spend this
-// month, rather than competing purely on rank — everything else still
-// ranks by amount, with the overflow folding into "More".
-const PINNED_CATEGORY = 'Bills';
+// Roughly matches the donut's own height, so the legend never grows
+// taller than the visual it sits beside.
+const LEGEND_MAX_HEIGHT = 175;
 
 // Shared donut-arc math, pulled out so it can run once on real data and
 // once on placeholder data for the empty state, without duplicating the
@@ -71,10 +65,7 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   return list.map(([name, value], i) => {
     const scaledEffective = effectiveDashes[i] * scale;
     const visibleDash = value > 0 ? Math.max(scaledEffective - GAP, 0) : 0;
-    // "More" is the aggregate overflow bucket, distinct from any real
-    // category named "Other" — kept grey so it visually reads as
-    // "everything else" rather than competing with the real palette.
-    const color = name === 'More' ? '#5a5a5a' : getCategoryColor(i);
+    const color = getCategoryColor(i);
     const prevValue = previousTotals[name] || 0;
     const pct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : (value > 0 ? null : 0);
     const arc = {
@@ -87,35 +78,16 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   });
 }
 
-// Pins PINNED_CATEGORY into one of the visible slots (if it has spend
-// this month), fills the rest by rank, and folds anything past the cap
-// into a single "More" entry — named "More" rather than "Other" so it
-// never collides with an actual category the user might have named
-// "Other" (that real category can appear in the list on its own merit,
-// exactly like any other). The total list length, including "More",
-// never exceeds MAX_VISIBLE_CATEGORIES.
-function condenseCategories(sortedEntries) {
-  const pinnedEntry = sortedEntries.find(([name]) => name === PINNED_CATEGORY);
-  const rest = sortedEntries.filter(([name]) => name !== PINNED_CATEGORY);
-
-  let slots = MAX_VISIBLE_CATEGORIES;
-  if (pinnedEntry) slots -= 1;
-
-  const needsMore = rest.length > slots;
-  const visibleSlots = needsMore ? slots - 1 : slots;
-
-  const visibleRest = rest.slice(0, Math.max(0, visibleSlots));
-  const hiddenRest = rest.slice(Math.max(0, visibleSlots));
-
-  let list = pinnedEntry ? [pinnedEntry, ...visibleRest] : visibleRest;
-  list = list.slice().sort((a, b) => b[1] - a[1]);
-
-  if (hiddenRest.length > 0) {
-    const moreTotal = hiddenRest.reduce((sum, [, val]) => sum + val, 0);
-    list = [...list, ['More', moreTotal]];
-  }
-
-  return { list, hiddenCount: hiddenRest.length };
+// Every category with spend this month is shown — nothing is hidden or
+// folded into an aggregate bucket. Instead, text size and row spacing
+// shrink automatically as the count grows, so any realistic number of
+// categories fits within LEGEND_MAX_HEIGHT without ever overflowing or
+// clipping inside the fixed-height card.
+function getLegendSizing(count) {
+  if (count <= 4) return { fontSize: 15, gap: 13, swatch: 14 };
+  if (count <= 6) return { fontSize: 13, gap: 9, swatch: 12 };
+  if (count <= 8) return { fontSize: 12, gap: 6, swatch: 11 };
+  return { fontSize: 10.5, gap: 4, swatch: 9 };
 }
 
 // Placeholder content shown, lightly blurred, behind an overlay message
@@ -292,17 +264,19 @@ export default function Dashboard() {
   monthTransactions
     .filter((t) => Number(t.amount) < 0)
     .forEach((t) => {
-      // Backend now always assigns a real "Other" category rather than
+      // Backend always assigns a real "Other" category rather than
       // leaving category_name null, this fallback only guards against
       // any legacy/edge-case rows that still slip through blank.
       const name = t.category_name || 'Other';
       categoryTotals[name] = (categoryTotals[name] || 0) + Math.abs(Number(t.amount));
     });
 
-  const sortedCategoryEntries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
-  const { list: categoryList } = condenseCategories(sortedCategoryEntries);
+  // Every category with spend this month, sorted by amount — no cap,
+  // no folding into an aggregate bucket.
+  const categoryList = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
+  const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
 
   // --- Previous-month comparison data, computed directly from the
   // selected month via date math (not array adjacency), so it's correct
@@ -322,21 +296,12 @@ export default function Dashboard() {
     const prevTo = new Date(prevYear, prevMonthNum - 1, prevLastDay).toISOString().slice(0, 10);
 
     const prevMonthTransactions = allTransactions.filter((t) => t.date >= prevFrom && t.date <= prevTo);
-    const prevRawTotals = {};
     prevMonthTransactions
       .filter((t) => Number(t.amount) < 0)
       .forEach((t) => {
         const name = t.category_name || 'Other';
-        prevRawTotals[name] = (prevRawTotals[name] || 0) + Math.abs(Number(t.amount));
+        previousCategoryTotals[name] = (previousCategoryTotals[name] || 0) + Math.abs(Number(t.amount));
       });
-    // Fold last month's data the same way, using THIS month's visible
-    // category names, so a "More"-bucketed category still compares
-    // sensibly against its own prior spend.
-    const visibleNames = new Set(categoryList.map(([name]) => name));
-    Object.entries(prevRawTotals).forEach(([name, val]) => {
-      const bucket = visibleNames.has(name) ? name : 'More';
-      previousCategoryTotals[bucket] = (previousCategoryTotals[bucket] || 0) + val;
-    });
     prevTotalSpend = Object.values(previousCategoryTotals).reduce((a, b) => a + b, 0);
 
     daysInSelMonth = new Date(selYear, selMonthNum, 0).getDate();
@@ -370,13 +335,10 @@ export default function Dashboard() {
 
   // Picks the single most useful thing to say about this month's spend:
   // the biggest increase, otherwise the biggest decrease, otherwise a
-  // plain summary. "More" is excluded since it's an aggregate, not a
-  // real category, but a real "Other" category can appear here just
-  // like any other.
+  // plain summary.
   function buildInsight(insightArcs) {
-    const real = insightArcs.filter((a) => a.name !== 'More');
-    const withIncrease = real.filter((a) => a.pct !== null && a.pct > 5).sort((a, b) => b.pct - a.pct);
-    const withDecrease = real.filter((a) => a.pct !== null && a.pct < -5).sort((a, b) => a.pct - b.pct);
+    const withIncrease = insightArcs.filter((a) => a.pct !== null && a.pct > 5).sort((a, b) => b.pct - a.pct);
+    const withDecrease = insightArcs.filter((a) => a.pct !== null && a.pct < -5).sort((a, b) => a.pct - b.pct);
 
     if (withIncrease.length > 0) {
       const top = withIncrease[0];
@@ -386,8 +348,8 @@ export default function Dashboard() {
       const top = withDecrease[0];
       return { text: `Nice — ${top.name} spending is down ${Math.round(Math.abs(top.pct))}% from last month.`, tone: 'good' };
     }
-    if (real.length > 0) {
-      const top = real.slice().sort((a, b) => b.value - a.value)[0];
+    if (insightArcs.length > 0) {
+      const top = insightArcs.slice().sort((a, b) => b.value - a.value)[0];
       const dayNote = isCurrentMonth ? ` (day ${daysElapsed} of ${daysInSelMonth})` : '';
       return { text: `${top.name} is your biggest category so far this month${dayNote}.`, tone: 'neutral' };
     }
@@ -404,10 +366,9 @@ export default function Dashboard() {
   const revealMaxBar = chartsMounted ? displayMaxBarVal : displayMaxBarVal;
 
   // Only the legend NAME text is interactive — the donut arcs and the
-  // comparison bars are display-only, per request. "More" is never
-  // clickable since it isn't a single filterable category.
+  // comparison bars are display-only.
   function goToCategory(name) {
-    if (!hasSpendData || name === 'More') return;
+    if (!hasSpendData) return;
     const params = new URLSearchParams({ category: name });
     if (selectedMonth) params.set('month', selectedMonth);
     navigate(`/transactions?${params.toString()}`);
@@ -542,14 +503,14 @@ export default function Dashboard() {
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: legendSizing.gap, maxHeight: LEGEND_MAX_HEIGHT, overflowY: 'auto' }}>
                       {displayArcs.map((arc) => (
                         <div key={arc.name} style={{
-                          display: 'grid', gridTemplateColumns: '16px 138px 55px 1fr',
+                          display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
                           alignItems: 'center', columnGap: 10,
                         }}>
                           <span style={{
-                            width: 14, height: 14, borderRadius: 4, background: arc.color,
+                            width: legendSizing.swatch, height: legendSizing.swatch, borderRadius: 4, background: arc.color,
                             border: '0.5px solid rgba(0,0,0,0.18)',
                             boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
                           }} />
@@ -557,22 +518,22 @@ export default function Dashboard() {
                             onClick={() => goToCategory(arc.name)}
                             className="font-mono"
                             style={{
-                              fontSize: 15, color: '#101112', fontWeight: 700,
-                              cursor: arc.name === 'More' ? 'default' : 'pointer',
-                              textDecoration: arc.name === 'More' ? 'none' : 'underline',
+                              fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700,
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
                               textDecorationColor: 'rgba(0,0,0,0.15)',
                               textUnderlineOffset: 3,
                             }}
                           >
                             {arc.name}
                           </span>
-                          <span className="font-mono" style={{ fontSize: 15, color: '#101112', fontWeight: 700 }}>
+                          <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700 }}>
                             £{arc.value.toFixed(0)}
                           </span>
                           <span>
                             {arc.pct !== null && (
                               <span className="font-mono" style={{
-                                fontSize: 13, fontWeight: 700,
+                                fontSize: legendSizing.fontSize - 2, fontWeight: 700,
                                 color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                               }}>
                                 {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
@@ -580,7 +541,7 @@ export default function Dashboard() {
                             )}
                             {arc.pct === null && arc.value > 0 && (
                               <span className="font-mono" style={{
-                                fontSize: 12, color: '#333', fontWeight: 700,
+                                fontSize: Math.max(10, legendSizing.fontSize - 3), color: '#333', fontWeight: 700,
                                 border: '1px solid #999', borderRadius: 4, padding: '1px 6px',
                                 background: 'rgba(0,0,0,0.05)',
                               }}>
@@ -622,7 +583,7 @@ export default function Dashboard() {
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 3: this month vs last month bars */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 12, position: 'relative', zIndex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: Math.max(6, legendSizing.gap - 2), position: 'relative', zIndex: 1, minWidth: 0, overflowY: 'auto' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 2px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     This Month vs Last
                   </p>
@@ -631,7 +592,7 @@ export default function Dashboard() {
                     const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                     return (
                       <div key={arc.name}>
-                        <p className="font-mono" style={{ fontSize: 12, color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
+                        <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
                         <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                           <div style={{
                             position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
