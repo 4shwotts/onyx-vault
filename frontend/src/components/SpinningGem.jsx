@@ -26,13 +26,15 @@ const LIGHT_ANGLE = -35; // degrees — a fixed light source roughly front-left
 
 // Flat-shades each face by how directly it faces the fixed light
 // source, so adjacent faces read as distinct planes catching light
-// differently, the actual mechanism that makes a rotating solid look
-// three-dimensional (a flat image can only ever fake this).
+// differently. Kept within the same metallic grey band the rest of
+// the chrome UI uses (roughly 30–65% lightness) rather than swinging
+// to near-black/near-white, which read as a jarring flip rather than
+// a metal surface catching light.
 function shadeFor(angle, baseLightness) {
   const rad = (angle - LIGHT_ANGLE) * (Math.PI / 180);
   const b = 0.5 + 0.5 * Math.cos(rad);
-  const lightness = baseLightness + b * (78 - baseLightness);
-  return `hsl(220, 6%, ${lightness}%)`;
+  const lightness = baseLightness + b * (62 - baseLightness);
+  return `hsl(220, 5%, ${lightness}%)`;
 }
 
 export default function SpinningGem({ size = SIZE_DEFAULT }) {
@@ -50,7 +52,7 @@ export default function SpinningGem({ size = SIZE_DEFAULT }) {
               height: L,
               marginLeft: -B / 2,
               marginTop: -L,
-              background: shadeFor(angle, 14),
+              background: shadeFor(angle, 32),
               // Reading right-to-left: rotateX tilts the face inward
               // first, translateZ pushes it out to the equator radius,
               // then rotateY places it at its compass position.
@@ -67,7 +69,7 @@ export default function SpinningGem({ size = SIZE_DEFAULT }) {
               height: L,
               marginLeft: -B / 2,
               marginTop: 0,
-              background: shadeFor(angle, 6),
+              background: shadeFor(angle, 24),
               // Mirrors the top face's tilt (negative theta) so the
               // apex converges downward instead of upward. If the
               // solid renders inverted or collapsed, this is the sign
