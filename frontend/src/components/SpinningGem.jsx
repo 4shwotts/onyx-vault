@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-// Flat fallback if OnyxGem.svg fails to load — same two-tone etched
-// look as the 3D version below, just static.
+// Flat fallback if OnyxGem.svg fails to load.
 function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,255,255,0.6)' }) {
   const gemPath = 'M12 3 L22 9 L12 21 L2 9 Z';
   const facetLine = 'M2 9 L22 9';
@@ -17,25 +16,21 @@ function OnyxMark({ size = 32, lineColor = '#101112', offsetColor = 'rgba(255,25
   );
 }
 
-const FACE_COUNT = 6;
-const FACE_ANGLE = 360 / FACE_COUNT;
-
-// Arranges six copies of the same etched OnyxGem mask around a small
-// hexagonal drum (each face pushed outward via translateZ at a fixed
-// rotateY offset), rather than spinning a single flat plane. A flat
-// plane goes edge-on and disappears at 90° — real physics for a flat
-// card, wrong for something meant to read as a solid faceted object.
-// With six faces spaced 60° apart, there's always at least one face
-// turned enough toward the viewer to stay visible through the whole
-// rotation, giving a genuine sense of volume with pure CSS.
+// A single etched OnyxGem mask that oscillates through a partial arc
+// (not a full 360° spin) via rotateY, with a shine pass timed to peak
+// at the steepest point of the turn. A flat plane spun through a full
+// rotation goes edge-on and vanishes at 90°, and layering multiple
+// copies to fake volume (a six-face "drum") turned into visual noise
+// at this icon size — both were the wrong technique for something this
+// small. Swinging back and forth within a range that never reaches
+// true edge-on stays legible throughout while still reading as
+// "turning to catch the light."
 export default function SpinningGem({ size = 36 }) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
     return <OnyxMark size={size} />;
   }
-
-  const radius = size * 0.32;
 
   return (
     <div
@@ -48,17 +43,9 @@ export default function SpinningGem({ size = 36 }) {
         onError={() => setFailed(true)}
         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
       />
-      <div className="gem-spin-inner">
-        {Array.from({ length: FACE_COUNT }).map((_, i) => (
-          <div
-            key={i}
-            className="gem-face"
-            style={{ transform: `rotateY(${i * FACE_ANGLE}deg) translateZ(${radius}px)` }}
-          >
-            <div className="gem-mask-layer gem-mask-back" />
-            <div className="gem-mask-layer gem-mask-front" />
-          </div>
-        ))}
+      <div className="gem-swing-inner">
+        <div className="gem-mask-layer gem-mask-back" />
+        <div className="gem-mask-layer gem-mask-front" />
         <div className="gem-mask-layer gem-shine" />
       </div>
     </div>

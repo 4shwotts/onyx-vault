@@ -187,29 +187,26 @@ body {
     inset 0 -2px 5px rgba(0, 0, 0, 0.4);
 }
 
-/* Spinning logo mark (see SpinningGem.jsx). Six copies of the etched
-   OnyxGem mask are arranged around a small hexagonal drum via
-   translateZ, rather than spinning a single flat plane — a flat plane
-   goes edge-on and disappears at 90°, this keeps at least one face
-   turned toward the viewer at all times so it reads as a solid object. */
+/* Spinning logo mark (see SpinningGem.jsx). A single etched OnyxGem
+   mask oscillates through a partial rotateY arc rather than a full
+   360° spin, so it never goes edge-on/invisible the way a flat plane
+   does at 90°. A separate shine layer brightens right at the peak of
+   the swing. */
 .gem-spin-wrap {
   perspective: 420px;
   position: relative;
 }
-@keyframes gemSpin {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(360deg); }
+@keyframes gemSwing {
+  0%, 100% { transform: rotateY(-38deg); }
+  50% { transform: rotateY(38deg); }
 }
-.gem-spin-inner {
+.gem-swing-inner {
   position: relative;
   width: 100%;
   height: 100%;
-  animation: gemSpin 4.5s linear infinite;
+  animation: gemSwing 3.2s ease-in-out infinite;
   transform-style: preserve-3d;
-}
-.gem-face {
-  position: absolute;
-  inset: 0;
+  backface-visibility: hidden;
 }
 .gem-mask-layer {
   position: absolute;
@@ -233,13 +230,13 @@ body {
 @keyframes gemShine {
   0%, 100% { opacity: 0; }
   45% { opacity: 0; }
-  50% { opacity: 0.75; }
+  50% { opacity: 0.8; }
   55% { opacity: 0; }
 }
 .gem-shine {
   background: #ffffff;
   mix-blend-mode: screen;
-  animation: gemShine 4.5s linear infinite;
+  animation: gemShine 3.2s ease-in-out infinite;
 }
 
 /* Liquid chrome card surface: one directional light-source gradient
