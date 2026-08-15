@@ -57,22 +57,22 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-const CARD_PADDING_Y = 16;
-const SUBHEADING_SIZE = 12;
+const CARD_PADDING_Y = 20;
+const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Fixed height, kept compact — a taller card looked good in isolation
-// but pushed Recent Transactions out of view. This size, combined with
-// tighter spacing throughout (all margins/padding/gaps on an 8px
-// scale), is what keeps everything on screen without a scrollbar.
-const CARD_HEIGHT = 320;
+// The category card no longer has a fixed height — it flexes to fill
+// whatever room is left between the balance section and Recent
+// Transactions (see the main layout below). This keeps it appropriately
+// sized on any viewport instead of leaving large empty gaps or being
+// forced to a size too small for its content.
 
 function getLegendSizing(count) {
-  if (count <= 6) return { fontSize: 14, swatch: 13 };
-  if (count <= 8) return { fontSize: 12, swatch: 11 };
-  if (count <= 10) return { fontSize: 11, swatch: 10 };
-  return { fontSize: 10, swatch: 9 };
+  if (count <= 6) return { fontSize: 15, swatch: 14 };
+  if (count <= 8) return { fontSize: 13, swatch: 12 };
+  if (count <= 10) return { fontSize: 12, swatch: 11 };
+  return { fontSize: 10.5, swatch: 10 };
 }
 
 const FAKE_ACCOUNTS = [
@@ -360,13 +360,10 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 8, minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
 
-          {/* Total Balance section trimmed to an 8px spacing scale
-              throughout — this, plus the smaller fixed card height
-              below, is what keeps Recent Transactions fully on screen
-              without the page needing to scroll. */}
-          <div>
+          {/* Total Balance section — fixed height, doesn't grow. */}
+          <div style={{ flexShrink: 0 }}>
             <p className="font-mono" style={{ fontSize: 13, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
@@ -424,8 +421,12 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          {/* Spend by Category — this block grows to fill whatever
+              space is actually left over between the balance section
+              and Recent Transactions, rather than the page distributing
+              unused space as large gaps between all three blocks. */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexShrink: 0 }}>
               <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
               {availableMonths.length > 0 && (
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
@@ -433,7 +434,7 @@ export default function Dashboard() {
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: `${CARD_PADDING_Y}px 24px`, height: CARD_HEIGHT,
+              borderRadius: 16, padding: `${CARD_PADDING_Y}px 26px`, flex: 1, minHeight: 0,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
               <div style={{
@@ -447,8 +448,8 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minHeight: 0 }}>
-                    <svg viewBox="0 0 120 120" style={{ width: 160, height: 160, flexShrink: 0, overflow: 'visible' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, flex: 1, minHeight: 0 }}>
+                    <svg viewBox="0 0 120 120" style={{ width: 185, height: 185, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
                           <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity="0.28" />
@@ -469,10 +470,10 @@ export default function Dashboard() {
                           }}
                         />
                       ))}
-                      <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="18" fill="#101112">
+                      <text x="60" y="57" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="20" fill="#101112">
                         £{displayTotalSpend.toFixed(0)}
                       </text>
-                      <text x="60" y="73" textAnchor="middle" className="font-mono" fontSize="8" fill="#3a3a3a" fontWeight="600">
+                      <text x="60" y="74" textAnchor="middle" className="font-mono" fontSize="9" fill="#3a3a3a" fontWeight="600">
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
@@ -539,46 +540,45 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 16px', position: 'relative', zIndex: 1 }} />
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 20px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 2: pace / projection */}
-                <div style={{ width: 152, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
+                <div style={{ width: 165, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
-                  <p className="font-mono" style={{ fontSize: 28, color: '#101112', margin: '8px 0 8px', fontWeight: 700, letterSpacing: -0.5 }}>
+                  <p className="font-mono" style={{ fontSize: 32, color: '#101112', margin: '10px 0 8px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
                   <p className="font-mono" style={{
-                    fontSize: 14, margin: 0, fontWeight: 700,
+                    fontSize: 15, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
                   }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <TrendArrow up={displayPctVsLastMonth >= 0} size={11} />
+                      <TrendArrow up={displayPctVsLastMonth >= 0} size={12} />
                       {Math.abs(displayPctVsLastMonth).toFixed(0)}%
                     </span>
                     {' '}vs last month
                   </p>
                   {displayIsCurrentMonth && (
-                    <p className="font-mono" style={{ fontSize: 12, color: '#777', margin: '8px 0 0' }}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#777', margin: '10px 0 0' }}>
                       Day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
                   )}
                   {insight && (
-                    <p className="font-mono" style={{ fontSize: 11, color: insightColor, margin: '8px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                    <p className="font-mono" style={{ fontSize: 11.5, color: insightColor, margin: '10px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
                       {insight.text}
                     </p>
                   )}
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 16px', position: 'relative', zIndex: 1 }} />
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 20px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars — rows kept
-                    thin (6px bars, 8px gaps) and the column clips
-                    overflow, so more categories still fit inside the
-                    smaller fixed card height without being clipped or
-                    bleeding into the section on the left. */}
+                {/* SECTION 3: this month vs last month bars — the
+                    column still clips overflow and truncates long
+                    names so a long category can't bleed across the
+                    divider into the section on the left. */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 8px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
@@ -590,10 +590,10 @@ export default function Dashboard() {
                       return (
                         <div key={arc.name} style={{ minWidth: 0 }}>
                           <p className="font-mono" style={{
-                            fontSize: Math.max(9, legendSizing.fontSize - 1), color: '#444', margin: '0 0 4px', fontWeight: 700,
+                            fontSize: Math.max(9.5, legendSizing.fontSize - 1), color: '#444', margin: '0 0 5px', fontWeight: 700,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{arc.name}</p>
-                          <div style={{ position: 'relative', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
+                          <div style={{ position: 'relative', height: 7, borderRadius: 3, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                             <div style={{
                               position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3,
                               width: `${curPct}%`, background: arc.color,
@@ -618,7 +618,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div>
+          {/* Recent Transactions — fixed height, doesn't grow. Sits
+              directly under the category card with a consistent 16px
+              gap rather than being pushed around by leftover space. */}
+          <div style={{ flexShrink: 0 }}>
             <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 8px', fontWeight: 700 }}>Recent Transactions</p>
             <div style={{ position: 'relative' }}>
               <div className="dark-surface" style={{
