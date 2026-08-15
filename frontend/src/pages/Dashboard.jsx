@@ -62,14 +62,12 @@ const SUBHEADING_SIZE = 14;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Card now grows further before capping so higher category counts get
-// genuine breathing room instead of everything just shrinking to fit
-// a fixed ceiling. The balance section above was tightened to make
-// room for this without the page needing to scroll.
-function getCardHeight(count) {
-  if (count <= 6) return 340;
-  return Math.min(460, 340 + (count - 6) * 20);
-}
+// Fixed height regardless of category count — the card no longer
+// shrinks on lighter months, so the layout stays consistent whether
+// it's a quiet month or one with every category populated. The
+// balance section above was tightened to make room for this without
+// the page needing to scroll.
+const CARD_HEIGHT = 460;
 
 function getLegendSizing(count) {
   if (count <= 6) return { fontSize: 16, swatch: 15 };
@@ -89,7 +87,6 @@ const FAKE_RECENT = [
   { id: 'ghost-2', description: 'Salary', amount: 2100 },
   { id: 'ghost-3', description: 'Netflix', amount: -11.99 },
   { id: 'ghost-4', description: 'Costa Coffee', amount: -4.50 },
-  { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
 ];
 
 function buildArcs(list, totalSpend, previousTotals, circumference) {
@@ -267,7 +264,6 @@ export default function Dashboard() {
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
-  const cardHeight = getCardHeight(categoryList.length || FAKE_CATEGORY_LIST.length);
 
   let previousCategoryTotals = {};
   let prevTotalSpend = 0;
@@ -340,7 +336,7 @@ export default function Dashboard() {
 
   const insight = hasSpendData ? buildInsight(arcs) : null;
 
-  const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
   const hasRecent = recent.length > 0;
   const currentAccountPage = accountPages[accountPage] || [];
 
@@ -438,7 +434,7 @@ export default function Dashboard() {
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: cardHeight,
+              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
               <div style={{
@@ -511,11 +507,6 @@ export default function Dashboard() {
                               £{arc.value.toFixed(0)}
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center' }}>
-                              {/* Both badge types now share the same
-                                  white pill background — only the text
-                                  colour (and, for NEW, a border) carries
-                                  the meaning, so they read as one
-                                  consistent badge system. */}
                               {arc.pct !== null && (
                                 <span className="font-mono" style={{
                                   fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
@@ -559,11 +550,6 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
-                  {/* The arrow now sits in its own inline-flex span with
-                      just the percentage figure, rather than as the
-                      first child of the whole (wrapping) paragraph —
-                      previously it centred against the full two-line
-                      block instead of sitting next to the number. */}
                   <p className="font-mono" style={{
                     fontSize: 16, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
@@ -589,23 +575,21 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 22px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars — an
-                    explicit "gap" combined with justify-content:
-                    space-evenly guarantees a minimum breathing room
-                    between every row's label and the bar above it, even
-                    at the tightest category counts, rather than relying
-                    purely on leftover space distribution. */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, height: '100%' }}>
+                {/* SECTION 3: this month vs last month bars */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: 10, flex: 1, minHeight: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: 10, flex: 1, minHeight: 0, minWidth: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
-                        <div key={arc.name}>
-                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 6px', fontWeight: 700 }}>{arc.name}</p>
+                        <div key={arc.name} style={{ minWidth: 0 }}>
+                          <p className="font-mono" style={{
+                            fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 6px', fontWeight: 700,
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                             <div style={{
                               position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
