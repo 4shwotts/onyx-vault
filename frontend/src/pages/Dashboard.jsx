@@ -57,24 +57,25 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-const CARD_PADDING_Y = 20;
-const SUBHEADING_SIZE = 13;
+const CARD_PADDING_Y = 24;
+const SUBHEADING_SIZE = 14;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Trimmed vertical space elsewhere on the page (see the Total Balance
-// section below) freed up enough slack to grow the card back up a bit
-// without reintroducing the page-level scrollbar from before.
+// Card now grows further before capping so higher category counts get
+// genuine breathing room instead of everything just shrinking to fit
+// a fixed ceiling. The balance section above was tightened to make
+// room for this without the page needing to scroll.
 function getCardHeight(count) {
-  if (count <= 6) return 300;
-  return Math.min(380, 300 + (count - 6) * 16);
+  if (count <= 6) return 340;
+  return Math.min(460, 340 + (count - 6) * 20);
 }
 
 function getLegendSizing(count) {
-  if (count <= 6) return { fontSize: 15, swatch: 14 };
-  if (count <= 8) return { fontSize: 13, swatch: 12 };
-  if (count <= 10) return { fontSize: 12, swatch: 11 };
-  return { fontSize: 10.5, swatch: 10 };
+  if (count <= 6) return { fontSize: 16, swatch: 15 };
+  if (count <= 8) return { fontSize: 14, swatch: 13 };
+  if (count <= 10) return { fontSize: 13, swatch: 12 };
+  return { fontSize: 11.5, swatch: 11 };
 }
 
 const FAKE_ACCOUNTS = [
@@ -356,7 +357,7 @@ export default function Dashboard() {
   const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
   return (
-    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+    <div style={{ height: '100vh', padding: '18px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
@@ -364,28 +365,28 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10, minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 8, minHeight: 0 }}>
 
-          {/* Total Balance section trimmed down (smaller top margins) —
-              the slack reclaimed here is what lets the category card
-              grow back to a comfortable size below without the page
-              needing to scroll. */}
+          {/* Total Balance section tightened further (smaller balance
+              figure, smaller account cards, tighter margins) — this is
+              what funds the taller category card below without the
+              page needing to scroll. */}
           <div>
-            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <p className="font-mono" style={{ fontSize: 14, color: '#333', margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
-            <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
+            <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
-            <div style={{ position: 'relative', minHeight: 100, marginTop: 12 }}>
+            <div style={{ position: 'relative', minHeight: 78, marginTop: 8 }}>
               <div
                 key={hasAccounts ? accountPage : 'empty'}
                 className={hasAccounts ? 'account-page-fade' : ''}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
-                  gap: 16,
+                  gap: 12,
                   filter: hasAccounts ? 'none' : 'blur(3px)',
                   opacity: hasAccounts ? 1 : 0.55,
                   pointerEvents: hasAccounts ? 'auto' : 'none',
@@ -393,10 +394,10 @@ export default function Dashboard() {
               >
                 {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
                   <div key={acc.id} className="dark-surface" style={darkCardStyle}>
-                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 6px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: 11, color: '#8a8a8a', margin: '0 0 5px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
                       {acc.name}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 25, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: 21, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
                       £<AnimatedNumber value={Number(acc.balance)} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                     </p>
                   </div>
@@ -416,7 +417,7 @@ export default function Dashboard() {
               )}
             </div>
             {hasAccounts && accountPages.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 5 }}>
                 {accountPages.map((_, i) => (
                   <span key={i} style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -451,8 +452,8 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 26, flex: 1, minHeight: 0 }}>
-                    <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 22, flex: 1, minHeight: 0 }}>
+                    <svg viewBox="0 0 120 120" style={{ width: 205, height: 205, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
                           <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity="0.28" />
@@ -473,10 +474,10 @@ export default function Dashboard() {
                           }}
                         />
                       ))}
-                      <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="19" fill="#101112">
+                      <text x="60" y="57" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="22" fill="#101112">
                         £{displayTotalSpend.toFixed(0)}
                       </text>
-                      <text x="60" y="74" textAnchor="middle" className="font-mono" fontSize="9" fill="#3a3a3a" fontWeight="600">
+                      <text x="60" y="75" textAnchor="middle" className="font-mono" fontSize="10" fill="#3a3a3a" fontWeight="600">
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
@@ -485,7 +486,7 @@ export default function Dashboard() {
                         const arrowSize = Math.max(9, legendSizing.fontSize - 4);
                         return (
                           <div key={arc.name} style={{
-                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
+                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 128px 50px 1fr`,
                             alignItems: 'center', columnGap: 10,
                           }}>
                             <span style={{
@@ -548,22 +549,30 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 22px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 2: pace / projection */}
-                <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
+                <div style={{ width: 175, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
                   <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
+                  {/* The arrow now sits in its own inline-flex span with
+                      just the percentage figure, rather than as the
+                      first child of the whole (wrapping) paragraph —
+                      previously it centred against the full two-line
+                      block instead of sitting next to the number. */}
                   <p className="font-mono" style={{
-                    fontSize: 16, margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5,
+                    fontSize: 16, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
                   }}>
-                    <TrendArrow up={displayPctVsLastMonth >= 0} size={12} />
-                    {Math.abs(displayPctVsLastMonth).toFixed(0)}% vs last month
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <TrendArrow up={displayPctVsLastMonth >= 0} size={12} />
+                      {Math.abs(displayPctVsLastMonth).toFixed(0)}%
+                    </span>
+                    {' '}vs last month
                   </p>
                   {displayIsCurrentMonth && (
                     <p className="font-mono" style={{ fontSize: 13, color: '#777', margin: '12px 0 0' }}>
@@ -578,7 +587,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 22px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 3: this month vs last month bars — an
                     explicit "gap" combined with justify-content:
@@ -664,5 +673,5 @@ export default function Dashboard() {
   );
 }
 
-const darkCardStyle = { borderRadius: 12, padding: '16px 18px' };
+const darkCardStyle = { borderRadius: 12, padding: '13px 16px' };
 const darkListStyle = { borderRadius: 14, padding: 4 };
