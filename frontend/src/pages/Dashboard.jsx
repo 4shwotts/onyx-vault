@@ -41,24 +41,18 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-// Fixed, never grows — the whole page must fit within the viewport with
-// no scrolling, so the card can't expand with category count the way an
-// earlier version did. Instead, content WITHIN the card distributes
-// itself to fill this fixed space (see CARD_INNER_HEIGHT usage below).
-const CARD_HEIGHT = 300;
-const CARD_PADDING_Y = 24;
+// Trimmed down from 300 to free up real gap space between the three
+// stacked sections below (card / recent transactions) — at 300 the
+// slack space-between had to work with was ~0, which is why sections
+// were touching with no visible gap.
+const CARD_HEIGHT = 260;
+const CARD_PADDING_Y = 22;
 const SECTION_HEADING_HEIGHT = 30;
-// The vertical space available for the actual legend/bar rows once the
-// card's own padding and each section's heading are subtracted.
 const CARD_INNER_HEIGHT = CARD_HEIGHT - CARD_PADDING_Y * 2 - SECTION_HEADING_HEIGHT;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Only shrinks font/swatch size once there are enough categories that
-// they wouldn't otherwise fit CARD_INNER_HEIGHT even fully spread out —
-// with few categories, space-evenly distribution (applied where this is
-// used) fills the height instead of shrinking anything.
 function getLegendSizing(count) {
   if (count <= 6) return { fontSize: 15, swatch: 14 };
   if (count <= 8) return { fontSize: 13, swatch: 12 };
@@ -66,10 +60,6 @@ function getLegendSizing(count) {
   return { fontSize: 10.5, swatch: 10 };
 }
 
-// Placeholder content shown, lightly blurred, behind an overlay message
-// whenever a section has no real data yet — keeps every chrome card at
-// its normal size and layout instead of the page reflowing around empty
-// space, while still reading clearly as "empty", not "broken."
 const FAKE_ACCOUNTS = [
   { id: 'ghost-1', name: 'Current', balance: 1240 },
   { id: 'ghost-2', name: 'Savings', balance: 3820 },
@@ -84,9 +74,6 @@ const FAKE_RECENT = [
   { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
 ];
 
-// Shared donut-arc math, pulled out so it can run once on real data and
-// once on placeholder data for the empty state, without duplicating the
-// reservation/scaling logic.
 function buildArcs(list, totalSpend, previousTotals, circumference) {
   const rawDashes = list.map(([, value]) => {
     const fraction = totalSpend > 0 ? value / totalSpend : 0;
@@ -113,8 +100,6 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   });
 }
 
-// Two tones so the pill blends into whichever surface it sits on top of,
-// rather than reading as a generic system alert box.
 function EmptyOverlay({ message, tone = 'light' }) {
   const isLight = tone === 'light';
   return (
@@ -135,8 +120,6 @@ function EmptyOverlay({ message, tone = 'light' }) {
   );
 }
 
-// Animates a number counting up from its previous value to a new target
-// whenever the target changes, instead of the figure just snapping in.
 function AnimatedNumber({ value, formatter, duration = 700 }) {
   const [display, setDisplay] = useState(value);
   const fromRef = useRef(value);
@@ -165,9 +148,6 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
   return <>{formatter(display)}</>;
 }
 
-// Skeleton layout matched structurally (same three sections, same
-// space-between distribution, same card height) to the real loaded
-// layout below, so there's no visible jump/resize once data arrives.
 function DashboardSkeleton() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
@@ -366,7 +346,7 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 18, minHeight: 0 }}>
 
           <div>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -427,18 +407,25 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
+            {/* Heading, insight, and month picker all on one row now —
+                the insight used to take its own line, this reclaims
+                that vertical space. Month picker gets a small top nudge
+                so it doesn't sit flush with the heading's cap-height. */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+                <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
+                {insight && (
+                  <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: 0, fontWeight: 600 }}>
+                    {insight.text}
+                  </p>
+                )}
+              </div>
               {availableMonths.length > 0 && (
-                <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
+                <div style={{ marginTop: 4 }}>
+                  <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
+                </div>
               )}
             </div>
-
-            {insight && (
-              <p className="font-mono" style={{ fontSize: 13, color: insightColor, margin: '0 0 10px', fontWeight: 600 }}>
-                {insight.text}
-              </p>
-            )}
 
             <div className="chrome-surface" style={{
               borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
@@ -450,10 +437,7 @@ export default function Dashboard() {
                 opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
-                {/* SECTION 1: donut + legend with trend arrows — legend
-                    rows use justify-content: space-evenly so a handful
-                    of categories spread out to fill CARD_INNER_HEIGHT
-                    instead of clumping at the top. */}
+                {/* SECTION 1: donut + legend with trend arrows */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0 }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     Categories
@@ -514,20 +498,31 @@ export default function Dashboard() {
                           <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700 }}>
                             £{arc.value.toFixed(0)}
                           </span>
-                          <span>
+                          <span style={{ display: 'flex', alignItems: 'center' }}>
                             {arc.pct !== null && (
+                              // Pill background behind the trend %, so it
+                              // reads clearly against the chrome surface
+                              // instead of floating unanchored text, and
+                              // vertical-centers against the £ value.
                               <span className="font-mono" style={{
-                                fontSize: Math.max(10, legendSizing.fontSize - 2), fontWeight: 700,
+                                fontSize: Math.max(10, legendSizing.fontSize - 2), fontWeight: 700, lineHeight: 1,
                                 color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
+                                background: arc.pct >= 0 ? 'rgba(184,50,50,0.10)' : 'rgba(31,138,82,0.10)',
+                                padding: '3px 6px', borderRadius: 5,
+                                display: 'inline-flex', alignItems: 'center',
                               }}>
                                 {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
                               </span>
                             )}
                             {arc.pct === null && arc.value > 0 && (
+                              // Brighter, more contrasting NEW pill —
+                              // same padding/position column as the
+                              // trend badges above.
                               <span className="font-mono" style={{
-                                fontSize: Math.max(10, legendSizing.fontSize - 3), color: '#333', fontWeight: 700,
-                                border: '1px solid #999', borderRadius: 4, padding: '1px 6px',
-                                background: 'rgba(0,0,0,0.05)',
+                                fontSize: Math.max(10, legendSizing.fontSize - 3), fontWeight: 700, lineHeight: 1,
+                                color: '#6c3483', background: '#f1e4f7',
+                                border: '1px solid #b98be0', borderRadius: 5, padding: '3px 6px',
+                                display: 'inline-flex', alignItems: 'center',
                               }}>
                                 NEW
                               </span>
@@ -566,10 +561,9 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars — same
-                    space-evenly treatment as the legend. */}
+                {/* SECTION 3: this month vs last month bars */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0 }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 2px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 12px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     This Month vs Last
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: CARD_INNER_HEIGHT }}>
@@ -578,7 +572,7 @@ export default function Dashboard() {
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
                         <div key={arc.name}>
-                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
+                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 6px', fontWeight: 700 }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                             <div style={{
                               position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,

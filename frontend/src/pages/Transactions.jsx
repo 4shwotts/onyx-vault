@@ -250,10 +250,10 @@ export default function Transactions() {
   const pagedTransactions = displayTransactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
-      <div className="page-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div className="page-container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <p className="font-mono" style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#000' }}>Transactions</p>
           <button onClick={() => setShowForm(!showForm)} className="font-mono" style={buttonStyle}>
@@ -341,10 +341,10 @@ export default function Transactions() {
         {loading ? (
           <p style={{ color: '#888', fontSize: 14 }}>Loading transactions...</p>
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+          <>
+            <div style={{ position: 'relative' }}>
               <div className="chrome-surface" style={{
-                borderRadius: 14, padding: '10px 8px', height: '100%', overflow: 'hidden',
+                borderRadius: 14, padding: '10px 8px',
                 filter: transactions.length === 0 ? 'blur(3px)' : 'none',
                 opacity: transactions.length === 0 ? 0.55 : 1,
                 pointerEvents: transactions.length === 0 ? 'none' : 'auto',
@@ -384,7 +384,7 @@ export default function Transactions() {
             </div>
 
             {transactions.length > PAGE_SIZE && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 16, flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 16 }}>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -406,7 +406,7 @@ export default function Transactions() {
                 </button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
