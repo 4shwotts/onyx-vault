@@ -7,7 +7,7 @@ import { getAvailableMonths } from '../utils/months';
 import { BASE_CATEGORIES } from '../constants/categories';
 import { CategoryIcon } from '../components/Icon';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 9;
 
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
@@ -67,13 +67,6 @@ export default function Transactions() {
   const [frequency, setFrequency] = useState('monthly');
   const [submitting, setSubmitting] = useState(false);
 
-  // The filter dropdown shows every category in BASE_CATEGORIES, not
-  // just ones that already have a real row in the database — a
-  // category with zero transactions so far should still be selectable
-  // (it'll correctly show "no transactions"), not silently missing
-  // from the list. Categories with a real id filter normally on the
-  // backend; ones with no id yet are virtual and always resolve to an
-  // empty result client-side, since there's genuinely nothing to fetch.
   const mergedFilterCategories = useMemo(() => {
     const realNames = new Set(categories.map((c) => c.name));
     const virtualOnes = BASE_CATEGORIES
@@ -105,8 +98,6 @@ export default function Transactions() {
         api.getRecurring(),
         api.getTransactions(),
       ]);
-      // A virtual category (no real DB rows yet) is always empty —
-      // skip trusting the unfiltered response and show nothing.
       setTransactions(isVirtualCategory ? [] : txs);
       setAccounts(accs);
       setCategories(cats);
@@ -125,17 +116,10 @@ export default function Transactions() {
     loadAll();
   }, [filterAccount, filterCategory, filterMonth]);
 
-  // Reset to page 1 whenever the filtered set changes, otherwise
-  // narrowing a filter could leave the view stranded on a now
-  // out-of-range page.
   useEffect(() => {
     setPage(1);
   }, [filterAccount, filterCategory, filterMonth]);
 
-  // Applies ?category=, ?account=, and ?month= from the URL (set by the
-  // Dashboard's clickable category legend, or the command palette) once
-  // categories/accounts are available to resolve names to ids. Runs
-  // only once, so manually changing filters afterward isn't overridden.
   useEffect(() => {
     if (appliedUrlFilters) return;
     if (categories.length === 0 && accounts.length === 0) return;
@@ -168,20 +152,12 @@ export default function Transactions() {
     }
   }, [categories, accounts, searchParams, appliedUrlFilters]);
 
-  // Opens the add-transaction form immediately if the command palette
-  // linked here with ?new=1, independent of data loading.
   useEffect(() => {
     if (searchParams.get('new') === '1') {
       setShowForm(true);
     }
   }, [searchParams]);
 
-  // Categories are created on the fly here rather than requiring the
-  // user to pre-create them: if the typed name matches an existing
-  // category (case-insensitive), reuse its id; otherwise create a new
-  // one. An empty category field always resolves to the real "Other"
-  // category rather than leaving category_id null — every transaction
-  // gets a genuine category, nothing is left "uncategorised."
   async function resolveCategoryId() {
     const typed = categoryName.trim() || 'Other';
     const existing = categories.find(
@@ -211,10 +187,6 @@ export default function Transactions() {
           frequency,
           start_date: date,
         });
-        // The backend processes the rule immediately if start_date is
-        // today or earlier (see recurring.js), returning
-        // first_transaction_created so the message here can reflect
-        // what actually happened rather than always saying "scheduled."
         if (created.first_transaction_created) {
           setInfo("Recurring rule created — today's payment was processed immediately. It'll run automatically from here on.");
         } else {
@@ -265,8 +237,6 @@ export default function Transactions() {
     }
   }
 
-  // Falls back to the raw string if the date can't be parsed, rather
-  // than letting a malformed value throw and break the whole row.
   function formatNextRun(dateStr) {
     try {
       return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -280,10 +250,10 @@ export default function Transactions() {
   const pagedTransactions = displayTransactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
       <Nav />
 
-      <div className="page-container">
+      <div className="page-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <p className="font-mono" style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#000' }}>Transactions</p>
           <button onClick={() => setShowForm(!showForm)} className="font-mono" style={buttonStyle}>
@@ -371,10 +341,10 @@ export default function Transactions() {
         {loading ? (
           <p style={{ color: '#888', fontSize: 14 }}>Loading transactions...</p>
         ) : (
-          <>
-            <div style={{ position: 'relative' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
               <div className="chrome-surface" style={{
-                borderRadius: 14, padding: '10px 8px',
+                borderRadius: 14, padding: '10px 8px', height: '100%', overflow: 'hidden',
                 filter: transactions.length === 0 ? 'blur(3px)' : 'none',
                 opacity: transactions.length === 0 ? 0.55 : 1,
                 pointerEvents: transactions.length === 0 ? 'none' : 'auto',
@@ -414,7 +384,7 @@ export default function Transactions() {
             </div>
 
             {transactions.length > PAGE_SIZE && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 16, flexShrink: 0 }}>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -423,7 +393,7 @@ export default function Transactions() {
                 >
                   Previous
                 </button>
-                <p className="font-mono" style={{ fontSize: 13, color: '#555', margin: 0 }}>
+                <p className="font-mono" style={{ fontSize: 13, color: '#555', margin: 0, minWidth: 90, textAlign: 'center' }}>
                   Page {page} of {totalPages}
                 </p>
                 <button
@@ -436,7 +406,7 @@ export default function Transactions() {
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -479,6 +449,6 @@ const buttonStyle = {
 };
 const pageButtonStyle = {
   background: '#141414', color: '#e5e5e5', border: '0.5px solid #333', borderRadius: 8,
-  padding: '9px 16px', fontSize: 13, fontWeight: 600,
+  padding: '9px 16px', fontSize: 13, fontWeight: 600, minWidth: 100, textAlign: 'center',
 };
 const formStyle = { background: '#141414', borderRadius: 12, padding: 22, marginBottom: 22, maxWidth: 360 };

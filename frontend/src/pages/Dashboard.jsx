@@ -41,19 +41,48 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-const BASE_CARD_HEIGHT = 300;
+// Fixed, never grows — the whole page must fit within the viewport with
+// no scrolling, so the card can't expand with category count the way an
+// earlier version did. Instead, content WITHIN the card distributes
+// itself to fill this fixed space (see CARD_INNER_HEIGHT usage below).
+const CARD_HEIGHT = 300;
+const CARD_PADDING_Y = 24;
+const SECTION_HEADING_HEIGHT = 30;
+// The vertical space available for the actual legend/bar rows once the
+// card's own padding and each section's heading are subtracted.
+const CARD_INNER_HEIGHT = CARD_HEIGHT - CARD_PADDING_Y * 2 - SECTION_HEADING_HEIGHT;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Grows the card's own height as more categories appear, rather than
-// keeping a fixed height and letting content scroll inside it — a
-// nested internal scrollbar reads as broken/cramped, a taller card
-// reads as the UI simply accommodating more data.
-function getCardHeight(count) {
-  if (count <= 6) return BASE_CARD_HEIGHT;
-  return Math.min(460, BASE_CARD_HEIGHT + (count - 6) * 26);
+// Only shrinks font/swatch size once there are enough categories that
+// they wouldn't otherwise fit CARD_INNER_HEIGHT even fully spread out —
+// with few categories, space-evenly distribution (applied where this is
+// used) fills the height instead of shrinking anything.
+function getLegendSizing(count) {
+  if (count <= 6) return { fontSize: 15, swatch: 14 };
+  if (count <= 8) return { fontSize: 13, swatch: 12 };
+  if (count <= 10) return { fontSize: 12, swatch: 11 };
+  return { fontSize: 10.5, swatch: 10 };
 }
+
+// Placeholder content shown, lightly blurred, behind an overlay message
+// whenever a section has no real data yet — keeps every chrome card at
+// its normal size and layout instead of the page reflowing around empty
+// space, while still reading clearly as "empty", not "broken."
+const FAKE_ACCOUNTS = [
+  { id: 'ghost-1', name: 'Current', balance: 1240 },
+  { id: 'ghost-2', name: 'Savings', balance: 3820 },
+  { id: 'ghost-3', name: 'Credit', balance: -180 },
+];
+const FAKE_CATEGORY_LIST = [['Groceries', 420], ['Transport', 180], ['Dining', 150], ['Utilities', 95], ['Shopping', 60]];
+const FAKE_RECENT = [
+  { id: 'ghost-1', description: 'Tesco', amount: -42.10 },
+  { id: 'ghost-2', description: 'Salary', amount: 2100 },
+  { id: 'ghost-3', description: 'Netflix', amount: -11.99 },
+  { id: 'ghost-4', description: 'Costa Coffee', amount: -4.50 },
+  { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
+];
 
 // Shared donut-arc math, pulled out so it can run once on real data and
 // once on placeholder data for the empty state, without duplicating the
@@ -84,36 +113,6 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   });
 }
 
-// Every category with spend this month is shown — nothing is hidden or
-// folded into an aggregate bucket. Text size and row spacing shrink as
-// the count grows, and the card itself grows taller (see
-// getCardHeight), so any realistic number of categories fits with no
-// internal scrolling at all.
-function getLegendSizing(count) {
-  if (count <= 4) return { fontSize: 15, gap: 13, swatch: 14 };
-  if (count <= 6) return { fontSize: 13, gap: 10, swatch: 12 };
-  if (count <= 8) return { fontSize: 12, gap: 8, swatch: 11 };
-  return { fontSize: 11, gap: 6, swatch: 10 };
-}
-
-// Placeholder content shown, lightly blurred, behind an overlay message
-// whenever a section has no real data yet — keeps every chrome card at
-// its normal size and layout instead of the page reflowing around empty
-// space, while still reading clearly as "empty", not "broken."
-const FAKE_ACCOUNTS = [
-  { id: 'ghost-1', name: 'Current', balance: 1240 },
-  { id: 'ghost-2', name: 'Savings', balance: 3820 },
-  { id: 'ghost-3', name: 'Credit', balance: -180 },
-];
-const FAKE_CATEGORY_LIST = [['Groceries', 420], ['Transport', 180], ['Dining', 150], ['Utilities', 95], ['Shopping', 60]];
-const FAKE_RECENT = [
-  { id: 'ghost-1', description: 'Tesco', amount: -42.10 },
-  { id: 'ghost-2', description: 'Salary', amount: 2100 },
-  { id: 'ghost-3', description: 'Netflix', amount: -11.99 },
-  { id: 'ghost-4', description: 'Costa Coffee', amount: -4.50 },
-  { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
-];
-
 // Two tones so the pill blends into whichever surface it sits on top of,
 // rather than reading as a generic system alert box.
 function EmptyOverlay({ message, tone = 'light' }) {
@@ -137,9 +136,7 @@ function EmptyOverlay({ message, tone = 'light' }) {
 }
 
 // Animates a number counting up from its previous value to a new target
-// whenever the target changes, instead of the figure just snapping in —
-// real polish signal, cheap to add, makes the dashboard feel alive on
-// load and whenever the selected month changes.
+// whenever the target changes, instead of the figure just snapping in.
 function AnimatedNumber({ value, formatter, duration = 700 }) {
   const [display, setDisplay] = useState(value);
   const fromRef = useRef(value);
@@ -153,7 +150,6 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
 
     function tick(now) {
       const t = Math.min(1, (now - start) / duration);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - t, 3);
       setDisplay(from + (to - from) * eased);
       if (t < 1) {
@@ -169,9 +165,9 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
   return <>{formatter(display)}</>;
 }
 
-// Skeleton layout shown while the initial fetch is in flight — shaped
-// like the real page instead of a bare "Loading..." string, so the
-// dashboard feels like it's about to appear rather than being blank.
+// Skeleton layout matched structurally (same three sections, same
+// space-between distribution, same card height) to the real loaded
+// layout below, so there's no visible jump/resize once data arrives.
 function DashboardSkeleton() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
@@ -186,7 +182,7 @@ function DashboardSkeleton() {
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ height: BASE_CARD_HEIGHT, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: CARD_HEIGHT, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 10 }} />
@@ -236,8 +232,6 @@ export default function Dashboard() {
     setMonthTransactions(allTransactions.filter((t) => t.date >= monthRange.from && t.date <= monthRange.to));
   }, [selectedMonth, allTransactions]);
 
-  // Triggers the donut/bar reveal animation shortly after data is ready,
-  // rather than everything being visible on the very first paint.
   useEffect(() => {
     if (loading) return;
     const timer = setTimeout(() => setChartsMounted(true), 60);
@@ -247,9 +241,6 @@ export default function Dashboard() {
   const hasAccounts = accounts.length > 0;
   const accountPages = chunkArray(accounts, ACCOUNTS_PER_PAGE);
 
-  // Auto-rotate through pages of accounts (fixes the layout compression
-  // that happened when many accounts wrapped into extra grid rows on
-  // this fixed-height page — now it's always a single row, just cycling).
   useEffect(() => {
     if (accountPages.length <= 1) return;
     const interval = setInterval(() => {
@@ -270,25 +261,15 @@ export default function Dashboard() {
   monthTransactions
     .filter((t) => Number(t.amount) < 0)
     .forEach((t) => {
-      // Backend always assigns a real "Other" category rather than
-      // leaving category_name null, this fallback only guards against
-      // any legacy/edge-case rows that still slip through blank.
       const name = t.category_name || 'Other';
       categoryTotals[name] = (categoryTotals[name] || 0) + Math.abs(Number(t.amount));
     });
 
-  // Every category with spend this month, sorted by amount — no cap,
-  // no folding into an aggregate bucket.
   const categoryList = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
-  const cardHeight = getCardHeight(categoryList.length || FAKE_CATEGORY_LIST.length);
 
-  // --- Previous-month comparison data, computed directly from the
-  // selected month via date math (not array adjacency), so it's correct
-  // even if the previous month had zero transactions or doesn't appear
-  // in the months dropdown at all.
   let previousCategoryTotals = {};
   let prevTotalSpend = 0;
   let selYear, selMonthNum, daysInSelMonth, isCurrentMonth, daysElapsed;
@@ -328,8 +309,6 @@ export default function Dashboard() {
   const fakeTotalSpend = FAKE_CATEGORY_LIST.reduce((sum, [, v]) => sum + v, 0);
   const fakeArcs = buildArcs(FAKE_CATEGORY_LIST, fakeTotalSpend, {}, circumference);
 
-  // Everything below picks real data when it exists, otherwise the fake
-  // placeholder set, so the card layout never has to branch structurally.
   const displayArcs = hasSpendData ? arcs : fakeArcs;
   const displayTotalSpend = hasSpendData ? totalSpend : fakeTotalSpend;
   const displayProjected = hasSpendData ? projectedTotal : displayTotalSpend * 1.5;
@@ -340,9 +319,6 @@ export default function Dashboard() {
   const displayMaxBarVal = hasSpendData ? Math.max(1, ...arcs.map((a) => a.value), ...arcs.map((a) => a.prevValue)) : Math.max(1, ...fakeArcs.map((a) => a.value));
   const displayShortMonthLabel = hasSpendData ? shortMonthLabel : 'THIS MONTH';
 
-  // Picks the single most useful thing to say about this month's spend:
-  // the biggest increase, otherwise the biggest decrease, otherwise a
-  // plain summary.
   function buildInsight(insightArcs) {
     const withIncrease = insightArcs.filter((a) => a.pct !== null && a.pct > 5).sort((a, b) => b.pct - a.pct);
     const withDecrease = insightArcs.filter((a) => a.pct !== null && a.pct < -5).sort((a, b) => a.pct - b.pct);
@@ -372,8 +348,6 @@ export default function Dashboard() {
   const revealArcs = chartsMounted ? displayArcs : displayArcs.map((a) => ({ ...a, dashArray: `0 ${circumference}` }));
   const revealMaxBar = chartsMounted ? displayMaxBarVal : displayMaxBarVal;
 
-  // Only the legend NAME text is interactive — the donut arcs and the
-  // comparison bars are display-only.
   function goToCategory(name) {
     if (!hasSpendData) return;
     const params = new URLSearchParams({ category: name });
@@ -384,7 +358,7 @@ export default function Dashboard() {
   const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
@@ -392,7 +366,7 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
 
           <div>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -467,7 +441,7 @@ export default function Dashboard() {
             )}
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: '24px 28px', height: cardHeight,
+              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
               <div style={{
@@ -476,12 +450,15 @@ export default function Dashboard() {
                 opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
-                {/* SECTION 1: donut + legend with trend arrows */}
+                {/* SECTION 1: donut + legend with trend arrows — legend
+                    rows use justify-content: space-evenly so a handful
+                    of categories spread out to fill CARD_INNER_HEIGHT
+                    instead of clumping at the top. */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0 }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 26 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 26, height: CARD_INNER_HEIGHT }}>
                     <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -510,7 +487,7 @@ export default function Dashboard() {
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: legendSizing.gap }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: '100%' }}>
                       {displayArcs.map((arc) => (
                         <div key={arc.name} style={{
                           display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
@@ -589,32 +566,35 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: Math.max(8, legendSizing.gap - 2), position: 'relative', zIndex: 1, minWidth: 0 }}>
+                {/* SECTION 3: this month vs last month bars — same
+                    space-evenly treatment as the legend. */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0 }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 2px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     This Month vs Last
                   </p>
-                  {displayArcs.map((arc) => {
-                    const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
-                    const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
-                    return (
-                      <div key={arc.name}>
-                        <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
-                        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
-                          <div style={{
-                            position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
-                            width: `${curPct}%`, background: arc.color,
-                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15)',
-                            transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
-                          }} />
-                          <div style={{
-                            position: 'absolute', top: -2, bottom: -2, width: 2,
-                            left: `calc(${prevPct}% - 1px)`, background: 'rgba(0,0,0,0.55)', borderRadius: 1,
-                          }} title={`Last month: £${arc.prevValue.toFixed(0)}`} />
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: CARD_INNER_HEIGHT }}>
+                    {displayArcs.map((arc) => {
+                      const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
+                      const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
+                      return (
+                        <div key={arc.name}>
+                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 3px', fontWeight: 700 }}>{arc.name}</p>
+                          <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
+                            <div style={{
+                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
+                              width: `${curPct}%`, background: arc.color,
+                              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15)',
+                              transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
+                            }} />
+                            <div style={{
+                              position: 'absolute', top: -2, bottom: -2, width: 2,
+                              left: `calc(${prevPct}% - 1px)`, background: 'rgba(0,0,0,0.55)', borderRadius: 1,
+                            }} title={`Last month: £${arc.prevValue.toFixed(0)}`} />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
