@@ -41,18 +41,20 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-const CARD_PADDING_Y = 22;
+const CARD_PADDING_Y = 20;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Grows the card as more categories appear, rather than a fixed height
-// that clips rows — a previous version's fixed inner-height math
-// didn't account for real subheading margins, which is what clipped
-// the last couple of rows when there were 7-8 categories.
+// Grows the card modestly as more categories appear — pulled back from
+// an earlier version that grew too aggressively and forced a page-level
+// scrollbar even at typical category counts. Base size matches what
+// fit comfortably before; the flex-fill layout inside (not a manual
+// height calculation) is what actually prevents row clipping now, so
+// this doesn't need to grow much to stay safe.
 function getCardHeight(count) {
-  if (count <= 6) return 320;
-  return Math.min(480, 320 + (count - 6) * 26);
+  if (count <= 6) return 260;
+  return Math.min(340, 260 + (count - 6) * 16);
 }
 
 function getLegendSizing(count) {
@@ -164,7 +166,7 @@ function DashboardSkeleton() {
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ height: 320, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: 260, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 10 }} />
@@ -341,7 +343,7 @@ export default function Dashboard() {
   const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
@@ -349,7 +351,7 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12, minHeight: 0 }}>
 
           <div>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -359,7 +361,7 @@ export default function Dashboard() {
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
-            <div style={{ position: 'relative', minHeight: 108, marginTop: 18 }}>
+            <div style={{ position: 'relative', minHeight: 108, marginTop: 16 }}>
               <div
                 key={hasAccounts ? accountPage : 'empty'}
                 className={hasAccounts ? 'account-page-fade' : ''}
@@ -397,7 +399,7 @@ export default function Dashboard() {
               )}
             </div>
             {hasAccounts && accountPages.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
                 {accountPages.map((_, i) => (
                   <span key={i} style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -410,7 +412,7 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
               {availableMonths.length > 0 && (
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
@@ -427,12 +429,7 @@ export default function Dashboard() {
                 opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
-                {/* SECTION 1: donut + legend — stretches to the row's
-                    full height via alignItems:'stretch' on the parent,
-                    then the legend rows themselves fill whatever's left
-                    after the "Categories" subheading via flex:1, so
-                    spacing is always correct regardless of card height
-                    or subheading size, no manual math to get wrong. */}
+                {/* SECTION 1: donut + legend */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     Categories
@@ -525,10 +522,7 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 2: pace / projection — insight text now
-                    lives at the bottom of this column, using space
-                    that was previously empty rather than eating a
-                    whole extra row up in the header. */}
+                {/* SECTION 2: pace / projection */}
                 <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
@@ -548,7 +542,7 @@ export default function Dashboard() {
                     </p>
                   )}
                   {insight && (
-                    <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: '18px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                    <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: '14px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
                       {insight.text}
                     </p>
                   )}
@@ -557,10 +551,9 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars — same
-                    flex:1-fills-remaining-space approach as section 1. */}
+                {/* SECTION 3: this month vs last month bars */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, height: '100%' }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 12px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', flex: 1, minHeight: 0 }}>
@@ -569,7 +562,7 @@ export default function Dashboard() {
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
                         <div key={arc.name}>
-                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 6px', fontWeight: 700 }}>{arc.name}</p>
+                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 5px', fontWeight: 700 }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                             <div style={{
                               position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
@@ -596,7 +589,7 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 10px', fontWeight: 700 }}>Recent Transactions</p>
+            <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 8px', fontWeight: 700 }}>Recent Transactions</p>
             <div style={{ position: 'relative' }}>
               <div className="dark-surface" style={{
                 ...darkListStyle,
