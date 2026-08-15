@@ -41,17 +41,19 @@ const GAP = 14;
 // gap), regardless of how small its actual value is — this is what keeps
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
-// Trimmed down from 300 to free up real gap space between the three
-// stacked sections below (card / recent transactions) — at 300 the
-// slack space-between had to work with was ~0, which is why sections
-// were touching with no visible gap.
-const CARD_HEIGHT = 260;
 const CARD_PADDING_Y = 22;
-const SECTION_HEADING_HEIGHT = 30;
-const CARD_INNER_HEIGHT = CARD_HEIGHT - CARD_PADDING_Y * 2 - SECTION_HEADING_HEIGHT;
 const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
+
+// Grows the card as more categories appear, rather than a fixed height
+// that clips rows — a previous version's fixed inner-height math
+// didn't account for real subheading margins, which is what clipped
+// the last couple of rows when there were 7-8 categories.
+function getCardHeight(count) {
+  if (count <= 6) return 320;
+  return Math.min(480, 320 + (count - 6) * 26);
+}
 
 function getLegendSizing(count) {
   if (count <= 6) return { fontSize: 15, swatch: 14 };
@@ -162,7 +164,7 @@ function DashboardSkeleton() {
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ height: CARD_HEIGHT, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: 320, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 10 }} />
@@ -249,6 +251,7 @@ export default function Dashboard() {
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
+  const cardHeight = getCardHeight(categoryList.length || FAKE_CATEGORY_LIST.length);
 
   let previousCategoryTotals = {};
   let prevTotalSpend = 0;
@@ -338,7 +341,7 @@ export default function Dashboard() {
   const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
   return (
-    <div style={{ height: '100vh', padding: '24px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
@@ -346,7 +349,7 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 18, minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
           <div>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -407,42 +410,34 @@ export default function Dashboard() {
           </div>
 
           <div>
-            {/* Heading, insight, and month picker all on one row now —
-                the insight used to take its own line, this reclaims
-                that vertical space. Month picker gets a small top nudge
-                so it doesn't sit flush with the heading's cap-height. */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-                <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
-                {insight && (
-                  <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: 0, fontWeight: 600 }}>
-                    {insight.text}
-                  </p>
-                )}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
               {availableMonths.length > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
-                </div>
+                <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
               )}
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
+              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: cardHeight,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
               <div style={{
-                display: 'flex', width: '100%', gap: 0,
+                display: 'flex', width: '100%', height: '100%', gap: 0,
                 filter: hasSpendData ? 'none' : 'blur(3px)',
                 opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
-                {/* SECTION 1: donut + legend with trend arrows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0 }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                {/* SECTION 1: donut + legend — stretches to the row's
+                    full height via alignItems:'stretch' on the parent,
+                    then the legend rows themselves fill whatever's left
+                    after the "Categories" subheading via flex:1, so
+                    spacing is always correct regardless of card height
+                    or subheading size, no manual math to get wrong. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0, height: '100%' }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 26, height: CARD_INNER_HEIGHT }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 26, flex: 1, minHeight: 0 }}>
                     <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -500,28 +495,21 @@ export default function Dashboard() {
                           </span>
                           <span style={{ display: 'flex', alignItems: 'center' }}>
                             {arc.pct !== null && (
-                              // Pill background behind the trend %, so it
-                              // reads clearly against the chrome surface
-                              // instead of floating unanchored text, and
-                              // vertical-centers against the £ value.
                               <span className="font-mono" style={{
-                                fontSize: Math.max(10, legendSizing.fontSize - 2), fontWeight: 700, lineHeight: 1,
+                                fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
                                 color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                                 background: arc.pct >= 0 ? 'rgba(184,50,50,0.10)' : 'rgba(31,138,82,0.10)',
-                                padding: '3px 6px', borderRadius: 5,
+                                padding: '4px 8px', borderRadius: 5,
                                 display: 'inline-flex', alignItems: 'center',
                               }}>
                                 {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
                               </span>
                             )}
                             {arc.pct === null && arc.value > 0 && (
-                              // Brighter, more contrasting NEW pill —
-                              // same padding/position column as the
-                              // trend badges above.
                               <span className="font-mono" style={{
-                                fontSize: Math.max(10, legendSizing.fontSize - 3), fontWeight: 700, lineHeight: 1,
+                                fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
                                 color: '#6c3483', background: '#f1e4f7',
-                                border: '1px solid #b98be0', borderRadius: 5, padding: '3px 6px',
+                                border: '1px solid #b98be0', borderRadius: 5, padding: '4px 8px',
                                 display: 'inline-flex', alignItems: 'center',
                               }}>
                                 NEW
@@ -537,8 +525,11 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 2: pace / projection */}
-                <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1 }}>
+                {/* SECTION 2: pace / projection — insight text now
+                    lives at the bottom of this column, using space
+                    that was previously empty rather than eating a
+                    whole extra row up in the header. */}
+                <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
@@ -556,17 +547,23 @@ export default function Dashboard() {
                       Day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
                   )}
+                  {insight && (
+                    <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: '18px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                      {insight.text}
+                    </p>
+                  )}
                 </div>
 
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0 }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 12px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                {/* SECTION 3: this month vs last month bars — same
+                    flex:1-fills-remaining-space approach as section 1. */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, height: '100%' }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 12px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: CARD_INNER_HEIGHT }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', flex: 1, minHeight: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
