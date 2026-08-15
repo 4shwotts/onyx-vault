@@ -36,6 +36,22 @@ function chunkArray(arr, size) {
   return chunks;
 }
 
+// Small filled-triangle SVG, sized in px to exactly match the number
+// it sits next to — replaces the unicode ↑/↓ glyphs, which render at
+// inconsistent visual heights/weights depending on font and size and
+// were reading as visually "off" against the numeral beside them.
+function TrendArrow({ up, size }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" style={{ display: 'block', flexShrink: 0 }}>
+      {up ? (
+        <path d="M5 1.2 L9 8.2 L1 8.2 Z" fill="currentColor" />
+      ) : (
+        <path d="M5 8.8 L9 1.8 L1 1.8 Z" fill="currentColor" />
+      )}
+    </svg>
+  );
+}
+
 const GAP = 14;
 // Every category reserves at least this much circumference (visible arc +
 // gap), regardless of how small its actual value is — this is what keeps
@@ -46,15 +62,12 @@ const SUBHEADING_SIZE = 13;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
-// Grows the card modestly as more categories appear — pulled back from
-// an earlier version that grew too aggressively and forced a page-level
-// scrollbar even at typical category counts. Base size matches what
-// fit comfortably before; the flex-fill layout inside (not a manual
-// height calculation) is what actually prevents row clipping now, so
-// this doesn't need to grow much to stay safe.
+// Trimmed vertical space elsewhere on the page (see the Total Balance
+// section below) freed up enough slack to grow the card back up a bit
+// without reintroducing the page-level scrollbar from before.
 function getCardHeight(count) {
-  if (count <= 6) return 260;
-  return Math.min(340, 260 + (count - 6) * 16);
+  if (count <= 6) return 300;
+  return Math.min(380, 300 + (count - 6) * 16);
 }
 
 function getLegendSizing(count) {
@@ -157,7 +170,7 @@ function DashboardSkeleton() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
       <div>
         <div className="skeleton-block" style={{ width: 140, height: 15, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ width: 220, height: 40, marginBottom: 18 }} />
+        <div className="skeleton-block" style={{ width: 220, height: 40, marginBottom: 14 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {[0, 1, 2].map((i) => (
             <div key={i} className="skeleton-block-dark" style={{ height: 76, borderRadius: 12 }} />
@@ -165,11 +178,11 @@ function DashboardSkeleton() {
         </div>
       </div>
       <div>
-        <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ height: 260, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 8 }} />
+        <div className="skeleton-block" style={{ height: 300, borderRadius: 16 }} />
       </div>
       <div>
-        <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 10 }} />
+        <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 8 }} />
         <div className="skeleton-block-dark" style={{ height: 240, borderRadius: 14 }} />
       </div>
     </div>
@@ -351,17 +364,21 @@ export default function Dashboard() {
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12, minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10, minHeight: 0 }}>
 
+          {/* Total Balance section trimmed down (smaller top margins) —
+              the slack reclaimed here is what lets the category card
+              grow back to a comfortable size below without the page
+              needing to scroll. */}
           <div>
-            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
             <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
-            <div style={{ position: 'relative', minHeight: 108, marginTop: 16 }}>
+            <div style={{ position: 'relative', minHeight: 100, marginTop: 12 }}>
               <div
                 key={hasAccounts ? accountPage : 'empty'}
                 className={hasAccounts ? 'account-page-fade' : ''}
@@ -376,10 +393,10 @@ export default function Dashboard() {
               >
                 {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
                   <div key={acc.id} className="dark-surface" style={darkCardStyle}>
-                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 8px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 6px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
                       {acc.name}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 27, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: 25, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
                       £<AnimatedNumber value={Number(acc.balance)} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                     </p>
                   </div>
@@ -399,7 +416,7 @@ export default function Dashboard() {
               )}
             </div>
             {hasAccounts && accountPages.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
                 {accountPages.map((_, i) => (
                   <span key={i} style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -464,57 +481,68 @@ export default function Dashboard() {
                       </text>
                     </svg>
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: '100%' }}>
-                      {displayArcs.map((arc) => (
-                        <div key={arc.name} style={{
-                          display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
-                          alignItems: 'center', columnGap: 10,
-                        }}>
-                          <span style={{
-                            width: legendSizing.swatch, height: legendSizing.swatch, borderRadius: 4, background: arc.color,
-                            border: '0.5px solid rgba(0,0,0,0.18)',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
-                          }} />
-                          <span
-                            onClick={() => goToCategory(arc.name)}
-                            className="font-mono"
-                            style={{
-                              fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700,
-                              cursor: 'pointer',
-                              textDecoration: 'underline',
-                              textDecorationColor: 'rgba(0,0,0,0.15)',
-                              textUnderlineOffset: 3,
-                            }}
-                          >
-                            {arc.name}
-                          </span>
-                          <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700 }}>
-                            £{arc.value.toFixed(0)}
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center' }}>
-                            {arc.pct !== null && (
-                              <span className="font-mono" style={{
-                                fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
-                                color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
-                                background: arc.pct >= 0 ? 'rgba(184,50,50,0.10)' : 'rgba(31,138,82,0.10)',
-                                padding: '4px 8px', borderRadius: 5,
-                                display: 'inline-flex', alignItems: 'center',
-                              }}>
-                                {arc.pct >= 0 ? '↑' : '↓'}{Math.abs(arc.pct).toFixed(0)}%
-                              </span>
-                            )}
-                            {arc.pct === null && arc.value > 0 && (
-                              <span className="font-mono" style={{
-                                fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
-                                color: '#6c3483', background: '#f1e4f7',
-                                border: '1px solid #b98be0', borderRadius: 5, padding: '4px 8px',
-                                display: 'inline-flex', alignItems: 'center',
-                              }}>
-                                NEW
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                      {displayArcs.map((arc) => {
+                        const arrowSize = Math.max(9, legendSizing.fontSize - 4);
+                        return (
+                          <div key={arc.name} style={{
+                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
+                            alignItems: 'center', columnGap: 10,
+                          }}>
+                            <span style={{
+                              width: legendSizing.swatch, height: legendSizing.swatch, borderRadius: 4, background: arc.color,
+                              border: '0.5px solid rgba(0,0,0,0.18)',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+                            }} />
+                            <span
+                              onClick={() => goToCategory(arc.name)}
+                              className="font-mono"
+                              style={{
+                                fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700,
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                textDecorationColor: 'rgba(0,0,0,0.15)',
+                                textUnderlineOffset: 3,
+                              }}
+                            >
+                              {arc.name}
+                            </span>
+                            <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700 }}>
+                              £{arc.value.toFixed(0)}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center' }}>
+                              {/* Both badge types now share the same
+                                  white pill background — only the text
+                                  colour (and, for NEW, a border) carries
+                                  the meaning, so they read as one
+                                  consistent badge system. */}
+                              {arc.pct !== null && (
+                                <span className="font-mono" style={{
+                                  fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
+                                  color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
+                                  background: 'rgba(255,255,255,0.85)',
+                                  border: '0.5px solid rgba(0,0,0,0.08)',
+                                  padding: '4px 8px', borderRadius: 5,
+                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                }}>
+                                  <TrendArrow up={arc.pct >= 0} size={arrowSize} />
+                                  {Math.abs(arc.pct).toFixed(0)}%
+                                </span>
+                              )}
+                              {arc.pct === null && arc.value > 0 && (
+                                <span className="font-mono" style={{
+                                  fontSize: Math.max(11, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
+                                  color: '#6c3483',
+                                  background: 'rgba(255,255,255,0.85)',
+                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px',
+                                  display: 'inline-flex', alignItems: 'center',
+                                }}>
+                                  NEW
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -531,10 +559,11 @@ export default function Dashboard() {
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
                   <p className="font-mono" style={{
-                    fontSize: 16, margin: 0, fontWeight: 700,
+                    fontSize: 16, margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
                   }}>
-                    {displayPctVsLastMonth >= 0 ? '↑' : '↓'} {Math.abs(displayPctVsLastMonth).toFixed(0)}% vs last month
+                    <TrendArrow up={displayPctVsLastMonth >= 0} size={12} />
+                    {Math.abs(displayPctVsLastMonth).toFixed(0)}% vs last month
                   </p>
                   {displayIsCurrentMonth && (
                     <p className="font-mono" style={{ fontSize: 13, color: '#777', margin: '12px 0 0' }}>
@@ -551,18 +580,23 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars */}
+                {/* SECTION 3: this month vs last month bars — an
+                    explicit "gap" combined with justify-content:
+                    space-evenly guarantees a minimum breathing room
+                    between every row's label and the bar above it, even
+                    at the tightest category counts, rather than relying
+                    purely on leftover space distribution. */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', flex: 1, minHeight: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: 10, flex: 1, minHeight: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
                         <div key={arc.name}>
-                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 5px', fontWeight: 700 }}>{arc.name}</p>
+                          <p className="font-mono" style={{ fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 6px', fontWeight: 700 }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                             <div style={{
                               position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
