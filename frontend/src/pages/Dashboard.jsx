@@ -364,21 +364,21 @@ export default function Dashboard() {
 
           {/* Total Balance section — fixed height, doesn't grow. */}
           <div style={{ flexShrink: 0 }}>
-            <p className="font-mono" style={{ fontSize: 13, color: '#333', margin: '0 0 8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
-            <p className="font-mono" style={{ fontSize: 32, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
+            <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
-            <div style={{ position: 'relative', minHeight: 64, marginTop: 8 }}>
+            <div style={{ position: 'relative', minHeight: 100, marginTop: 12 }}>
               <div
                 key={hasAccounts ? accountPage : 'empty'}
                 className={hasAccounts ? 'account-page-fade' : ''}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
-                  gap: 8,
+                  gap: 16,
                   filter: hasAccounts ? 'none' : 'blur(3px)',
                   opacity: hasAccounts ? 1 : 0.55,
                   pointerEvents: hasAccounts ? 'auto' : 'none',
@@ -386,10 +386,10 @@ export default function Dashboard() {
               >
                 {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
                   <div key={acc.id} className="dark-surface" style={darkCardStyle}>
-                    <p className="font-mono" style={{ fontSize: 10, color: '#8a8a8a', margin: '0 0 4px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 6px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
                       {acc.name}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 18, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: 25, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
                       £<AnimatedNumber value={Number(acc.balance)} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                     </p>
                   </div>
@@ -409,7 +409,7 @@ export default function Dashboard() {
               )}
             </div>
             {hasAccounts && accountPages.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
                 {accountPages.map((_, i) => (
                   <span key={i} style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -434,7 +434,7 @@ export default function Dashboard() {
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: `${CARD_PADDING_Y}px 26px`, flex: 1, minHeight: 0,
+              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, flex: 1, minHeight: 0,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
             }}>
               <div style={{
@@ -444,12 +444,12 @@ export default function Dashboard() {
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
                 {/* SECTION 1: donut + legend */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', zIndex: 1, flexShrink: 0, height: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, flex: 1, minHeight: 0 }}>
-                    <svg viewBox="0 0 120 120" style={{ width: 185, height: 185, flexShrink: 0, overflow: 'visible' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 26, flex: 1, minHeight: 0 }}>
+                    <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
                           <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity="0.28" />
@@ -470,7 +470,7 @@ export default function Dashboard() {
                           }}
                         />
                       ))}
-                      <text x="60" y="57" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="20" fill="#101112">
+                      <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="19" fill="#101112">
                         £{displayTotalSpend.toFixed(0)}
                       </text>
                       <text x="60" y="74" textAnchor="middle" className="font-mono" fontSize="9" fill="#3a3a3a" fontWeight="600">
@@ -482,8 +482,8 @@ export default function Dashboard() {
                         const arrowSize = Math.max(9, legendSizing.fontSize - 4);
                         return (
                           <div key={arc.name} style={{
-                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 118px 46px 1fr`,
-                            alignItems: 'center', columnGap: 8,
+                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
+                            alignItems: 'center', columnGap: 10,
                           }}>
                             <span style={{
                               width: legendSizing.swatch, height: legendSizing.swatch, borderRadius: 4, background: arc.color,
@@ -540,18 +540,18 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 20px', position: 'relative', zIndex: 1 }} />
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 2: pace / projection */}
-                <div style={{ width: 165, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
+                <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
-                  <p className="font-mono" style={{ fontSize: 32, color: '#101112', margin: '10px 0 8px', fontWeight: 700, letterSpacing: -0.5 }}>
+                  <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
                   <p className="font-mono" style={{
-                    fontSize: 15, margin: 0, fontWeight: 700,
+                    fontSize: 16, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
                   }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -561,41 +561,41 @@ export default function Dashboard() {
                     {' '}vs last month
                   </p>
                   {displayIsCurrentMonth && (
-                    <p className="font-mono" style={{ fontSize: 12, color: '#777', margin: '10px 0 0' }}>
+                    <p className="font-mono" style={{ fontSize: 13, color: '#777', margin: '12px 0 0' }}>
                       Day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
                   )}
                   {insight && (
-                    <p className="font-mono" style={{ fontSize: 11.5, color: insightColor, margin: '10px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                    <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: '14px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
                       {insight.text}
                     </p>
                   )}
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 20px', position: 'relative', zIndex: 1 }} />
+                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 3: this month vs last month bars — the
                     column still clips overflow and truncates long
                     names so a long category can't bleed across the
                     divider into the section on the left. */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: '100%' }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 8px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
+                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: 8, flex: 1, minHeight: 0, minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: 10, flex: 1, minHeight: 0, minWidth: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
                         <div key={arc.name} style={{ minWidth: 0 }}>
                           <p className="font-mono" style={{
-                            fontSize: Math.max(9.5, legendSizing.fontSize - 1), color: '#444', margin: '0 0 5px', fontWeight: 700,
+                            fontSize: Math.max(10, legendSizing.fontSize - 1), color: '#444', margin: '0 0 6px', fontWeight: 700,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{arc.name}</p>
-                          <div style={{ position: 'relative', height: 7, borderRadius: 3, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
+                          <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
                             <div style={{
-                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3,
+                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 4,
                               width: `${curPct}%`, background: arc.color,
                               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15)',
                               transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
@@ -635,11 +635,11 @@ export default function Dashboard() {
                   const dotColor = isExpense ? '#e05a5a' : '#3fbf7f';
                   return (
                     <div key={t.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px',
                       borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
                       position: 'relative', zIndex: 1,
                     }}>
-                      <p className="font-mono" style={{ fontSize: 15, color: '#eef1f3', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <p className="font-mono" style={{ fontSize: 15, color: '#eef1f3', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{
                           width: 6, height: 6, borderRadius: '50%', background: dotColor,
                           boxShadow: `0 0 6px ${dotColor}99`, flexShrink: 0,
@@ -663,5 +663,5 @@ export default function Dashboard() {
   );
 }
 
-const darkCardStyle = { borderRadius: 12, padding: '8px 16px' };
+const darkCardStyle = { borderRadius: 12, padding: '16px 18px' };
 const darkListStyle = { borderRadius: 14, padding: 4 };
