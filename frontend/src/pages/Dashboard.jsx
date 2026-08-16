@@ -59,17 +59,17 @@ const GAP = 14;
 // tiny categories from crowding into each other.
 const MIN_SLOT = GAP + 6;
 const CARD_PADDING_Y = 20;
-const SUBHEADING_SIZE = 13;
+const SUBHEADING_SIZE = 15;
 const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
 // Fixed card height — doesn't grow or shrink with category count or
-// viewport. To keep every category legible and fully contained at this
-// fixed size, both the legend and the "This Month vs Last" bar rows
-// scale their own spacing down at higher counts (getLegendSizing /
-// getBarSizing) rather than the card itself resizing or content
-// getting clipped.
-const CARD_HEIGHT = 300;
+// viewport. Bumped slightly (300 -> 320) to make room for larger
+// subheading and bar-row text without reintroducing the Shopping /
+// Subscriptions clipping that happened at the smaller size. The legend
+// and bar rows still scale their own spacing down at higher category
+// counts (getLegendSizing / getBarSizing).
+const CARD_HEIGHT = 320;
 
 function getLegendSizing(count) {
   if (count <= 6) return { fontSize: 16, swatch: 15 };
@@ -81,13 +81,14 @@ function getLegendSizing(count) {
 // Bar rows carry their own label font size (rather than reusing
 // legendSizing) since the "This Month vs Last" column has noticeably
 // less vertical room than the legend column for the same category
-// count — reusing legend's larger font was what caused Shopping and
-// Subscriptions to get clipped at 8-9 categories.
+// count. Sizes bumped up a step from before for readability, budgeted
+// against the taller CARD_HEIGHT so 8-9 categories still fit without
+// clipping.
 function getBarSizing(count) {
-  if (count <= 6) return { gap: 10, barHeight: 8, labelMB: 6, labelFontSize: 13 };
-  if (count <= 8) return { gap: 6, barHeight: 6, labelMB: 4, labelFontSize: 11 };
-  if (count <= 10) return { gap: 4, barHeight: 4, labelMB: 2, labelFontSize: 10 };
-  return { gap: 3, barHeight: 3, labelMB: 2, labelFontSize: 9 };
+  if (count <= 6) return { gap: 11, barHeight: 8, labelMB: 6, labelFontSize: 14 };
+  if (count <= 8) return { gap: 6, barHeight: 6, labelMB: 4, labelFontSize: 12 };
+  if (count <= 10) return { gap: 4, barHeight: 5, labelMB: 3, labelFontSize: 11 };
+  return { gap: 3, barHeight: 4, labelMB: 2, labelFontSize: 10 };
 }
 
 const FAKE_ACCOUNTS = [
@@ -101,6 +102,7 @@ const FAKE_RECENT = [
   { id: 'ghost-2', description: 'Salary', amount: 2100 },
   { id: 'ghost-3', description: 'Netflix', amount: -11.99 },
   { id: 'ghost-4', description: 'Costa Coffee', amount: -4.50 },
+  { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
 ];
 
 function buildArcs(list, totalSpend, previousTotals, circumference) {
@@ -351,7 +353,7 @@ export default function Dashboard() {
 
   const insight = hasSpendData ? buildInsight(arcs) : null;
 
-  const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
+  const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
   const hasRecent = recent.length > 0;
   const currentAccountPage = accountPages[accountPage] || [];
 
@@ -437,10 +439,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Spend by Category — fixed-size card (CARD_HEIGHT), the
-              same size regardless of category count or viewport. The
-              legend and bar rows inside scale their own spacing down
-              at higher counts instead of the card itself resizing. */}
+          {/* Spend by Category — fixed-size card (CARD_HEIGHT). */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
@@ -452,11 +451,7 @@ export default function Dashboard() {
             <div className="chrome-surface" style={{
               borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
-              // .chrome-surface's default shadow (0 20px 44px) is tuned
-              // for wider spacing than the 16px gap this card now sits
-              // in — at this gap it bled visibly into Recent
-              // Transactions below. Scaled down here, same character.
-              boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 8px 20px rgba(0,0,0,0.28), 0 3px 8px rgba(0,0,0,0.18)',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 2px 6px rgba(0,0,0,0.18)',
             }}>
               <div style={{
                 display: 'flex', width: '100%', height: '100%', gap: 0,
@@ -501,6 +496,7 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: '100%' }}>
                       {displayArcs.map((arc) => {
                         const arrowSize = Math.max(9, legendSizing.fontSize - 4);
+                        const badgeWidth = Math.round(legendSizing.fontSize * 3.6);
                         return (
                           <div key={arc.name} style={{
                             display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
@@ -534,7 +530,7 @@ export default function Dashboard() {
                                   color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                                   background: '#ffffff',
                                   border: '0.5px solid rgba(0,0,0,0.08)',
-                                  padding: '4px 8px', borderRadius: 5, minWidth: 46, justifyContent: 'center',
+                                  padding: '4px 8px', borderRadius: 5, width: badgeWidth, justifyContent: 'center',
                                   display: 'inline-flex', alignItems: 'center', gap: 4,
                                 }}>
                                   <TrendArrow up={arc.pct >= 0} size={arrowSize} />
@@ -546,7 +542,7 @@ export default function Dashboard() {
                                   fontSize: Math.max(10, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
                                   color: '#6c3483',
                                   background: '#ffffff',
-                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px', minWidth: 46, justifyContent: 'center',
+                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px', width: badgeWidth, justifyContent: 'center',
                                   display: 'inline-flex', alignItems: 'center',
                                 }}>
                                   NEW
@@ -571,11 +567,6 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
-                  {/* The arrow sits in its own inline-flex span with
-                      just the percentage figure, rather than as the
-                      first child of the whole (wrapping) paragraph —
-                      that previously centred against the full two-line
-                      block instead of sitting next to the number. */}
                   <p className="font-mono" style={{
                     fontSize: 16, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
@@ -601,13 +592,7 @@ export default function Dashboard() {
                 {/* divider */}
                 <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
 
-                {/* SECTION 3: this month vs last month bars — gap, bar
-                    height and label margin all scale down at higher
-                    category counts (getBarSizing) so more rows still
-                    fit inside the fixed card height instead of
-                    overflowing or forcing the card to grow. The column
-                    still clips overflow and truncates long names as a
-                    safety net. */}
+                {/* SECTION 3: this month vs last month bars */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
@@ -692,9 +677,9 @@ export default function Dashboard() {
 
 const darkCardStyle = {
   borderRadius: 12, padding: '16px 18px',
-  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 8px 18px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.25)',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
 };
 const darkListStyle = {
   borderRadius: 14, padding: 4,
-  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 8px 18px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.25)',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
 };

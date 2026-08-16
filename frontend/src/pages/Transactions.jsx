@@ -7,7 +7,10 @@ import { getAvailableMonths } from '../utils/months';
 import { BASE_CATEGORIES } from '../constants/categories';
 import { CategoryIcon } from '../components/Icon';
 
-const PAGE_SIZE = 9;
+// Dropped from 9 to 8 per page, and paired with tighter row/section
+// padding below — at 9 the list plus the Previous/Next controls sat
+// just past the bottom of the viewport, forcing a slight scroll.
+const PAGE_SIZE = 8;
 
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
@@ -250,18 +253,18 @@ export default function Transactions() {
   const pagedTransactions = displayTransactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: '20px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       <div className="page-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <p className="font-mono" style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#000' }}>Transactions</p>
           <button onClick={() => setShowForm(!showForm)} className="font-mono" style={buttonStyle}>
             {showForm ? 'Cancel' : '+ Add'}
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
           <select value={filterAccount} onChange={(e) => setFilterAccount(e.target.value)} className="font-mono" style={chipStyle}>
             <option value="">All Accounts</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -315,11 +318,11 @@ export default function Transactions() {
         {info && <p style={{ color: 'var(--accent)', fontSize: 14, marginBottom: 14 }}>{info}</p>}
 
         {recurring.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 10px', fontWeight: 700 }}>Transactions Recurring</p>
+          <div style={{ marginBottom: 20 }}>
+            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700 }}>Transactions Recurring</p>
             <div className="dark-surface" style={darkListStyle}>
               {recurring.map((r, i) => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderBottom: i < recurring.length - 1 ? '0.5px solid #262626' : 'none', position: 'relative', zIndex: 1 }}>
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', borderBottom: i < recurring.length - 1 ? '0.5px solid #262626' : 'none', position: 'relative', zIndex: 1 }}>
                   <div>
                     <p className="font-mono" style={{ fontSize: 16, color: '#e5e5e5', margin: '0 0 2px', fontWeight: 600 }}>{r.description || '(no description)'}</p>
                     <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: 0 }}>
@@ -351,7 +354,7 @@ export default function Transactions() {
               }}>
                 {pagedTransactions.map((t, i) => (
                   <div key={t.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px',
                     borderBottom: i < pagedTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -384,7 +387,7 @@ export default function Transactions() {
             </div>
 
             {transactions.length > PAGE_SIZE && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 12 }}>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
