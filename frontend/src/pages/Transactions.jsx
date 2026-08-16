@@ -10,7 +10,7 @@ import { CategoryIcon } from '../components/Icon';
 // Dropped from 9 to 8 per page, and paired with tighter row/section
 // padding below — at 9 the list plus the Previous/Next controls sat
 // just past the bottom of the viewport, forcing a slight scroll.
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 9;
 
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },

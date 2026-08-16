@@ -85,8 +85,8 @@ function getLegendSizing(count) {
 // against the taller CARD_HEIGHT so 8-9 categories still fit without
 // clipping.
 function getBarSizing(count) {
-  if (count <= 6) return { gap: 11, barHeight: 8, labelMB: 6, labelFontSize: 14 };
-  if (count <= 8) return { gap: 6, barHeight: 6, labelMB: 4, labelFontSize: 12 };
+  if (count <= 6) return { gap: 11, barHeight: 9, labelMB: 6, labelFontSize: 14 };
+  if (count <= 8) return { gap: 6, barHeight: 7, labelMB: 4, labelFontSize: 12 };
   if (count <= 10) return { gap: 4, barHeight: 5, labelMB: 3, labelFontSize: 11 };
   return { gap: 3, barHeight: 4, labelMB: 2, labelFontSize: 10 };
 }
@@ -382,14 +382,14 @@ export default function Dashboard() {
 
           {/* Total Balance section. */}
           <div>
-            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
             <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
-            <div style={{ position: 'relative', minHeight: 100, marginTop: 12 }}>
+            <div style={{ position: 'relative', minHeight: 84, marginTop: 8 }}>
               <div
                 key={hasAccounts ? accountPage : 'empty'}
                 className={hasAccounts ? 'account-page-fade' : ''}
@@ -495,8 +495,9 @@ export default function Dashboard() {
                     </svg>
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: '100%' }}>
                       {displayArcs.map((arc) => {
-                        const arrowSize = Math.max(9, legendSizing.fontSize - 4);
-                        const badgeWidth = Math.round(legendSizing.fontSize * 3.6);
+                        const arrowSize = Math.max(10, legendSizing.fontSize - 3);
+                        const badgeFontSize = legendSizing.fontSize - 1;
+                        const badgeWidth = Math.round(badgeFontSize * 4.2);
                         return (
                           <div key={arc.name} style={{
                             display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
@@ -526,12 +527,12 @@ export default function Dashboard() {
                             <span style={{ display: 'flex', alignItems: 'center' }}>
                               {arc.pct !== null && (
                                 <span className="font-mono" style={{
-                                  fontSize: Math.max(10, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
+                                  fontSize: badgeFontSize, fontWeight: 700, lineHeight: 1,
                                   color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                                   background: '#ffffff',
                                   border: '0.5px solid rgba(0,0,0,0.08)',
                                   padding: '4px 8px', borderRadius: 5, width: badgeWidth, justifyContent: 'center',
-                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                  display: 'inline-flex', alignItems: 'center', gap: 2,
                                 }}>
                                   <TrendArrow up={arc.pct >= 0} size={arrowSize} />
                                   {Math.abs(arc.pct).toFixed(0)}%
@@ -539,7 +540,7 @@ export default function Dashboard() {
                               )}
                               {arc.pct === null && arc.value > 0 && (
                                 <span className="font-mono" style={{
-                                  fontSize: Math.max(10, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
+                                  fontSize: badgeFontSize, fontWeight: 700, lineHeight: 1,
                                   color: '#6c3483',
                                   background: '#ffffff',
                                   border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px', width: badgeWidth, justifyContent: 'center',
@@ -571,7 +572,7 @@ export default function Dashboard() {
                     fontSize: 16, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
                   }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                       <TrendArrow up={displayPctVsLastMonth >= 0} size={13} />
                       {Math.abs(displayPctVsLastMonth).toFixed(0)}%
                     </span>
@@ -647,7 +648,7 @@ export default function Dashboard() {
                   const dotColor = isExpense ? '#e05a5a' : '#3fbf7f';
                   return (
                     <div key={t.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px',
                       borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
                       position: 'relative', zIndex: 1,
                     }}>
@@ -680,6 +681,6 @@ const darkCardStyle = {
   boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
 };
 const darkListStyle = {
-  borderRadius: 14, padding: 4,
+  borderRadius: 14, padding: 4, overflow: 'hidden',
   boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
 };
