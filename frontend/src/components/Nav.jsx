@@ -39,15 +39,19 @@ export default function Nav() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Search now lives inside the same dark-surface bar as the nav
+          links and logout, rather than as its own separate floating
+          chip — one cohesive bar on the right, matching the single
+          chrome-surface unit the logo already forms on the left. */}
+      <div className="dark-surface" style={{ display: 'flex', alignItems: 'center', borderRadius: 12, padding: 6, gap: 2 }}>
         <span
           onClick={openCommandPalette}
           className="font-mono"
           title="Search (Ctrl/Cmd + K)"
           style={{
-            fontSize: 11, letterSpacing: 0.5, color: '#7a7a7a', cursor: 'pointer',
-            padding: '7px 12px', borderRadius: 8, background: '#141414', border: '0.5px solid #262626',
-            fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 13, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-secondary)',
+            cursor: 'pointer', padding: '10px 16px', borderRadius: 8, fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: 1,
           }}
         >
           Search
@@ -59,41 +63,41 @@ export default function Nav() {
           </span>
         </span>
 
-        <div className="dark-surface" style={{ display: 'flex', alignItems: 'center', borderRadius: 12, padding: 6, gap: 2 }}>
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) => `font-mono${isActive ? ' nav-tab-active' : ''}`}
-              style={({ isActive }) => ({
-                fontSize: 13,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-                textDecoration: 'none',
-                padding: '10px 20px',
-                borderRadius: 8,
-                color: isActive ? '#fff' : 'var(--text-secondary)',
-                background: isActive ? '#2a2f33' : 'transparent',
-                borderTop: isActive ? '0.5px solid #565c60' : '0.5px solid transparent',
-                fontWeight: 600,
-                position: 'relative',
-                zIndex: 1,
-              })}
-            >
-              {link.label}
-            </NavLink>
-          ))}
+        <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
 
-          <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
-
-          <span
-            onClick={handleLogout}
-            className="font-mono"
-            style={{ fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1 }}
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) => `font-mono${isActive ? ' nav-tab-active' : ''}`}
+            style={({ isActive }) => ({
+              fontSize: 13,
+              letterSpacing: 0.5,
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              padding: '10px 20px',
+              borderRadius: 8,
+              color: isActive ? '#fff' : 'var(--text-secondary)',
+              background: isActive ? '#2a2f33' : 'transparent',
+              borderTop: isActive ? '0.5px solid #565c60' : '0.5px solid transparent',
+              fontWeight: 600,
+              position: 'relative',
+              zIndex: 1,
+            })}
           >
-            Logout
-          </span>
-        </div>
+            {link.label}
+          </NavLink>
+        ))}
+
+        <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
+
+        <span
+          onClick={handleLogout}
+          className="font-mono"
+          style={{ fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1 }}
+        >
+          Logout
+        </span>
       </div>
     </div>
   );
