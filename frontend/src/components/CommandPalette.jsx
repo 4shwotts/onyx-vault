@@ -102,13 +102,23 @@ export default function CommandPalette() {
 
   const lowerQuery = query.trim().toLowerCase();
 
-  const matchedCommands = [...staticCommands, ...accountCommands, ...categoryCommands].filter((c) =>
-    lowerQuery === '' || c.label.toLowerCase().includes(lowerQuery)
-  );
+  // With an empty query, only the small fixed set of static commands
+  // shows (Navigate + Quick actions) — accounts and categories are
+  // left out of the default view entirely, since dumping every
+  // account and category by default doesn't scale (a handful of
+  // accounts is fine, but a growing category list would eventually
+  // bury the useful stuff) and isn't any more specific or useful than
+  // just browsing the Accounts/Transactions filter dropdowns directly.
+  // They only surface once there's an actual query to match against.
+  const matchedCommands = lowerQuery === ''
+    ? staticCommands
+    : [...staticCommands, ...accountCommands, ...categoryCommands].filter((c) =>
+        c.label.toLowerCase().includes(lowerQuery)
+      );
 
-  // Only search transaction descriptions once the person has actually
-  // typed something meaningful — showing every transaction by default
-  // would drown out the more useful navigation/action commands.
+  // Transaction descriptions only search once the person has typed
+  // something meaningful — showing every transaction by default would
+  // drown out the more useful navigation/action commands.
   const matchedTransactions = lowerQuery.length >= 2
     ? transactions
         .filter((t) => (t.description || '').toLowerCase().includes(lowerQuery))
