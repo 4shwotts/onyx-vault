@@ -36,9 +36,8 @@ function chunkArray(arr, size) {
   return chunks;
 }
 
-// Stroked chevron rather than a solid triangle — the filled shape read
-// as visually heavy and sat oddly against the numeral it accompanies.
-// A thin rounded-stroke chevron centres more naturally against text.
+// Stroked chevron, bolder stroke than before for visibility against
+// both the white pill badges and plain text.
 function TrendArrow({ up, size }) {
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" style={{ display: 'block', flexShrink: 0 }}>
@@ -46,7 +45,7 @@ function TrendArrow({ up, size }) {
         d={up ? 'M2.5 7.5 L6 4 L9.5 7.5' : 'M2.5 4.5 L6 8 L9.5 4.5'}
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2.3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -65,24 +64,30 @@ const ACCOUNTS_PER_PAGE = 3;
 const ACCOUNT_ROTATE_MS = 4000;
 
 // Fixed card height — doesn't grow or shrink with category count or
-// viewport. To keep every category legible and contained at this fixed
-// size, the "This Month vs Last" bar rows use getBarSizing (below) to
-// compress their spacing at higher counts, the same way the legend
-// already compresses its font size via getLegendSizing.
+// viewport. To keep every category legible and fully contained at this
+// fixed size, both the legend and the "This Month vs Last" bar rows
+// scale their own spacing down at higher counts (getLegendSizing /
+// getBarSizing) rather than the card itself resizing or content
+// getting clipped.
 const CARD_HEIGHT = 300;
 
 function getLegendSizing(count) {
-  if (count <= 6) return { fontSize: 15, swatch: 14 };
-  if (count <= 8) return { fontSize: 13, swatch: 12 };
-  if (count <= 10) return { fontSize: 12, swatch: 11 };
-  return { fontSize: 10.5, swatch: 10 };
+  if (count <= 6) return { fontSize: 16, swatch: 15 };
+  if (count <= 8) return { fontSize: 14, swatch: 13 };
+  if (count <= 10) return { fontSize: 13, swatch: 12 };
+  return { fontSize: 11.5, swatch: 11 };
 }
 
+// Bar rows carry their own label font size (rather than reusing
+// legendSizing) since the "This Month vs Last" column has noticeably
+// less vertical room than the legend column for the same category
+// count — reusing legend's larger font was what caused Shopping and
+// Subscriptions to get clipped at 8-9 categories.
 function getBarSizing(count) {
-  if (count <= 6) return { gap: 10, barHeight: 8, labelMB: 6 };
-  if (count <= 8) return { gap: 8, barHeight: 7, labelMB: 5 };
-  if (count <= 10) return { gap: 6, barHeight: 6, labelMB: 4 };
-  return { gap: 4, barHeight: 5, labelMB: 3 };
+  if (count <= 6) return { gap: 10, barHeight: 8, labelMB: 6, labelFontSize: 13 };
+  if (count <= 8) return { gap: 6, barHeight: 6, labelMB: 4, labelFontSize: 11 };
+  if (count <= 10) return { gap: 4, barHeight: 4, labelMB: 2, labelFontSize: 10 };
+  return { gap: 3, barHeight: 3, labelMB: 2, labelFontSize: 9 };
 }
 
 const FAKE_ACCOUNTS = [
@@ -447,6 +452,11 @@ export default function Dashboard() {
             <div className="chrome-surface" style={{
               borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
+              // .chrome-surface's default shadow (0 20px 44px) is tuned
+              // for wider spacing than the 16px gap this card now sits
+              // in — at this gap it bled visibly into Recent
+              // Transactions below. Scaled down here, same character.
+              boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 8px 20px rgba(0,0,0,0.28), 0 3px 8px rgba(0,0,0,0.18)',
             }}>
               <div style={{
                 display: 'flex', width: '100%', height: '100%', gap: 0,
@@ -524,7 +534,7 @@ export default function Dashboard() {
                                   color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                                   background: '#ffffff',
                                   border: '0.5px solid rgba(0,0,0,0.08)',
-                                  padding: '4px 8px', borderRadius: 5,
+                                  padding: '4px 8px', borderRadius: 5, minWidth: 46, justifyContent: 'center',
                                   display: 'inline-flex', alignItems: 'center', gap: 4,
                                 }}>
                                   <TrendArrow up={arc.pct >= 0} size={arrowSize} />
@@ -536,7 +546,7 @@ export default function Dashboard() {
                                   fontSize: Math.max(10, legendSizing.fontSize - 1), fontWeight: 700, lineHeight: 1,
                                   color: '#6c3483',
                                   background: '#ffffff',
-                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px',
+                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px', minWidth: 46, justifyContent: 'center',
                                   display: 'inline-flex', alignItems: 'center',
                                 }}>
                                   NEW
@@ -561,14 +571,17 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
-                  <p className="font-mono" style={{ fontSize: 15, margin: 0, fontWeight: 700, color: '#444' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      background: '#ffffff', border: '0.5px solid rgba(0,0,0,0.08)',
-                      padding: '4px 9px', borderRadius: 5,
-                      color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
-                    }}>
-                      <TrendArrow up={displayPctVsLastMonth >= 0} size={12} />
+                  {/* The arrow sits in its own inline-flex span with
+                      just the percentage figure, rather than as the
+                      first child of the whole (wrapping) paragraph —
+                      that previously centred against the full two-line
+                      block instead of sitting next to the number. */}
+                  <p className="font-mono" style={{
+                    fontSize: 16, margin: 0, fontWeight: 700,
+                    color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
+                  }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <TrendArrow up={displayPctVsLastMonth >= 0} size={13} />
                       {Math.abs(displayPctVsLastMonth).toFixed(0)}%
                     </span>
                     {' '}vs last month
@@ -606,7 +619,7 @@ export default function Dashboard() {
                       return (
                         <div key={arc.name} style={{ minWidth: 0 }}>
                           <p className="font-mono" style={{
-                            fontSize: Math.max(9, legendSizing.fontSize - 1), color: '#444', margin: `0 0 ${barSizing.labelMB}px`, fontWeight: 700,
+                            fontSize: barSizing.labelFontSize, color: '#444', margin: `0 0 ${barSizing.labelMB}px`, fontWeight: 700,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: barSizing.barHeight, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
@@ -677,5 +690,11 @@ export default function Dashboard() {
   );
 }
 
-const darkCardStyle = { borderRadius: 12, padding: '16px 18px' };
-const darkListStyle = { borderRadius: 14, padding: 4 };
+const darkCardStyle = {
+  borderRadius: 12, padding: '16px 18px',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 8px 18px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.25)',
+};
+const darkListStyle = {
+  borderRadius: 14, padding: 4,
+  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 8px 18px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.25)',
+};
