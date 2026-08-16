@@ -181,23 +181,23 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
 
 function DashboardSkeleton() {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
       <div>
-        <div className="skeleton-block" style={{ width: 140, height: 15, marginBottom: 10 }} />
-        <div className="skeleton-block" style={{ width: 220, height: 40, marginBottom: 14 }} />
+        <div className="skeleton-block" style={{ width: 140, height: 15, marginBottom: 4 }} />
+        <div className="skeleton-block" style={{ width: 220, height: 44, marginBottom: 8 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton-block-dark" style={{ height: 76, borderRadius: 12 }} />
+            <div key={i} className="skeleton-block-dark" style={{ height: 84, borderRadius: 12 }} />
           ))}
         </div>
       </div>
       <div>
-        <div className="skeleton-block" style={{ width: 180, height: 16, marginBottom: 8 }} />
-        <div className="skeleton-block" style={{ height: 300, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ width: 180, height: 18, marginBottom: 8 }} />
+        <div className="skeleton-block" style={{ height: CARD_HEIGHT, borderRadius: 16 }} />
       </div>
       <div>
-        <div className="skeleton-block" style={{ width: 170, height: 16, marginBottom: 8 }} />
-        <div className="skeleton-block-dark" style={{ height: 240, borderRadius: 14 }} />
+        <div className="skeleton-block" style={{ width: 170, height: 18, marginBottom: 8 }} />
+        <div className="skeleton-block-dark" style={{ height: 250, borderRadius: 14 }} />
       </div>
     </div>
   );
@@ -648,7 +648,7 @@ export default function Dashboard() {
                   const dotColor = isExpense ? '#e05a5a' : '#3fbf7f';
                   return (
                     <div key={t.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px',
                       borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
                       position: 'relative', zIndex: 1,
                     }}>
