@@ -15,6 +15,8 @@ export default function Nav() {
   async function handleLogout() {
     try {
       await api.logout();
+    } catch (err) {
+      console.error('Logout request failed:', err);
     } finally {
       navigate('/login');
     }
@@ -39,12 +41,9 @@ export default function Nav() {
         </p>
       </div>
 
-      {/* Search now lives inside the same dark-surface bar as the nav
-          links and logout, rather than as its own separate floating
-          chip — one cohesive bar on the right, matching the single
-          chrome-surface unit the logo already forms on the left. */}
       <div className="dark-surface" style={{ display: 'flex', alignItems: 'center', borderRadius: 12, padding: 6, gap: 2 }}>
-        <span
+        <button
+          type="button"
           onClick={openCommandPalette}
           className="font-mono"
           title="Search (Ctrl/Cmd + K)"
@@ -52,6 +51,7 @@ export default function Nav() {
             fontSize: 13, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-secondary)',
             cursor: 'pointer', padding: '10px 16px', borderRadius: 8, fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: 1,
+            background: 'transparent', border: 'none', font: 'inherit',
           }}
         >
           Search
@@ -61,7 +61,7 @@ export default function Nav() {
           }}>
             ⌘K
           </span>
-        </span>
+        </button>
 
         <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
 
@@ -91,13 +91,18 @@ export default function Nav() {
 
         <div style={{ width: 1, height: 20, background: '#333', margin: '0 6px', position: 'relative', zIndex: 1 }} />
 
-        <span
+        <button
+          type="button"
           onClick={handleLogout}
           className="font-mono"
-          style={{ fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1 }}
+          style={{
+            fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer',
+            textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1,
+            background: 'transparent', border: 'none', font: 'inherit',
+          }}
         >
           Logout
-        </span>
+        </button>
       </div>
     </div>
   );
