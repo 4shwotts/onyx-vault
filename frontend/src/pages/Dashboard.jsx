@@ -91,6 +91,19 @@ function getBarSizing(count) {
   return { gap: 3, barHeight: 4, labelMB: 2, labelFontSize: 10 };
 }
 
+// The donut's centre total was a fixed font size regardless of how
+// many digits the number has — fine for "£633" but a 6-digit total
+// just ran straight out past the ring. Scales down as digits grow so
+// it always stays inside the circle.
+function getDonutValueFontSize(value) {
+  const digits = Math.max(1, Math.round(Math.abs(value))).toString().length;
+  if (digits <= 3) return 19;
+  if (digits === 4) return 17;
+  if (digits === 5) return 14;
+  if (digits === 6) return 12;
+  return 10;
+}
+
 const FAKE_ACCOUNTS = [
   { id: 'ghost-1', name: 'Current', balance: 1240 },
   { id: 'ghost-2', name: 'Savings', balance: 3820 },
@@ -380,8 +393,9 @@ export default function Dashboard() {
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, overflow: 'hidden' }}>
 
-          {/* Total Balance section. */}
-          <div>
+          {/* Total Balance section. flexShrink:0 — only Recent
+              Transactions below is designed to absorb space pressure. */}
+          <div style={{ flexShrink: 0 }}>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
@@ -439,8 +453,15 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Spend by Category — fixed-size card (CARD_HEIGHT). */}
-          <div>
+          {/* Spend by Category — fixed-size card (CARD_HEIGHT), the
+              same size regardless of category count or viewport. The
+              legend and bar rows inside scale their own spacing down
+              at higher counts instead of the card itself resizing.
+              flexShrink:0 — only Recent Transactions below is designed
+              to absorb space pressure, so this can't get squeezed
+              smaller than its fixed inner height and visually overlap
+              the section below it. */}
+          <div style={{ flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
               {availableMonths.length > 0 && (
@@ -486,7 +507,7 @@ export default function Dashboard() {
                           }}
                         />
                       ))}
-                      <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize="19" fill="#101112">
+                      <text x="60" y="56" textAnchor="middle" className="font-mono" fontWeight="700" fontSize={getDonutValueFontSize(displayTotalSpend)} fill="#101112">
                         £{displayTotalSpend.toFixed(0)}
                       </text>
                       <text x="60" y="74" textAnchor="middle" className="font-mono" fontSize="9" fill="#3a3a3a" fontWeight="600">
@@ -496,11 +517,18 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: '100%' }}>
                       {displayArcs.map((arc) => {
                         const arrowSize = Math.max(10, legendSizing.fontSize - 3);
+                        // minWidth (not a fixed width) — a fixed width
+                        // broke completely on unusually large values
+                        // (a 6-digit £ amount or a 4+ digit percentage
+                        // just overflowed straight out of the pill).
+                        // minWidth keeps the normal-case look uniform
+                        // while letting outliers grow instead of
+                        // breaking.
                         const badgeFontSize = legendSizing.fontSize - 1;
-                        const badgeWidth = Math.round(badgeFontSize * 4.2);
+                        const badgeMinWidth = Math.round(badgeFontSize * 4.2);
                         return (
                           <div key={arc.name} style={{
-                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px 55px 1fr`,
+                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px minmax(48px, auto) minmax(0, 1fr)`,
                             alignItems: 'center', columnGap: 10,
                           }}>
                             <span style={{
@@ -521,18 +549,18 @@ export default function Dashboard() {
                             >
                               {arc.name}
                             </span>
-                            <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700 }}>
+                            <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700, whiteSpace: 'nowrap' }}>
                               £{arc.value.toFixed(0)}
                             </span>
-                            <span style={{ display: 'flex', alignItems: 'center' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                               {arc.pct !== null && (
                                 <span className="font-mono" style={{
                                   fontSize: badgeFontSize, fontWeight: 700, lineHeight: 1,
                                   color: arc.pct >= 0 ? '#b83232' : '#1f8a52',
                                   background: '#ffffff',
                                   border: '0.5px solid rgba(0,0,0,0.08)',
-                                  padding: '4px 8px', borderRadius: 5, width: badgeWidth, justifyContent: 'center',
-                                  display: 'inline-flex', alignItems: 'center', gap: 2,
+                                  padding: '4px 8px', borderRadius: 5, minWidth: badgeMinWidth, justifyContent: 'center',
+                                  display: 'inline-flex', alignItems: 'center', gap: 2, whiteSpace: 'nowrap',
                                 }}>
                                   <TrendArrow up={arc.pct >= 0} size={arrowSize} />
                                   {Math.abs(arc.pct).toFixed(0)}%
@@ -543,8 +571,8 @@ export default function Dashboard() {
                                   fontSize: badgeFontSize, fontWeight: 700, lineHeight: 1,
                                   color: '#6c3483',
                                   background: '#ffffff',
-                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px', width: badgeWidth, justifyContent: 'center',
-                                  display: 'inline-flex', alignItems: 'center',
+                                  border: '0.5px solid #b98be0', borderRadius: 5, padding: '4px 8px', minWidth: badgeMinWidth, justifyContent: 'center',
+                                  display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap',
                                 }}>
                                   NEW
                                 </span>
@@ -633,12 +661,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Recent Transactions — fixed height, doesn't grow. */}
-          <div style={{ flexShrink: 0 }}>
-            <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 8px', fontWeight: 700 }}>Recent Transactions</p>
-            <div style={{ position: 'relative' }}>
+          {/* Recent Transactions — flex:1, not a guessed fixed height. */}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 8px', fontWeight: 700, flexShrink: 0 }}>Recent Transactions</p>
+            <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
               <div className="dark-surface" style={{
                 ...darkListStyle,
+                height: '100%',
                 filter: hasRecent ? 'none' : 'blur(3px)',
                 opacity: hasRecent ? 1 : 0.55,
                 pointerEvents: hasRecent ? 'auto' : 'none',
@@ -648,18 +677,18 @@ export default function Dashboard() {
                   const dotColor = isExpense ? '#e05a5a' : '#3fbf7f';
                   return (
                     <div key={t.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px',
                       borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
                       position: 'relative', zIndex: 1,
                     }}>
-                      <p className="font-mono" style={{ fontSize: 15, color: '#eef1f3', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <p className="font-mono" style={{ fontSize: 15, color: '#eef1f3', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <span style={{
                           width: 6, height: 6, borderRadius: '50%', background: dotColor,
                           boxShadow: `0 0 6px ${dotColor}99`, flexShrink: 0,
                         }} />
                         {t.description || '(no description)'}
                       </p>
-                      <p className="font-mono" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: dotColor }}>
+                      <p className="font-mono" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: dotColor, flexShrink: 0, marginLeft: 12 }}>
                         {isExpense ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
                       </p>
                     </div>
