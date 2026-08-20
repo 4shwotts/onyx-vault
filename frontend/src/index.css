@@ -11,14 +11,16 @@ html, body, #root {
   height: 100vh;
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  background-color: var(--page-bg);
+  overflow-x: hidden;
+  background-color: #0a0b0d;
 }
 
-/* Ensure text headers contrast clearly over raytraced chrome speculars */
-h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
+/* Ensure headings like 'Spend by category' remain visible over WebGL dark chrome */
+h1, h2, h3, h4, .section-heading, [class*="title"] {
   color: #ffffff !important;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 16px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.8) !important;
+  position: relative;
+  z-index: 2;
 }
 
 body {

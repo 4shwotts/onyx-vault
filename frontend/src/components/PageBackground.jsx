@@ -1,6 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import { Timer } from 'three/addons/misc/Timer.js'; // Modern Three.js Timer module
 
 export default function PageBackground() {
   const canvasRef = useRef(null);
@@ -9,29 +7,24 @@ export default function PageBackground() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let renderer;
-    try {
-      renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: false,
-        alpha: false,
-        powerPreference: 'high-performance'
-      });
-    } catch (e) {
-      console.warn('WebGL not supported:', e);
-      return;
-    }
+    const gl = canvas.getContext('webgl', {
+      alpha: false,
+      antialias: false,
+      powerPreference: 'high-performance'
+    });
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    if (!gl) return;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    // Vertex Shader
+    const vsSource = `
+      attribute vec2 a_position;
+      void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+      }
+    `;
 
-    // Modern Three.js Timer instance (replaces deprecated THREE.Clock)
-    const timer = new Timer();
-
-    const fragmentShader = `
+    // Liquid Chrome Fragment Shader (Pure GLSL)
+    const fsSource = `
       precision mediump float;
       uniform vec2 u_resolution;
       uniform float u_time;
@@ -41,8 +34,7 @@ export default function PageBackground() {
       vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
 
       float snoise(vec2 v) {
-        const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-                           -0.577350269189626, 0.024390243902439);
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
         vec2 i  = floor(v + dot(v, C.yy));
         vec2 x0 = v - i + dot(i, C.xx);
         vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
@@ -101,66 +93,59 @@ export default function PageBackground() {
       }
     `;
 
-    const vertexShader = `
-      void main() {
-        gl_Position = vec4(position, 1.0);
-      }
-    `;
+    function createShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      return shader;
+    }
 
-    const uniforms = {
-      u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-      u_time: { value: 0 }
-    };
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    const program = gl.createProgram();
 
-    const material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms
-    });
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+      gl.STATIC_DRAW
+    );
 
-    // Prevent WebGL Context Loss
-    const handleContextLost = (event) => {
-      event.preventDefault();
-      cancelAnimationFrame(animationFrameId);
-    };
+    const positionLocation = gl.getAttribLocation(program, 'a_position');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-    const handleContextRestored = () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      render(0);
-    };
-
-    canvas.addEventListener('webglcontextlost', handleContextLost, false);
-    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-
-    let animationFrameId;
-    const render = (timestamp) => {
-      timer.update(timestamp);
-      uniforms.u_time.value = timer.getElapsed() * 0.3;
-      renderer.render(scene, camera);
-      animationFrameId = requestAnimationFrame(render);
-    };
-    render(0);
+    const resLoc = gl.getUniformLocation(program, 'u_resolution');
+    const timeLoc = gl.getUniformLocation(program, 'u_time');
 
     const handleResize = () => {
-      if (!renderer) return;
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(resLoc, canvas.width, canvas.height);
     };
+
     window.addEventListener('resize', handleResize);
+    handleResize();
+
+    let animId;
+    const start = performance.now();
+    const render = (now) => {
+      gl.uniform1f(timeLoc, (now - start) * 0.0003);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      animId = requestAnimationFrame(render);
+    };
+    animId = requestAnimationFrame(render);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      canvas.removeEventListener('webglcontextlost', handleContextLost);
-      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
-      cancelAnimationFrame(animationFrameId);
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-      timer.dispose?.();
+      cancelAnimationFrame(animId);
     };
   }, []);
 
@@ -169,12 +154,13 @@ export default function PageBackground() {
       ref={canvasRef}
       style={{
         position: 'fixed',
-        inset: 0,
+        top: 0,
+        left: 0,
         width: '100vw',
         height: '100vh',
         zIndex: -1,
         pointerEvents: 'none',
-        backgroundColor: '#0d0e10'
+        backgroundColor: '#0a0b0d'
       }}
     />
   );
