@@ -1,34 +1,9 @@
 import React from 'react';
 
-function CircuitNode({ x, y, radius = 3, color = '#8e44ad', glow = false }) {
-  return (
-    <g>
-      <circle cx={x} cy={y} r={radius} fill={glow ? color : '#2a2e35'} />
-      {glow && (
-        <circle cx={x} cy={y} r={radius * 2.5} fill={color} opacity="0.25" />
-      )}
-    </g>
-  );
-}
-
-function ReticleTarget({ x, y, size = 18, color = 'rgba(255,255,255,0.15)' }) {
-  return (
-    <g stroke={color} strokeWidth="1" fill="none">
-      <circle cx={x} cy={y} r={size} strokeDasharray="4 2" />
-      <line x1={x - size - 4} y1={y} x2={x + size + 4} y2={y} />
-      <line x1={x} y1={y - size - 4} x2={x} y2={y + size + 4} />
-    </g>
-  );
-}
-
 export default function PageBackground() {
-  const lineStroke = 'rgba(255, 255, 255, 0.05)';
-  const accentStroke = 'rgba(142, 68, 173, 0.4)';
-
   return (
     <div className="page-background">
       <div className="page-background__base" />
-      <div className="page-background__grid" />
 
       <svg
         className="onyx-bg-svg"
@@ -37,46 +12,74 @@ export default function PageBackground() {
         fill="none"
         aria-hidden="true"
       >
-        {/* Sci-Fi HUD Crosshairs & Markers */}
-        <ReticleTarget x={150} y={120} size={14} />
-        <ReticleTarget x={1450} y={120} size={14} />
-        <ReticleTarget x={1400} y={780} size={20} />
+        <defs>
+          {/* Metallic Silver Gradients */}
+          <linearGradient id="metalDark" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1a1c1e" />
+            <stop offset="50%" stopColor="#0d0e0f" />
+            <stop offset="100%" stopColor="#161719" />
+          </linearGradient>
 
-        {/* Tech Circuit Traces */}
+          <linearGradient id="metalLight" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+            <stop offset="50%" stopColor="#d2d6db" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#8a9098" stopOpacity="0.4" />
+          </linearGradient>
+
+          <linearGradient id="metalBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#2c3035" />
+            <stop offset="100%" stopColor="#0a0a0b" />
+          </linearGradient>
+        </defs>
+
+        {/* Top Right Chunky Angled Panel Block */}
         <path
-          d="M -50 200 L 300 200 L 400 300 L 700 300"
-          stroke={lineStroke}
+          d="M 1050 -50 L 1650 -50 L 1650 420 L 1400 670 L 1220 670 L 1050 500 Z"
+          fill="url(#metalDark)"
+          stroke="#3d4248"
           strokeWidth="1.5"
         />
+        
+        {/* Layered Inner Bevels (Reference 2 style) */}
         <path
-          d="M 400 300 L 400 500 L 550 650"
-          stroke={accentStroke}
-          strokeWidth="1.5"
-          strokeDasharray="6 4"
+          d="M 1100 -50 L 1650 -50 L 1650 380 L 1420 610 L 1250 610 L 1100 460 Z"
+          fill="url(#metalBevel)"
+          stroke="url(#metalLight)"
+          strokeWidth="1"
+          opacity="0.9"
         />
+
         <path
-          d="M 1650 250 L 1250 250 L 1150 350 L 1150 600 L 1000 750"
-          stroke={lineStroke}
+          d="M 1150 -50 L 1650 -50 L 1650 340 L 1440 550 L 1280 550 L 1150 420 Z"
+          fill="#0d0e10"
+        />
+
+        {/* Left Sweeping Industrial Channels (Reference 1 style) */}
+        <path
+          d="M -100 250 L 350 250 L 650 550 L 650 950 L 520 950 L 520 580 L 270 330 L -100 330 Z"
+          fill="url(#metalDark)"
+          stroke="url(#metalLight)"
           strokeWidth="1.5"
         />
+
         <path
-          d="M 1250 250 L 1250 150 L 1100 150"
-          stroke={accentStroke}
+          d="M -100 380 L 230 380 L 450 600 L 450 950 L 370 950 L 370 630 L 180 440 L -100 440 Z"
+          fill="#121315"
+          stroke="#2d3136"
           strokeWidth="1"
         />
 
-        {/* Diagonal Tech Framing Corner Accents */}
-        <path d="M 30 0 L 0 30" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-        <path d="M 1570 0 L 1600 30" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-        <path d="M 0 870 L 30 900" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-        <path d="M 1600 870 L 1570 900" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+        {/* Bottom Corner Block Outlines */}
+        <path
+          d="M 1300 950 L 1050 700 L 780 700 L 700 780 L 700 950 Z"
+          fill="url(#metalBevel)"
+          stroke="#3d4248"
+          strokeWidth="1.5"
+        />
 
-        {/* Glowing Circuit Junction Nodes */}
-        <CircuitNode x={300} y={200} />
-        <CircuitNode x={400} y={300} glow />
-        <CircuitNode x={700} y={300} />
-        <CircuitNode x={1250} y={250} glow />
-        <CircuitNode x={1150} y={350} />
+        {/* Structural Accent Cutlines */}
+        <line x1="650" y1="550" x2="1050" y2="550" stroke="#2a2d32" strokeWidth="3" />
+        <line x1="1220" y1="670" x2="1220" y2="950" stroke="#2a2d32" strokeWidth="2" strokeDasharray="12 6" />
       </svg>
     </div>
   );
