@@ -13,80 +13,95 @@ export default function PageBackground() {
         aria-hidden="true"
       >
         <defs>
-          {/* Chrome Specular Gradient - Multi-stop high contrast for liquid sheen */}
-          <linearGradient id="chromeGloss" x1="0%" y1="0%" x2="100%" y2="100%">
+          {/* Photorealistic Liquid Chrome Gradient 1 (Main Fold) */}
+          <linearGradient id="liquidChromePrimary" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="15%" stopColor="#22252a" />
-            <stop offset="30%" stopColor="#e2e8f0" />
-            <stop offset="45%" stopColor="#0d0e11" />
-            <stop offset="65%" stopColor="#ffffff" />
-            <stop offset="80%" stopColor="#1a1c22" />
-            <stop offset="100%" stopColor="#cbd5e1" />
+            <stop offset="8%" stopColor="#dbe1e8" />
+            <stop offset="18%" stopColor="#111215" />
+            <stop offset="28%" stopColor="#8a929e" />
+            <stop offset="38%" stopColor="#ffffff" />
+            <stop offset="48%" stopColor="#1a1c20" />
+            <stop offset="62%" stopColor="#e2e8f0" />
+            <stop offset="78%" stopColor="#08090a" />
+            <stop offset="90%" stopColor="#cbd5e1" />
+            <stop offset="100%" stopColor="#ffffff" />
           </linearGradient>
 
-          <linearGradient id="edgeGleam" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="25%" stopColor="#000000" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.9" />
-            <stop offset="75%" stopColor="#111215" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.7" />
+          {/* Liquid Chrome Edge Reflection (High Contrast Specular) */}
+          <linearGradient id="chromeEdgeGlint" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="20%" stopColor="#000000" />
+            <stop offset="40%" stopColor="#ffffff" />
+            <stop offset="60%" stopColor="#15171a" />
+            <stop offset="80%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#0a0b0d" />
           </linearGradient>
 
-          {/* Liquid Pinch Shadow */}
-          <filter id="liquidShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="-10" dy="15" stdDeviation="12" floodColor="#000000" floodOpacity="0.85" />
+          {/* Ambient Edge Occlusion Drop Shadow */}
+          <filter id="chromeDepthShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="-20" dy="25" stdDeviation="25" floodColor="#000000" floodOpacity="0.9" />
+            <feDropShadow dx="-5" dy="8" stdDeviation="10" floodColor="#000000" floodOpacity="0.7" />
           </filter>
         </defs>
 
-        {/* --- LIQUID CHROME EDGE FOLDS --- */}
-        <g filter="url(#liquidShadow)">
-          {/* Top Liquid Flow Wave */}
+        {/* --- LIQUID CHROME Draped Edge Layers --- */}
+        <g filter="url(#chromeDepthShadow)">
+          {/* Top Liquid Curve Frame Accent */}
           <path
             d="M -50 -50 
-               C 400 150, 900 -80, 1650 120 
+               C 350 80, 850 -60, 1650 90 
                L 1650 -50 Z"
-            fill="url(#chromeGloss)"
+            fill="url(#liquidChromePrimary)"
           />
 
-          {/* Right Main Liquid Pinch Contour (Matching reference right-side convergence) */}
+          {/* Sharp White Specular Rim for Top Curve */}
+          <path
+            d="M -50 -45 
+               C 350 85, 850 -55, 1650 95"
+            stroke="#ffffff"
+            strokeWidth="3"
+            fill="none"
+            opacity="0.85"
+          />
+
+          {/* Main Organic Right-to-Bottom Fluid Convergence Sweep */}
           <path
             d="M 1650 -50 
-               C 1300 200, 1350 450, 1200 600 
-               C 1050 750, 800 850, 0 950 
-               L 1650 950 Z"
-            fill="url(#chromeGloss)"
-            opacity="0.9"
+               C 1380 180, 1420 420, 1260 580 
+               C 1080 750, 750 830, -50 960 
+               L 1650 960 Z"
+            fill="url(#liquidChromePrimary)"
           />
 
-          {/* High-Contrast Liquid Edge Highlight Stream */}
+          {/* High-Gloss Mirror Highlight Band */}
           <path
-            d="M 1650 50 
-               C 1380 250, 1420 480, 1240 620 
-               C 1100 730, 820 830, -50 920"
-            stroke="url(#edgeGleam)"
-            strokeWidth="35"
+            d="M 1650 15 
+               C 1400 220, 1440 450, 1275 600 
+               C 1100 760, 770 840, -50 940"
+            stroke="url(#chromeEdgeGlint)"
+            strokeWidth="28"
             fill="none"
             strokeLinecap="round"
           />
 
-          {/* Inner Sharp Specular Highlight Ribbon */}
+          {/* Razor-Thin Liquid Hotspot Specular Line */}
           <path
-            d="M 1650 70 
-               C 1400 260, 1435 470, 1250 610 
-               C 1120 720, 840 820, -50 905"
+            d="M 1650 30 
+               C 1410 230, 1450 455, 1282 608 
+               C 1110 765, 780 845, -50 930"
             stroke="#ffffff"
-            strokeWidth="6"
+            strokeWidth="5"
             fill="none"
-            opacity="0.9"
+            opacity="0.95"
           />
 
-          {/* Bottom Left Pinch Flow Accent */}
+          {/* Bottom Left Secondary Fluid Fold */}
           <path
-            d="M -50 650 
-               C 200 780, 450 820, 700 950 
-               L -50 950 Z"
-            fill="url(#chromeGloss)"
-            opacity="0.75"
+            d="M -50 720 
+               C 180 820, 420 840, 680 960 
+               L -50 960 Z"
+            fill="url(#liquidChromePrimary)"
+            opacity="0.8"
           />
         </g>
       </svg>
