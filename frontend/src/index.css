@@ -1,21 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #8c9096;
-  --shell-bg: #0d0d0d;
-  --card-bg: #111111;
-  --card-border: #24282b;
-  --card-border-top: #454b50;
-  --nav-bg: #141414;
+  --page-bg: #6e7278; /* Dark light-grey tone */
   --text-primary: #ffffff;
   --text-secondary: #f0f3f6;
-  --accent: #e0e4e8;
-  --accent-text: #111111;
-  --expense: #e05a5a;
-  --income: #3fbf7f;
 }
 
-/* Eliminate window scrollbars completely */
 html, body, #root {
   width: 100vw;
   height: 100vh;
@@ -24,10 +14,10 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Ensure headings stay crisp and legible across all background shades */
+/* Clear text shadow to pop against the textured grey canvas */
 h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
-  color: var(--text-secondary) !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.8);
+  color: #ffffff !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
 body {
@@ -62,17 +52,17 @@ body {
 .page-background__base {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(130% 100% at 50% 0%, #e2e6eb 0%, #a4a9b0 45%, #6d7278 85%, #4b4f55 100%);
+  background: radial-gradient(circle at 50% 50%, #7d8289 0%, #5e6268 100%);
 }
 
+/* Subtle noise/roughness overlay */
 .page-background__base::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-  opacity: 0.18;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  opacity: 0.22;
   mix-blend-mode: overlay;
   pointer-events: none;
 }

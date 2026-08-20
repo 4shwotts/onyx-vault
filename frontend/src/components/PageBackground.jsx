@@ -13,59 +13,91 @@ export default function PageBackground() {
         aria-hidden="true"
       >
         <defs>
-          {/* Inner Frame Drop Shadow */}
-          <filter id="frameShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="12" stdDeviation="16" floodColor="#000000" floodOpacity="0.85" />
-            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
+          {/* Subtle 3D shadow for the tracks */}
+          <filter id="trackShadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#000000" floodOpacity="0.4" />
           </filter>
-
-          {/* Chamfer Bevel Highlight */}
-          <linearGradient id="bevelLight" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#1a1c1f" stopOpacity="0.8" />
-          </linearGradient>
-
-          <linearGradient id="darkOuterFrame" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1a1c1e" />
-            <stop offset="50%" stopColor="#0d0e10" />
-            <stop offset="100%" stopColor="#050506" />
-          </linearGradient>
         </defs>
 
-        {/* --- UNIFIED RECESSED OUTER FRAME --- */}
-        <g filter="url(#frameShadow)">
-          {/* Outer Border Bevel Ring */}
-          <rect
-            x="35"
-            y="35"
-            width="1530"
-            height="830"
-            rx="12"
+        <g filter="url(#trackShadow)">
+          {/* --- SET 1: TOP RIGHT TO BOTTOM BENDING TRACKS (Matching reference image) --- */}
+          {/* Inner Track */}
+          <path
+            d="M 1320 -50 
+               L 1320 520 
+               L 920 820 
+               L -50 820"
+            stroke="#1a1b1d"
+            strokeWidth="50"
+            strokeLinejoin="miter"
+            strokeMiterlimit="10"
             fill="none"
-            stroke="url(#bevelLight)"
-            strokeWidth="2"
+          />
+          {/* Outer Track */}
+          <path
+            d="M 1430 -50 
+               L 1430 550 
+               L 1000 870 
+               L -50 870"
+            stroke="#1a1b1d"
+            strokeWidth="50"
+            strokeLinejoin="miter"
+            strokeMiterlimit="10"
+            fill="none"
           />
 
-          {/* Deep Recessed Dark Outer Shell */}
+          {/* Thin accent guideline alongside inner track */}
           <path
-            d="M 0 0 
-               L 1600 0 
-               L 1600 900 
-               L 0 900 Z 
-               M 40 40 
-               L 1560 40 
-               L 1560 860 
-               L 40 860 Z"
-            fill="url(#darkOuterFrame)"
-            fillRule="evenodd"
+            d="M 1285 -50 
+               L 1285 500 
+               L 890 795 
+               L -50 795"
+            stroke="#0d0e0f"
+            strokeWidth="3"
+            fill="none"
+            opacity="0.8"
+          />
+
+          {/* --- SET 2: SECOND PAIR OF DOUBLE TRACKS (Top-Left diagonal across canvas) --- */}
+          {/* Inner Track 2 */}
+          <path
+            d="M -50 180 
+               L 450 180 
+               L 800 440 
+               L 800 950"
+            stroke="#1a1b1d"
+            strokeWidth="40"
+            strokeLinejoin="miter"
+            strokeMiterlimit="10"
+            fill="none"
+          />
+          {/* Outer Track 2 */}
+          <path
+            d="M -50 110 
+               L 480 110 
+               L 860 390 
+               L 860 950"
+            stroke="#1a1b1d"
+            strokeWidth="40"
+            strokeLinejoin="miter"
+            strokeMiterlimit="10"
+            fill="none"
+          />
+
+          {/* --- SET 3: THIRD PAIR OF DOUBLE TRACKS (Subtle corner accents) --- */}
+          <path
+            d="M 1650 250 L 1100 -50"
+            stroke="#1a1b1d"
+            strokeWidth="30"
+            fill="none"
+          />
+          <path
+            d="M 1650 310 L 1180 -50"
+            stroke="#1a1b1d"
+            strokeWidth="30"
+            fill="none"
           />
         </g>
-
-        {/* Diagonal Corner Cut Accents (Clean 3D Frame Corners) */}
-        <line x1="40" y1="40" x2="120" y2="120" stroke="#000000" strokeWidth="3" opacity="0.6" />
-        <line x1="1560" y1="40" x2="1480" y2="120" stroke="#000000" strokeWidth="3" opacity="0.6" />
-        <line x1="40" y1="860" x2="120" y2="780" stroke="#000000" strokeWidth="3" opacity="0.6" />
-        <line x1="1560" y1="860" x2="1480" y2="780" stroke="#000000" strokeWidth="3" opacity="0.6" />
       </svg>
     </div>
   );
