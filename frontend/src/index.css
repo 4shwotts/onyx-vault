@@ -1,14 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #9ea2a8;
+  --page-bg: #82868c;
   --shell-bg: #0d0d0d;
   --card-bg: #111111;
   --card-border: #24282b;
   --card-border-top: #454b50;
   --nav-bg: #141414;
-  --text-primary: #eef1f3;
-  --text-secondary: #9a9a9a;
+  --text-primary: #ffffff;
+  /* Darkened section header text color for clear visibility on silver background */
+  --text-secondary: #121315; 
   --accent: #e0e4e8;
   --accent-text: #111111;
   --expense: #e05a5a;
@@ -49,19 +50,29 @@ body {
 .page-background__base {
   position: absolute;
   inset: 0;
-  /* Pure metallic silver finish without color tinting */
+  /* Layered linear brushed metal textures with heavy directional sheen */
   background:
-    radial-gradient(100% 120% at 20% 0%, #f0f2f5 0%, #c4c8cd 45%, #8f949a 85%, #6a6f75 100%);
+    /* Diagonal metallic sheen highlight */
+    linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 40%, rgba(0,0,0,0.2) 100%),
+    /* Horizontal brushed steel grain lines */
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    /* Deep metallic base gradient */
+    radial-gradient(110% 130% at 15% 10%, #d5d9de 0%, #9aa0a6 40%, #686d73 80%, #4a4e54 100%);
 }
 
-/* Subtle silver noise grain for texture */
 .page-background__base::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 100px 100px;
-  opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+  opacity: 0.22;
   mix-blend-mode: overlay;
   pointer-events: none;
 }
