@@ -1,3 +1,4 @@
+
 const PANEL0_D = "M1097.26 0L1385.24 2.31425C1401.71 2.44664 1415 15.8388 1415 32.3133V482.868C1415 499.178 1401.97 512.5 1385.66 512.86L805.528 525.691C796.66 525.887 788.16 522.148 782.311 515.48L751.799 480.692C742.558 470.156 741.843 454.625 750.078 443.284L777.528 405.48L1079.59 8.75839C1083.79 3.23961 1090.33 0 1097.26 0Z";
 const PANEL1_D = "M41.5451 499.394C18.8647 500.271 0 482.121 0 459.424V47.4085C0 25.4284 17.7353 7.56628 39.7148 7.40957L1049.82 0.208062C1060.93 0.128799 1066.81 13.3339 1059.31 21.5396L888.143 238.474L800.288 351.813L713.247 459.717C705.993 468.71 695.204 474.127 683.658 474.573L41.5451 499.394Z";
 const PANEL2_D = "M1374.03 526.986C1396.5 526.445 1415 544.506 1415 566.975V965C1415 987.091 1397.09 1005 1375 1005H385.914C380.161 1005 375.498 1000.34 375.498 994.584C375.498 991.959 376.489 989.43 378.273 987.504L780.513 553.395C787.855 545.471 798.091 540.853 808.891 540.593L1374.03 526.986Z";
@@ -78,13 +79,13 @@ export default function PageBackground() {
         <g clipPath="url(#clipPanel2)"><rect x="0" y="0" width="1415" height="1007" fill="url(#lightGrain)" opacity="0.05" style={{ mixBlendMode: 'overlay' }} /></g>
         <g clipPath="url(#clipPanel3)"><rect x="0" y="0" width="1415" height="1007" fill="url(#lightGrain)" opacity="0.07" style={{ mixBlendMode: 'overlay' }} /></g>
 
-        <CornerBracket x={22} y={22} size={26} color={decalColor} />
-        <CornerBracket x={1393} y={22} size={26} flipX color={decalColor} />
-        <CornerBracket x={22} y={985} size={26} flipY color={decalColor} />
-        <CornerBracket x={1393} y={985} size={26} flipX flipY color={decalColor} />
+        <CornerBracket x={22} y={22} size={30} color={decalColor} strokeWidth={1.6} />
+        <CornerBracket x={1393} y={22} size={30} flipX color={decalColor} strokeWidth={1.6} />
+        <CornerBracket x={22} y={985} size={30} flipY color={decalColor} strokeWidth={1.6} />
+        <CornerBracket x={1393} y={985} size={30} flipX flipY color={decalColor} strokeWidth={1.6} />
 
-        <CircuitTrace points={[[760, 528], [800, 500], [860, 500]]} color={decalColorFaint} />
-        <CircuitTrace points={[[380, 500], [340, 470], [340, 420]]} color={decalColorFaint} />
+        <CircuitTrace points={[[70, 60], [110, 60], [140, 90]]} color={decalColorFaint} />
+        <CircuitTrace points={[[1345, 960], [1310, 960], [1280, 930]]} color={decalColorFaint} />
       </svg>
     </div>
   );
