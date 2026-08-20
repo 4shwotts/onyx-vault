@@ -40,7 +40,7 @@ const fragmentShader = `
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
-    // Base metal tone — lighter grey than the previous version.
+    // Base metal tone.
     vec3 base = vec3(0.83, 0.84, 0.85);
 
     // Brushed-metal roughness: fine directional grain, horizontal
@@ -48,20 +48,31 @@ const fragmentShader = `
     float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
     base += (grain - 0.5) * 0.045;
 
-    // Several soft vertical light-catch bands across the width,
-    // simulating multiple reflected light sources on a curved
-    // metal surface.
+    // Soft background light-catch bands — kept subtle, just ambient
+    // variation underneath the glossy swooshes below.
     float band1 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.12) * 3.2);
-    float band2 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.48) * 3.2);
     float band3 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.86) * 3.2);
-    base += band1 * 0.11 + band2 * 0.08 + band3 * 0.11;
+    base += band1 * 0.05 + band3 * 0.05;
 
-    // Slow-drifting specular sweep — a highlight that moves across
-    // the surface over time, the way light shifts on brushed metal
-    // as an object (or the viewer) moves.
-    float sweepPos = mod(uTime * 0.025, 1.8) - 0.4;
-    float sweep = smoothstep(0.0, 1.0, 1.0 - abs((uv.x + uv.y * 0.35) - sweepPos) * 5.5);
-    base += sweep * 0.07;
+    // Glossy liquid-chrome swooshes: curved (sine-path) specular
+    // highlights, not straight bands — this is what actually reads as
+    // liquid/fluid rather than plain brushed metal. Each follows a
+    // curved path across the surface and drifts slowly over time.
+    float curve1 = 0.42 + 0.16 * sin(uv.x * 2.6 + uTime * 0.12) + sin(uTime * 0.05) * 0.05;
+    float dist1 = abs(uv.y - curve1);
+    float swoosh1 = smoothstep(0.05, 0.0, dist1);
+    base += swoosh1 * 0.32;
+
+    float curve2 = 0.62 + 0.12 * sin(uv.x * 3.4 - uTime * 0.09 + 2.0) - sin(uTime * 0.04) * 0.06;
+    float dist2 = abs(uv.y - curve2);
+    float swoosh2 = smoothstep(0.035, 0.0, dist2);
+    base += swoosh2 * 0.22;
+
+    // A third, thinner, faster-moving glint for extra liquidity.
+    float curve3 = 0.25 + 0.1 * sin(uv.x * 4.5 + uTime * 0.22);
+    float dist3 = abs(uv.y - curve3);
+    float swoosh3 = smoothstep(0.018, 0.0, dist3);
+    base += swoosh3 * 0.16;
 
     // Gentle vignette for a slightly domed, dimensional read rather
     // than a flat sheet.
