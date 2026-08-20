@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { Timer } from 'three/addons/misc/Timer.js'; // Modern Three.js Timer module
 
 export default function PageBackground() {
   const canvasRef = useRef(null);
@@ -12,12 +13,12 @@ export default function PageBackground() {
     try {
       renderer = new THREE.WebGLRenderer({
         canvas,
-        antialias: false, // Performance boost to prevent GPU context loss
+        antialias: false,
         alpha: false,
         powerPreference: 'high-performance'
       });
     } catch (e) {
-      console.warn('WebGL not supported or context lost on init:', e);
+      console.warn('WebGL not supported:', e);
       return;
     }
 
@@ -27,7 +28,9 @@ export default function PageBackground() {
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-    // Optimized High-Gloss Liquid Chrome Shader (Lighter on GPU memory)
+    // Modern Three.js Timer instance (replaces deprecated THREE.Clock)
+    const timer = new Timer();
+
     const fragmentShader = `
       precision mediump float;
       uniform vec2 u_resolution;
@@ -119,7 +122,7 @@ export default function PageBackground() {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    // Prevent GPU Context Loss crashes
+    // Prevent WebGL Context Loss
     const handleContextLost = (event) => {
       event.preventDefault();
       cancelAnimationFrame(animationFrameId);
@@ -134,8 +137,9 @@ export default function PageBackground() {
     canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
 
     let animationFrameId;
-    const render = (time) => {
-      uniforms.u_time.value = time * 0.0003;
+    const render = (timestamp) => {
+      timer.update(timestamp);
+      uniforms.u_time.value = timer.getElapsed() * 0.3;
       renderer.render(scene, camera);
       animationFrameId = requestAnimationFrame(render);
     };
@@ -156,6 +160,7 @@ export default function PageBackground() {
       geometry.dispose();
       material.dispose();
       renderer.dispose();
+      timer.dispose?.();
     };
   }, []);
 
