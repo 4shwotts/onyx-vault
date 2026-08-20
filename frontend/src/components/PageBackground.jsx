@@ -13,98 +13,86 @@ export default function PageBackground() {
         aria-hidden="true"
       >
         <defs>
-          {/* Heavy Steel Panel Gradients */}
-          <linearGradient id="darkSteel" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1e2023" />
-            <stop offset="40%" stopColor="#111214" />
-            <stop offset="100%" stopColor="#080809" />
+          <linearGradient id="chassisDark" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#212428" />
+            <stop offset="50%" stopColor="#121316" />
+            <stop offset="100%" stopColor="#08090a" />
           </linearGradient>
 
-          <linearGradient id="cutShadow" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#0a0b0c" />
-            <stop offset="100%" stopColor="#25282d" />
+          <linearGradient id="bevelLight" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#3a3e45" stopOpacity="0.1" />
           </linearGradient>
 
-          <linearGradient id="brightEdge" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#60656c" stopOpacity="0.2" />
+          <linearGradient id="innerRecess" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#050506" />
+            <stop offset="100%" stopColor="#1a1c1f" />
           </linearGradient>
 
-          {/* Rough Industrial Steel Texture Pattern */}
-          <pattern id="brushedTexture" width="200" height="200" patternUnits="userSpaceOnUse">
-            <line x1="0" y1="0" x2="200" y2="200" stroke="#ffffff" strokeWidth="0.5" opacity="0.08" />
-            <line x1="0" y1="50" x2="200" y2="250" stroke="#000000" strokeWidth="0.8" opacity="0.15" />
-            <line x1="50" y1="0" x2="250" y2="200" stroke="#ffffff" strokeWidth="0.5" opacity="0.06" />
-          </pattern>
-
-          {/* Panel Drop Shadow Filter */}
-          <filter id="panelShadow" x="-10%" y="-10%" width="130%" height="130%">
-            <feDropShadow dx="10" dy="18" stdDeviation="12" floodColor="#000000" floodOpacity="0.65" />
+          <filter id="heavy3dShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="25" stdDeviation="20" floodColor="#000000" floodOpacity="0.8" />
+            <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.5" />
           </filter>
         </defs>
 
-        {/* Top Right Chunky Angled Steel Panel with Heavy Shadow */}
-        <g filter="url(#panelShadow)">
+        {/* --- 3D INDUSTRIAL FRAME (Shifted Left Tracks Higher Up) --- */}
+        <g filter="url(#heavy3dShadow)">
           <path
-            d="M 1050 -50 L 1650 -50 L 1650 420 L 1400 670 L 1220 670 L 1050 500 Z"
-            fill="url(#darkSteel)"
-            stroke="#3a3e45"
+            d="M -50 -50 
+               L 1650 -50 
+               L 1650 950 
+               L -50 950 Z 
+               M 70 50 
+               L 1530 50 
+               L 1530 820 
+               L 70 820 Z"
+            fill="url(#chassisDark)"
+            fillRule="evenodd"
+            stroke="#2e3238"
             strokeWidth="2"
           />
-          {/* Internal Texture Overlay */}
+
           <path
-            d="M 1050 -50 L 1650 -50 L 1650 420 L 1400 670 L 1220 670 L 1050 500 Z"
-            fill="url(#brushedTexture)"
+            d="M 68 48 
+               L 1532 48 
+               L 1532 822 
+               L 68 822 Z"
+            fill="none"
+            stroke="url(#bevelLight)"
+            strokeWidth="2.5"
           />
         </g>
 
-        {/* Layered Inner Bevel Cuts */}
+        {/* --- CORNER STRUCTURAL CHANNEL CUTS (Replacing Top-Right Block with Line Channels) --- */}
         <path
-          d="M 1100 -50 L 1650 -50 L 1650 380 L 1420 610 L 1250 610 L 1100 460 Z"
-          fill="url(#cutShadow)"
-          stroke="url(#brightEdge)"
+          d="M -50 -50 L 220 -50 L -50 220 Z"
+          fill="url(#innerRecess)"
+          stroke="#33373e"
           strokeWidth="1.5"
         />
 
+        {/* Top-Right Mirrored Structural Line Channels */}
         <path
-          d="M 1150 -50 L 1650 -50 L 1650 340 L 1440 550 L 1280 550 L 1150 420 Z"
-          fill="#090a0b"
+          d="M 1650 -50 L 1380 -50 L 1650 220 Z"
+          fill="url(#innerRecess)"
+          stroke="#33373e"
+          strokeWidth="1.5"
         />
 
-        {/* Left Sweeping Industrial Channels */}
-        <g filter="url(#panelShadow)">
-          <path
-            d="M -100 250 L 350 250 L 650 550 L 650 950 L 520 950 L 520 580 L 270 330 L -100 330 Z"
-            fill="url(#darkSteel)"
-            stroke="url(#brightEdge)"
-            strokeWidth="2"
-          />
-          <path
-            d="M -100 250 L 350 250 L 650 550 L 650 950 L 520 950 L 520 580 L 270 330 L -100 330 Z"
-            fill="url(#brushedTexture)"
-          />
-        </g>
-
+        {/* Bottom-Right Chamfer Support */}
         <path
-          d="M -100 380 L 230 380 L 450 600 L 450 950 L 370 950 L 370 630 L 180 440 L -100 440 Z"
-          fill="#0c0d0f"
-          stroke="#272a2e"
-          strokeWidth="1"
+          d="M 1650 950 L 1380 950 L 1650 680 Z"
+          fill="url(#innerRecess)"
+          stroke="#33373e"
+          strokeWidth="1.5"
         />
 
-        {/* Bottom Corner Block Outlines */}
-        <path
-          d="M 1300 950 L 1050 700 L 780 700 L 700 780 L 700 950 Z"
-          fill="url(#cutShadow)"
-          stroke="#3a3e45"
-          strokeWidth="2"
-          filter="url(#panelShadow)"
-        />
-
-        {/* Structural Accent Cutlines & Grooves */}
-        <line x1="650" y1="550" x2="1050" y2="550" stroke="#181a1c" strokeWidth="4" />
-        <line x1="650" y1="551" x2="1050" y2="551" stroke="#ffffff" strokeWidth="1" opacity="0.3" />
-        <line x1="1220" y1="670" x2="1220" y2="950" stroke="#1d2023" strokeWidth="3" strokeDasharray="14 8" />
+        {/* Clean Parallel Edge Seam Lines (No random singular floating lines) */}
+        <line x1="70" y1="140" x2="-50" y2="140" stroke="#0a0b0c" strokeWidth="4" />
+        <line x1="70" y1="141" x2="-50" y2="141" stroke="#ffffff" strokeWidth="1" opacity="0.25" />
+        
+        <line x1="1530" y1="140" x2="1650" y2="140" stroke="#0a0b0c" strokeWidth="4" />
+        <line x1="1530" y1="141" x2="1650" y2="141" stroke="#ffffff" strokeWidth="1" opacity="0.25" />
       </svg>
     </div>
   );
