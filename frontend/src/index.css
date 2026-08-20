@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #c6c9cc;
+  --page-bg: #0b0d10;
   --shell-bg: #0d0d0d;
   --card-bg: #111111;
   --card-border: #24282b;
@@ -50,12 +50,21 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(45% 120% at 6% 40%, rgba(255,255,255,0.3), transparent 60%),
-    radial-gradient(40% 120% at 24% 60%, rgba(0,0,0,0.05), transparent 62%),
-    radial-gradient(42% 120% at 46% 35%, rgba(255,255,255,0.22), transparent 60%),
-    radial-gradient(40% 120% at 68% 65%, rgba(0,0,0,0.04), transparent 62%),
-    radial-gradient(45% 120% at 92% 45%, rgba(255,255,255,0.26), transparent 60%),
-    linear-gradient(165deg, #e6e8ea 0%, #d8dbdd 30%, #cfd2d5 55%, #dadcdf 80%, #e2e4e6 100%);
+    /* Top & Center Subtle Purple Accent Glows */
+    radial-gradient(circle at 50% 0%, rgba(142, 68, 173, 0.18) 0%, transparent 65%),
+    radial-gradient(circle at 85% 20%, rgba(142, 68, 173, 0.08) 0%, transparent 40%),
+    /* Metallic Brushed Panel Vignette */
+    radial-gradient(120% 100% at 50% 10%, #171a1f 0%, #0d0e11 50%, #060708 100%);
+}
+
+.page-background__grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 80%);
 }
 
 .onyx-bg-svg {

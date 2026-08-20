@@ -1,39 +1,34 @@
-function Diamond({ x, y, size, rotation = 0, opacity = 0.12, color }) {
+import React from 'react';
+
+function CircuitNode({ x, y, radius = 3, color = '#8e44ad', glow = false }) {
   return (
-    <path
-      d={`M ${x} ${y - size} L ${x + size} ${y} L ${x} ${y + size} L ${x - size} ${y} Z`}
-      fill="none"
-      stroke={color}
-      strokeWidth="1.2"
-      opacity={opacity}
-      transform={`rotate(${rotation} ${x} ${y})`}
-    />
+    <g>
+      <circle cx={x} cy={y} r={radius} fill={glow ? color : '#2a2e35'} />
+      {glow && (
+        <circle cx={x} cy={y} r={radius * 2.5} fill={color} opacity="0.25" />
+      )}
+    </g>
   );
 }
 
-function Hexagon({ x, y, size, rotation = 0, opacity = 0.1, color }) {
-  const points = Array.from({ length: 6 }, (_, i) => {
-    const angle = (Math.PI / 3) * i - Math.PI / 2;
-    return `${x + size * Math.cos(angle)},${y + size * Math.sin(angle)}`;
-  }).join(' ');
+function ReticleTarget({ x, y, size = 18, color = 'rgba(255,255,255,0.15)' }) {
   return (
-    <polygon
-      points={points}
-      fill="none"
-      stroke={color}
-      strokeWidth="1.2"
-      opacity={opacity}
-      transform={`rotate(${rotation} ${x} ${y})`}
-    />
+    <g stroke={color} strokeWidth="1" fill="none">
+      <circle cx={x} cy={y} r={size} strokeDasharray="4 2" />
+      <line x1={x - size - 4} y1={y} x2={x + size + 4} y2={y} />
+      <line x1={x} y1={y - size - 4} x2={x} y2={y + size + 4} />
+    </g>
   );
 }
 
 export default function PageBackground() {
-  const shapeColor = '#101112';
+  const lineStroke = 'rgba(255, 255, 255, 0.05)';
+  const accentStroke = 'rgba(142, 68, 173, 0.4)';
 
   return (
     <div className="page-background">
       <div className="page-background__base" />
+      <div className="page-background__grid" />
 
       <svg
         className="onyx-bg-svg"
@@ -42,14 +37,46 @@ export default function PageBackground() {
         fill="none"
         aria-hidden="true"
       >
-        <Diamond x={120} y={100} size={22} rotation={12} opacity={0.14} color={shapeColor} />
-        <Diamond x={1480} y={140} size={16} rotation={-8} opacity={0.1} color={shapeColor} />
-        <Hexagon x={220} y={780} size={20} rotation={20} opacity={0.1} color={shapeColor} />
-        <Diamond x={1420} y={760} size={26} rotation={5} opacity={0.13} color={shapeColor} />
-        <Hexagon x={1550} y={480} size={14} rotation={-15} opacity={0.09} color={shapeColor} />
-        <Diamond x={80} y={480} size={14} rotation={30} opacity={0.09} color={shapeColor} />
-        <Hexagon x={800} y={60} size={12} rotation={0} opacity={0.08} color={shapeColor} />
-        <Diamond x={780} y={850} size={18} rotation={-20} opacity={0.1} color={shapeColor} />
+        {/* Sci-Fi HUD Crosshairs & Markers */}
+        <ReticleTarget x={150} y={120} size={14} />
+        <ReticleTarget x={1450} y={120} size={14} />
+        <ReticleTarget x={1400} y={780} size={20} />
+
+        {/* Tech Circuit Traces */}
+        <path
+          d="M -50 200 L 300 200 L 400 300 L 700 300"
+          stroke={lineStroke}
+          strokeWidth="1.5"
+        />
+        <path
+          d="M 400 300 L 400 500 L 550 650"
+          stroke={accentStroke}
+          strokeWidth="1.5"
+          strokeDasharray="6 4"
+        />
+        <path
+          d="M 1650 250 L 1250 250 L 1150 350 L 1150 600 L 1000 750"
+          stroke={lineStroke}
+          strokeWidth="1.5"
+        />
+        <path
+          d="M 1250 250 L 1250 150 L 1100 150"
+          stroke={accentStroke}
+          strokeWidth="1"
+        />
+
+        {/* Diagonal Tech Framing Corner Accents */}
+        <path d="M 30 0 L 0 30" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+        <path d="M 1570 0 L 1600 30" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+        <path d="M 0 870 L 30 900" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+        <path d="M 1600 870 L 1570 900" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+
+        {/* Glowing Circuit Junction Nodes */}
+        <CircuitNode x={300} y={200} />
+        <CircuitNode x={400} y={300} glow />
+        <CircuitNode x={700} y={300} />
+        <CircuitNode x={1250} y={250} glow />
+        <CircuitNode x={1150} y={350} />
       </svg>
     </div>
   );
