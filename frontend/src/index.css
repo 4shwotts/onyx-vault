@@ -43,15 +43,26 @@ body {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background-color: #1c1c1c;
+  background-color: var(--page-bg);
+}
+
+.page-background__base {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(45% 120% at 6% 40%, rgba(255,255,255,0.3), transparent 60%),
+    radial-gradient(40% 120% at 24% 60%, rgba(0,0,0,0.05), transparent 62%),
+    radial-gradient(42% 120% at 46% 35%, rgba(255,255,255,0.22), transparent 60%),
+    radial-gradient(40% 120% at 68% 65%, rgba(0,0,0,0.04), transparent 62%),
+    radial-gradient(45% 120% at 92% 45%, rgba(255,255,255,0.26), transparent 60%),
+    linear-gradient(165deg, #e6e8ea 0%, #d8dbdd 30%, #cfd2d5 55%, #dadcdf 80%, #e2e4e6 100%);
 }
 
 .onyx-bg-svg {
   position: absolute;
-  top: -2%;
-  left: -2%;
-  width: 104%;
-  height: 104%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes accountPageFade {
