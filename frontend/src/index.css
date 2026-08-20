@@ -1,19 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #82868c;
+  --page-bg: #8c9096;
   --shell-bg: #0d0d0d;
   --card-bg: #111111;
   --card-border: #24282b;
   --card-border-top: #454b50;
   --nav-bg: #141414;
   --text-primary: #ffffff;
-  /* Darkened section header text color for clear visibility on silver background */
-  --text-secondary: #121315; 
+  /* Crisp bright silver-white with high visibility */
+  --text-secondary: #f0f3f6; 
   --accent: #e0e4e8;
   --accent-text: #111111;
   --expense: #e05a5a;
   --income: #3fbf7f;
+}
+
+h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
+  color: var(--text-secondary) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7);
 }
 
 * { box-sizing: border-box; }
@@ -50,20 +55,9 @@ body {
 .page-background__base {
   position: absolute;
   inset: 0;
-  /* Layered linear brushed metal textures with heavy directional sheen */
+  /* Deep brushed silver metallic texture with corner lighting */
   background:
-    /* Diagonal metallic sheen highlight */
-    linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 40%, rgba(0,0,0,0.2) 100%),
-    /* Horizontal brushed steel grain lines */
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.05) 0px,
-      rgba(255, 255, 255, 0.05) 1px,
-      transparent 1px,
-      transparent 3px
-    ),
-    /* Deep metallic base gradient */
-    radial-gradient(110% 130% at 15% 10%, #d5d9de 0%, #9aa0a6 40%, #686d73 80%, #4a4e54 100%);
+    radial-gradient(130% 100% at 50% 0%, #e2e6eb 0%, #a4a9b0 45%, #6d7278 85%, #4b4f55 100%);
 }
 
 .page-background__base::before {
