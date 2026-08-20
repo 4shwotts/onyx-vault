@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #6e7278; /* Dark light-grey tone */
+  --page-bg: #121417;
   --text-primary: #ffffff;
   --text-secondary: #f0f3f6;
 }
@@ -14,10 +14,10 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Clear text shadow to pop against the textured grey canvas */
+/* Ensure UI text remains highly legible against metallic sheen */
 h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
   color: #ffffff !important;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.8);
 }
 
 body {
@@ -52,17 +52,17 @@ body {
 .page-background__base {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, #7d8289 0%, #5e6268 100%);
+  background: radial-gradient(circle at 40% 45%, #7a828c 0%, #3a3e45 50%, #111317 100%);
 }
 
-/* Subtle noise/roughness overlay */
+/* Liquid metal grain overlay */
 .page-background__base::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.12;
   mix-blend-mode: overlay;
   pointer-events: none;
 }
