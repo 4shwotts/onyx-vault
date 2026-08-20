@@ -99,9 +99,15 @@ export default function Login() {
       alignItems: 'center', justifyContent: 'center', padding: 24,
       position: 'relative', zIndex: 1,
     }}>
-      <div className="glass-surface" style={{
+      {/* Switched from .glass-surface (dark) to .chrome-surface (light
+          metal) — same treatment as the account/balance cards
+          elsewhere in the app. The redundant inline dark border that
+          used to sit on top of glass-surface's own border is dropped
+          here, since chrome-surface already defines its own light
+          border that fits the metal look. */}
+      <div className="chrome-surface" style={{
             borderRadius: 12, padding: '36px 32px',
-            width: 300, height: 480, border: '0.5px solid #2a2b2e',
+            width: 300, height: 480,
             position: 'relative', zIndex: 1, boxSizing: 'border-box',
           }}>
             <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
@@ -112,18 +118,24 @@ export default function Login() {
           }}>
             <SpinningGem size={26} variant="dark" />
           </div>
+          {/* Both halves of the title, and the subtitle below, were
+              relying on var(--text-primary)/var(--text-secondary) —
+              light greys meant for a dark card. On the new light
+              chrome card those went nearly invisible, so both are now
+              explicit dark tones matching the same values the
+              dashboard already uses on its own chrome-surface cards. */}
           <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
-            <span style={{ fontWeight: 700 }}>Onyx</span>{' '}
-            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Vault</span>
+            <span style={{ fontWeight: 700, color: '#101112' }}>Onyx</span>{' '}
+            <span style={{ fontWeight: 700, color: '#101112' }}>Vault</span>
           </p>
-          <p className="font-mono" style={{ fontSize: 10, color: 'var(--text-secondary)', margin: '6px 0 0', letterSpacing: 1 }}>
+          <p className="font-mono" style={{ fontSize: 10, color: '#4a4a4a', margin: '6px 0 0', letterSpacing: 1 }}>
             {mode === 'login' ? 'SIGN IN TO CONTINUE' : 'CREATE YOUR ACCOUNT'}
           </p>
         </div>
 
         {registered ? (
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: 300, position: 'relative', zIndex: 1 }}>
-            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
+            <p className="font-mono" style={{ fontSize: 13, color: '#4a4a4a', textAlign: 'center', marginBottom: 20 }}>
               Account created. Check your email for a verification link before signing in.
             </p>
             <button
@@ -136,6 +148,9 @@ export default function Login() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
+            {/* Inputs unchanged — dark background with light text
+                already contrasts cleanly against the light chrome
+                card, no adjustment needed here. */}
             <input
               type="email"
               placeholder="Email"
@@ -184,7 +199,7 @@ export default function Login() {
             {unverified && (
               <div style={{ marginBottom: 10 }}>
                 {resendStatus === 'sent' ? (
-                  <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                  <p className="font-mono" style={{ fontSize: 12, color: '#4a4a4a', margin: 0 }}>
                     If that account exists and isn't verified, a new link has been sent.
                   </p>
                 ) : (
@@ -204,7 +219,7 @@ export default function Login() {
               {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
             </button>
 
-            <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
+            <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: '#4a4a4a', marginTop: 18 }}>
               {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
               <span
                 onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setUnverified(false); setEmailWarning(''); }}
