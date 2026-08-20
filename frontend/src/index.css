@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #121417;
+  --page-bg: #0d0e10;
   --text-primary: #ffffff;
   --text-secondary: #f0f3f6;
 }
@@ -12,12 +12,13 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background-color: var(--page-bg);
 }
 
-/* Ensure UI elements remain highly legible against metallic gloss */
+/* Ensure text headers contrast clearly over raytraced chrome speculars */
 h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
   color: #ffffff !important;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 16px rgba(0, 0, 0, 0.85);
 }
 
 body {
