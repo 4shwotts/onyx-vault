@@ -1,24 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&family=Orbitron:wght@500;700;900&display=swap');
 
 :root {
-  --page-bg: #121417;
-  --text-primary: #ffffff;
-  --text-secondary: #f0f3f6;
+  --page-bg: #c6c9cc;
+  --shell-bg: #0d0d0d;
+  --card-bg: #111111;
+  --card-border: #24282b;
+  --card-border-top: #454b50;
+  --nav-bg: #141414;
+  --text-primary: #eef1f3;
+  --text-secondary: #9a9a9a;
+  --accent: #8e44ad;
+  --accent-text: #f5eaf9;
+  --expense: #e05a5a;
+  --income: #3fbf7f;
 }
 
-html, body, #root {
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-/* Ensure UI elements remain highly legible against metallic gloss */
-h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
-  color: #ffffff !important;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.8);
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -40,28 +37,16 @@ body {
   width: 100%;
 }
 
-.page-background__base {
-  position: absolute;
+.page-background {
+  position: fixed;
   inset: 0;
-  /* Deep liquid grey core with corner lighting */
-  background: radial-gradient(ellipse at 35% 40%, #585d66 0%, #282b30 45%, #0e1012 100%);
-}
-
-/* Micro-fine metallic grain texture */
-.page-background__base::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 150px 150px;
-  opacity: 0.12;
-  mix-blend-mode: overlay;
+  z-index: -1;
+  overflow: hidden;
   pointer-events: none;
 }
 
-.onyx-bg-svg {
-  position: absolute;
-  inset: 0;
+.page-background canvas {
+  display: block;
   width: 100%;
   height: 100%;
 }

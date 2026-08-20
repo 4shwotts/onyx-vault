@@ -1,110 +1,129 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
+
+// A genuine WebGL fragment shader rather than layered CSS gradients —
+// CSS radial gradients can approximate light/dark banding but can't
+// produce real procedural roughness or a moving specular response,
+// which is what actually reads as "rendered metal" rather than "grey
+// gradient". Uses Three.js, already a dependency here via SpinningGem.
+const vertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position, 1.0);
+  }
+`;
+
+const fragmentShader = `
+  precision highp float;
+  varying vec2 vUv;
+  uniform float uTime;
+  uniform vec2 uResolution;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+  }
+
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / uResolution.y;
+    vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
+
+    // Base metal tone — lighter grey than the previous version.
+    vec3 base = vec3(0.83, 0.84, 0.85);
+
+    // Brushed-metal roughness: fine directional grain, horizontal
+    // strokes dominant (like a brushed aluminium sheet).
+    float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
+    base += (grain - 0.5) * 0.045;
+
+    // Several soft vertical light-catch bands across the width,
+    // simulating multiple reflected light sources on a curved
+    // metal surface.
+    float band1 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.12) * 3.2);
+    float band2 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.48) * 3.2);
+    float band3 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.86) * 3.2);
+    base += band1 * 0.11 + band2 * 0.08 + band3 * 0.11;
+
+    // Slow-drifting specular sweep — a highlight that moves across
+    // the surface over time, the way light shifts on brushed metal
+    // as an object (or the viewer) moves.
+    float sweepPos = mod(uTime * 0.025, 1.8) - 0.4;
+    float sweep = smoothstep(0.0, 1.0, 1.0 - abs((uv.x + uv.y * 0.35) - sweepPos) * 5.5);
+    base += sweep * 0.07;
+
+    // Gentle vignette for a slightly domed, dimensional read rather
+    // than a flat sheet.
+    float vignette = 1.0 - length(aspectUv - 0.5) * 0.32;
+    base *= vignette;
+
+    gl_FragColor = vec4(base, 1.0);
+  }
+`;
 
 export default function PageBackground() {
-  return (
-    <div className="page-background">
-      <div className="page-background__base" />
+  const mountRef = useRef(null);
 
-      <svg
-        className="onyx-bg-svg"
-        viewBox="0 0 1600 900"
-        preserveAspectRatio="none"
-        fill="none"
-        aria-hidden="true"
-      >
-        <defs>
-          {/* Photorealistic Liquid Chrome Gradient 1 (Main Fold) */}
-          <linearGradient id="liquidChromePrimary" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="8%" stopColor="#dbe1e8" />
-            <stop offset="18%" stopColor="#111215" />
-            <stop offset="28%" stopColor="#8a929e" />
-            <stop offset="38%" stopColor="#ffffff" />
-            <stop offset="48%" stopColor="#1a1c20" />
-            <stop offset="62%" stopColor="#e2e8f0" />
-            <stop offset="78%" stopColor="#08090a" />
-            <stop offset="90%" stopColor="#cbd5e1" />
-            <stop offset="100%" stopColor="#ffffff" />
-          </linearGradient>
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return undefined;
 
-          {/* Liquid Chrome Edge Reflection (High Contrast Specular) */}
-          <linearGradient id="chromeEdgeGlint" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="20%" stopColor="#000000" />
-            <stop offset="40%" stopColor="#ffffff" />
-            <stop offset="60%" stopColor="#15171a" />
-            <stop offset="80%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#0a0b0d" />
-          </linearGradient>
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-          {/* Ambient Edge Occlusion Drop Shadow */}
-          <filter id="chromeDepthShadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="-20" dy="25" stdDeviation="25" floodColor="#000000" floodOpacity="0.9" />
-            <feDropShadow dx="-5" dy="8" stdDeviation="10" floodColor="#000000" floodOpacity="0.7" />
-          </filter>
-        </defs>
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(mount.clientWidth, mount.clientHeight);
+    mount.appendChild(renderer.domElement);
 
-        {/* --- LIQUID CHROME Draped Edge Layers --- */}
-        <g filter="url(#chromeDepthShadow)">
-          {/* Top Liquid Curve Frame Accent */}
-          <path
-            d="M -50 -50 
-               C 350 80, 850 -60, 1650 90 
-               L 1650 -50 Z"
-            fill="url(#liquidChromePrimary)"
-          />
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
+    };
 
-          {/* Sharp White Specular Rim for Top Curve */}
-          <path
-            d="M -50 -45 
-               C 350 85, 850 -55, 1650 95"
-            stroke="#ffffff"
-            strokeWidth="3"
-            fill="none"
-            opacity="0.85"
-          />
+    const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
 
-          {/* Main Organic Right-to-Bottom Fluid Convergence Sweep */}
-          <path
-            d="M 1650 -50 
-               C 1380 180, 1420 420, 1260 580 
-               C 1080 750, 750 830, -50 960 
-               L 1650 960 Z"
-            fill="url(#liquidChromePrimary)"
-          />
+    let frameId;
+    const clock = new THREE.Clock();
 
-          {/* High-Gloss Mirror Highlight Band */}
-          <path
-            d="M 1650 15 
-               C 1400 220, 1440 450, 1275 600 
-               C 1100 760, 770 840, -50 940"
-            stroke="url(#chromeEdgeGlint)"
-            strokeWidth="28"
-            fill="none"
-            strokeLinecap="round"
-          />
+    function animate() {
+      uniforms.uTime.value = clock.getElapsedTime();
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(animate);
+    }
+    animate();
 
-          {/* Razor-Thin Liquid Hotspot Specular Line */}
-          <path
-            d="M 1650 30 
-               C 1410 230, 1450 455, 1282 608 
-               C 1110 765, 780 845, -50 930"
-            stroke="#ffffff"
-            strokeWidth="5"
-            fill="none"
-            opacity="0.95"
-          />
+    function handleResize() {
+      const w = mount.clientWidth;
+      const h = mount.clientHeight;
+      renderer.setSize(w, h);
+      uniforms.uResolution.value.set(w, h);
+    }
+    window.addEventListener('resize', handleResize);
 
-          {/* Bottom Left Secondary Fluid Fold */}
-          <path
-            d="M -50 720 
-               C 180 820, 420 840, 680 960 
-               L -50 960 Z"
-            fill="url(#liquidChromePrimary)"
-            opacity="0.8"
-          />
-        </g>
-      </svg>
-    </div>
-  );
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', handleResize);
+      mount.removeChild(renderer.domElement);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+    };
+  }, []);
+
+  return <div ref={mountRef} className="page-background" />;
 }
