@@ -15,17 +15,20 @@
   --income: #3fbf7f;
 }
 
-/* Fix navbar text fading by guaranteeing solid surface background and explicit z-index */
-header, nav, .nav-container, [class*="nav"] {
-  position: relative;
-  z-index: 50;
+/* Eliminate window scrollbars completely */
+html, body, #root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
+/* Ensure headings stay crisp and legible across all background shades */
 h1, h2, h3, h4, .text-secondary, [class*="text-slate"], [class*="text-gray"] {
   color: var(--text-secondary) !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.8);
 }
-
 
 body {
   margin: 0;

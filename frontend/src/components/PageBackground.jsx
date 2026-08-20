@@ -8,91 +8,64 @@ export default function PageBackground() {
       <svg
         className="onyx-bg-svg"
         viewBox="0 0 1600 900"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="none"
         fill="none"
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="chassisDark" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#212428" />
-            <stop offset="50%" stopColor="#121316" />
-            <stop offset="100%" stopColor="#08090a" />
-          </linearGradient>
-
-          <linearGradient id="bevelLight" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#3a3e45" stopOpacity="0.1" />
-          </linearGradient>
-
-          <linearGradient id="innerRecess" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#050506" />
-            <stop offset="100%" stopColor="#1a1c1f" />
-          </linearGradient>
-
-          <filter id="heavy3dShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="25" stdDeviation="20" floodColor="#000000" floodOpacity="0.8" />
-            <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.5" />
+          {/* Inner Frame Drop Shadow */}
+          <filter id="frameShadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="12" stdDeviation="16" floodColor="#000000" floodOpacity="0.85" />
+            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
           </filter>
+
+          {/* Chamfer Bevel Highlight */}
+          <linearGradient id="bevelLight" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#1a1c1f" stopOpacity="0.8" />
+          </linearGradient>
+
+          <linearGradient id="darkOuterFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1a1c1e" />
+            <stop offset="50%" stopColor="#0d0e10" />
+            <stop offset="100%" stopColor="#050506" />
+          </linearGradient>
         </defs>
 
-        {/* --- 3D INDUSTRIAL FRAME (Shifted Left Tracks Higher Up) --- */}
-        <g filter="url(#heavy3dShadow)">
-          <path
-            d="M -50 -50 
-               L 1650 -50 
-               L 1650 950 
-               L -50 950 Z 
-               M 70 50 
-               L 1530 50 
-               L 1530 820 
-               L 70 820 Z"
-            fill="url(#chassisDark)"
-            fillRule="evenodd"
-            stroke="#2e3238"
+        {/* --- UNIFIED RECESSED OUTER FRAME --- */}
+        <g filter="url(#frameShadow)">
+          {/* Outer Border Bevel Ring */}
+          <rect
+            x="35"
+            y="35"
+            width="1530"
+            height="830"
+            rx="12"
+            fill="none"
+            stroke="url(#bevelLight)"
             strokeWidth="2"
           />
 
+          {/* Deep Recessed Dark Outer Shell */}
           <path
-            d="M 68 48 
-               L 1532 48 
-               L 1532 822 
-               L 68 822 Z"
-            fill="none"
-            stroke="url(#bevelLight)"
-            strokeWidth="2.5"
+            d="M 0 0 
+               L 1600 0 
+               L 1600 900 
+               L 0 900 Z 
+               M 40 40 
+               L 1560 40 
+               L 1560 860 
+               L 40 860 Z"
+            fill="url(#darkOuterFrame)"
+            fillRule="evenodd"
           />
         </g>
 
-        {/* --- CORNER STRUCTURAL CHANNEL CUTS (Replacing Top-Right Block with Line Channels) --- */}
-        <path
-          d="M -50 -50 L 220 -50 L -50 220 Z"
-          fill="url(#innerRecess)"
-          stroke="#33373e"
-          strokeWidth="1.5"
-        />
-
-        {/* Top-Right Mirrored Structural Line Channels */}
-        <path
-          d="M 1650 -50 L 1380 -50 L 1650 220 Z"
-          fill="url(#innerRecess)"
-          stroke="#33373e"
-          strokeWidth="1.5"
-        />
-
-        {/* Bottom-Right Chamfer Support */}
-        <path
-          d="M 1650 950 L 1380 950 L 1650 680 Z"
-          fill="url(#innerRecess)"
-          stroke="#33373e"
-          strokeWidth="1.5"
-        />
-
-        {/* Clean Parallel Edge Seam Lines (No random singular floating lines) */}
-        <line x1="70" y1="140" x2="-50" y2="140" stroke="#0a0b0c" strokeWidth="4" />
-        <line x1="70" y1="141" x2="-50" y2="141" stroke="#ffffff" strokeWidth="1" opacity="0.25" />
-        
-        <line x1="1530" y1="140" x2="1650" y2="140" stroke="#0a0b0c" strokeWidth="4" />
-        <line x1="1530" y1="141" x2="1650" y2="141" stroke="#ffffff" strokeWidth="1" opacity="0.25" />
+        {/* Diagonal Corner Cut Accents (Clean 3D Frame Corners) */}
+        <line x1="40" y1="40" x2="120" y2="120" stroke="#000000" strokeWidth="3" opacity="0.6" />
+        <line x1="1560" y1="40" x2="1480" y2="120" stroke="#000000" strokeWidth="3" opacity="0.6" />
+        <line x1="40" y1="860" x2="120" y2="780" stroke="#000000" strokeWidth="3" opacity="0.6" />
+        <line x1="1560" y1="860" x2="1480" y2="780" stroke="#000000" strokeWidth="3" opacity="0.6" />
       </svg>
     </div>
   );
