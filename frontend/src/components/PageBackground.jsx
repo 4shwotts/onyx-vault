@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 // Complete change of technique: dense flowing contour lines (like a
-// topographic map or fingerprint), static, no animation.
+// topographic map or fingerprint), static, no animation. This reuses
+// the same height-field idea from the liquid-metal attempts, but
+// instead of lighting the surface, it draws thin lines at regular
+// intervals of the height value — the standard "isoline" rendering
+// technique, which is what actually produces this look. A spiral/
+// polar domain warp around an off-centre point gives the whorled
+// fingerprint structure rather than straight or simple radial bands.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -42,20 +48,18 @@ const fragmentShader = `
     return value;
   }
 
-  // Static height field — no time term anywhere. Coefficients opened
-  // up for bigger, fewer, more dramatic sweeping shapes.
+  // Static height field — no time term anywhere. A spiral around an
+  // off-centre focus point (matching the reference's whorl origin
+  // sitting up and to the left of centre), with a bit of fbm-based
+  // domain warp so the spiral isn't a perfect mechanical circle.
   float heightAt(vec2 p) {
     vec2 center = vec2(0.38, 0.32);
-
-    vec2 warp1 = vec2(fbm(p * 1.0), fbm(p * 1.0 + vec2(4.2, 1.7))) - 0.5;
-    vec2 pw = p + warp1 * 0.8;
-    vec2 warp2 = vec2(fbm(pw * 2.1 + 5.0), fbm(pw * 2.1 - 3.0)) - 0.5;
-    pw += warp2 * 0.4;
-
-    vec2 d = pw - center;
-    float radius = length(d);
+    vec2 d = p - center;
+    vec2 warp = vec2(fbm(p * 1.8), fbm(p * 1.8 + vec2(4.2, 1.7))) - 0.5;
+    d += warp * 0.4;
     float angle = atan(d.y, d.x);
-    return radius * 1.4 + angle * 0.12;
+    float radius = length(d);
+    return sin(angle * 2.0 + radius * 5.2);
   }
 
   void main() {
@@ -65,26 +69,28 @@ const fragmentShader = `
 
     float h = heightAt(aspectUv);
 
-    // Filled marble bands instead of thin isolines: fill grey
-    // wherever the fractional band value is below a threshold, white
-    // otherwise — that asymmetric threshold (not 0.5/0.5) is what
-    // gives more white than grey overall, matching the reference.
-    // Thickness naturally varies with the field's local steepness —
-    // steep areas produce several close thin bands, flat areas
-    // produce one big solid region — with no extra work needed for
-    // that variation, it falls straight out of the threshold-fill
-    // approach.
-    float freq = 9.0;
+    // Isoline rendering: draw a thin line wherever h crosses one of a
+    // regular series of thresholds. fwidth() gives the on-screen rate
+    // of change of h, which is what keeps the lines a consistent
+    // pixel width (anti-aliased) regardless of how steep the
+    // underlying field is at that point.
+    float freq = 13.0;
     float v = h * freq;
-    float band = fract(v);
-    float aa = fwidth(v) + 0.006;
-    float fill = 1.0 - smoothstep(0.32 - aa, 0.32 + aa, band);
+    float f = abs(fract(v) - 0.5) * 2.0;
+    float aa = fwidth(v) * 1.5 + 0.01;
+    float line = 1.0 - smoothstep(0.0, aa, f);
 
-    vec3 whiteBg = vec3(0.99, 0.99, 0.995);
-    vec3 greyFill = vec3(0.84, 0.85, 0.86);
-    vec3 color = mix(whiteBg, greyFill, fill);
+    // Base is a light neutral grey; lines vary between soft grey and
+    // near-white depending on the underlying height, so not every
+    // line reads identically bright — matching the reference's mix
+    // of bright and muted lines rather than one flat line colour.
+    vec3 baseColor = vec3(0.80, 0.81, 0.82);
+    float lineBrightness = 0.55 + 0.45 * (h * 0.5 + 0.5);
+    vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
 
-    float vignette = 1.0 - length(aspectUv - 0.5) * 0.15;
+    vec3 color = mix(baseColor, lineColor, line);
+
+    float vignette = 1.0 - length(aspectUv - 0.5) * 0.2;
     color *= vignette;
 
     gl_FragColor = vec4(color, 1.0);
@@ -110,6 +116,10 @@ export default function PageBackground() {
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
+    // extensions.derivatives enables fwidth() — needed for the
+    // anti-aliased contour lines above, and not guaranteed available
+    // by default on every WebGL1 context (WebGL2 has it natively, but
+    // this makes sure it works either way).
     const material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -120,6 +130,7 @@ export default function PageBackground() {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
+    // Static image — render once, no animation loop needed.
     renderer.render(scene, camera);
 
     function handleResize() {
