@@ -7,9 +7,7 @@ import { getAvailableMonths } from '../utils/months';
 import { BASE_CATEGORIES } from '../constants/categories';
 import { CategoryIcon } from '../components/Icon';
 
-// Dropped from 9 to 8 per page, and paired with tighter row/section
-// padding below — at 9 the list plus the Previous/Next controls sat
-// just past the bottom of the viewport, forcing a slight scroll.
+
 const PAGE_SIZE = 9;
 
 const FAKE_TRANSACTIONS = [

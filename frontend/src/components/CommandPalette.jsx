@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 
-// A single global overlay, mounted once at the app root, opened via
-// Cmd+K / Ctrl+K or the visible hint chip in the nav (which dispatches
-// a plain window event — avoids needing shared state/context just to
-// let the nav trigger something owned by this component).
 export default function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -29,11 +25,18 @@ export default function CommandPalette() {
     function handleExternalOpen() {
       setIsOpen(true);
     }
+    // Fired by api/client.js after any create/delete against accounts,
+    // categories, transactions, or recurring rules.
+    function handleDataChanged() {
+      setDataLoaded(false);
+    }
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('open-command-palette', handleExternalOpen);
+    window.addEventListener('app-data-changed', handleDataChanged);
     return () => {
       window.removeEventListener('keydown', handleKeydown);
       window.removeEventListener('open-command-palette', handleExternalOpen);
+      window.removeEventListener('app-data-changed', handleDataChanged);
     };
   }, []);
 
@@ -43,7 +46,6 @@ export default function CommandPalette() {
       setHighlighted(0);
       return;
     }
-    // Focus the input once the overlay has actually mounted.
     const timer = setTimeout(() => inputRef.current?.focus(), 20);
 
     if (!dataLoaded) {
@@ -54,10 +56,7 @@ export default function CommandPalette() {
           setTransactions(txs);
           setDataLoaded(true);
         })
-        .catch(() => {
-          // Silent — the palette still works for static navigation even
-          // if the data fetch fails, no need to surface an error here.
-        });
+        .catch(() => {});
     }
     return () => clearTimeout(timer);
   }, [isOpen, dataLoaded]);
@@ -102,23 +101,12 @@ export default function CommandPalette() {
 
   const lowerQuery = query.trim().toLowerCase();
 
-  // With an empty query, only the small fixed set of static commands
-  // shows (Navigate + Quick actions) — accounts and categories are
-  // left out of the default view entirely, since dumping every
-  // account and category by default doesn't scale (a handful of
-  // accounts is fine, but a growing category list would eventually
-  // bury the useful stuff) and isn't any more specific or useful than
-  // just browsing the Accounts/Transactions filter dropdowns directly.
-  // They only surface once there's an actual query to match against.
   const matchedCommands = lowerQuery === ''
     ? staticCommands
     : [...staticCommands, ...accountCommands, ...categoryCommands].filter((c) =>
         c.label.toLowerCase().includes(lowerQuery)
       );
 
-  // Transaction descriptions only search once the person has typed
-  // something meaningful — showing every transaction by default would
-  // drown out the more useful navigation/action commands.
   const matchedTransactions = lowerQuery.length >= 2
     ? transactions
         .filter((t) => (t.description || '').toLowerCase().includes(lowerQuery))
@@ -157,8 +145,6 @@ export default function CommandPalette() {
 
   if (!isOpen) return null;
 
-  // Group results for section headers, preserving the order they
-  // appear in `results` so keyboard index and visual position match.
   const groups = [];
   results.forEach((item) => {
     const lastGroup = groups[groups.length - 1];

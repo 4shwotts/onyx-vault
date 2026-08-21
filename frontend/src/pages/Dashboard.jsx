@@ -371,7 +371,7 @@ export default function Dashboard() {
   const currentAccountPage = accountPages[accountPage] || [];
 
   const revealArcs = chartsMounted ? displayArcs : displayArcs.map((a) => ({ ...a, dashArray: `0 ${circumference}` }));
-  const revealMaxBar = chartsMounted ? displayMaxBarVal : displayMaxBarVal;
+  const revealMaxBar =  displayMaxBarVal ;
 
   function goToCategory(name) {
     if (!hasSpendData) return;

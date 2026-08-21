@@ -16,6 +16,16 @@ async function request(path, options = {}) {
   return data;
 }
 
+function notifyDataChanged() {
+  window.dispatchEvent(new Event('app-data-changed'));
+}
+
+async function mutating(promise) {
+  const result = await promise;
+  notifyDataChanged();
+  return result;
+}
+
 export const api = {
   register: (email, password, honeypot = '', formRenderedAt = null) =>
     request('/auth/register', {
@@ -36,20 +46,24 @@ export const api = {
     request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
   deleteMyAccount: (password) =>
     request('/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) }),
+
   getAccounts: () => request('/accounts'),
   createAccount: (name, type) =>
-    request('/accounts', { method: 'POST', body: JSON.stringify({ name, type }) }),
-  deleteAccount: (id) => request(`/accounts/${id}`, { method: 'DELETE' }),
+    mutating(request('/accounts', { method: 'POST', body: JSON.stringify({ name, type }) })),
+  deleteAccount: (id) => mutating(request(`/accounts/${id}`, { method: 'DELETE' })),
+
   getCategories: () => request('/categories'),
   createCategory: (name) =>
-    request('/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+    mutating(request('/categories', { method: 'POST', body: JSON.stringify({ name }) })),
+
   getTransactions: (params = '') => request(`/transactions${params}`),
   createTransaction: (data) =>
-    request('/transactions', { method: 'POST', body: JSON.stringify(data) }),
-  deleteTransaction: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
+    mutating(request('/transactions', { method: 'POST', body: JSON.stringify(data) })),
+  deleteTransaction: (id) => mutating(request(`/transactions/${id}`, { method: 'DELETE' })),
+
   getRecurring: () => request('/recurring'),
   createRecurring: (data) =>
-    request('/recurring', { method: 'POST', body: JSON.stringify(data) }),
-  deleteRecurring: (id) => request(`/recurring/${id}`, { method: 'DELETE' }),
-  runRecurringNow: () => request('/recurring/run-now', { method: 'POST' }),
+    mutating(request('/recurring', { method: 'POST', body: JSON.stringify(data) })),
+  deleteRecurring: (id) => mutating(request(`/recurring/${id}`, { method: 'DELETE' })),
+  runRecurringNow: () => mutating(request('/recurring/run-now', { method: 'POST' })),
 };
