@@ -35,16 +35,36 @@ const fragmentShader = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
-  // Height field — frequencies raised significantly so several full
-  // fold cycles are actually visible across the screen (the previous
-  // values only spanned a fraction of one sine period across the 0-1
-  // UV range, which is why it barely showed).
+  // Fractal Brownian motion — several octaves of the noise function
+  // above, layered at increasing frequency/decreasing amplitude. This
+  // (not sine waves) is the real technique behind organic liquid/marble
+  // renders. Sine waves are inherently periodic, which is exactly why
+  // the previous version looked like regular stripes rather than
+  // liquid — noise-based fbm never repeats.
+  float fbm(vec2 p) {
+    float value = 0.0;
+    float amp = 0.5;
+    for (int i = 0; i < 5; i++) {
+      value += amp * noise(p);
+      p *= 2.0;
+      amp *= 0.5;
+    }
+    return value;
+  }
+
+  // Domain warping: feed fbm's own output back in as a coordinate
+  // offset for a second fbm pass. This is the standard technique for
+  // the chaotic, swirling folds you see in real liquid-metal/marble
+  // renders — a single fbm layer alone still looks like blobby clouds,
+  // warping the domain is what gives it that flowing, folded quality.
   float heightAt(vec2 p) {
-    float h = 0.0;
-    h += sin(p.x * 9.0 + uTime * 0.15) * 0.5;
-    h += sin(p.x * 14.0 - uTime * 0.1 + 1.7) * 0.28;
-    h += sin(p.y * 6.0 + uTime * 0.08 + 0.6) * 0.22;
-    return h;
+    vec2 q = p * 2.2;
+    vec2 warp = vec2(
+      fbm(q + uTime * 0.025),
+      fbm(q + vec2(5.2, 1.3) - uTime * 0.02)
+    );
+    float h = fbm(q + warp * 1.8);
+    return h - 0.5;
   }
 
   void main() {
@@ -52,33 +72,26 @@ const fragmentShader = `
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
-    float epsN = 0.0025;
+    float epsN = 0.003;
     float hC = heightAt(uv);
     float hX = heightAt(uv + vec2(epsN, 0.0));
     float hY = heightAt(uv + vec2(0.0, epsN));
-    // Slope multiplier raised (0.22 -> 1.0) for real, visible tilt.
-    vec3 normal = normalize(vec3(-(hX - hC) / epsN * 1.0, -(hY - hC) / epsN * 1.0, 1.0));
+    vec3 normal = normalize(vec3(-(hX - hC) / epsN * 2.6, -(hY - hC) / epsN * 2.6, 1.0));
 
-    // Light direction now grazing (mostly along x, low z) instead of
-    // pointing near-straight at the viewer — that's what makes the
-    // specular concentrate only on steep fold ridges rather than
-    // lighting up flat areas broadly.
-    vec3 lightDir = normalize(vec3(0.75, 0.3, 0.3));
+    vec3 lightDir = normalize(vec3(0.7, 0.35, 0.35));
     vec3 viewDir = vec3(0.0, 0.0, 1.0);
     vec3 halfDir = normalize(lightDir + viewDir);
     float diff = max(dot(normal, lightDir), 0.0);
-    float spec = pow(max(dot(normal, halfDir), 0.0), 26.0);
+    float spec = pow(max(dot(normal, halfDir), 0.0), 20.0);
 
-    // Darker baseline so the folds' contrast actually reads, rather
-    // than a bright wash with subtle variation.
-    float tone = clamp(0.16 + diff * 0.55 + spec * 0.95, 0.0, 1.0);
+    float tone = clamp(0.18 + diff * 0.55 + spec * 0.85, 0.0, 1.0);
 
     vec3 shadowColor = vec3(0.09, 0.10, 0.12);
     vec3 highColor = vec3(0.97, 0.98, 0.99);
     vec3 base = mix(shadowColor, highColor, tone);
 
     float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
-    base += (grain - 0.5) * 0.03;
+    base += (grain - 0.5) * 0.025;
 
     float vignette = 1.0 - length(aspectUv - 0.5) * 0.28;
     base *= vignette;
