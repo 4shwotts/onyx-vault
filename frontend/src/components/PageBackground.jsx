@@ -46,18 +46,25 @@ const fragmentShader = `
     return value;
   }
 
-  // Static height field — no time term anywhere. Just distance from a
-  // focal point (nudged slightly off dead-centre so it doesn't read
-  // as too mechanically perfect), plus a touch of domain warp for
-  // organic irregularity in the rings. Distance fields are monotonic,
-  // so feeding this straight into the isoline logic below naturally
-  // produces expanding concentric rings — no sin()/angle math needed.
+  // Static height field — no time term anywhere. Distance from a
+  // focal point, but the coordinates get warped twice at different
+  // scales before that distance is measured — a compound warp like
+  // this is what gives flowing, curvy rings (curves within curves)
+  // rather than one uniform wobble on an otherwise perfect circle.
   float heightAt(vec2 p) {
     vec2 center = vec2(0.54, 0.47);
-    vec2 d = p - center;
-    vec2 warp = vec2(fbm(p * 1.6), fbm(p * 1.6 + vec2(4.2, 1.7))) - 0.5;
-    d += warp * 0.3;
-    return length(d);
+
+    // First pass: larger-scale, stronger warp for big flowing bends.
+    vec2 warp1 = vec2(fbm(p * 1.1), fbm(p * 1.1 + vec2(4.2, 1.7))) - 0.5;
+    vec2 pw = p + warp1 * 0.55;
+
+    // Second pass: smaller-scale warp applied to the already-warped
+    // coordinates, adding finer flowing detail on top of the big
+    // bends rather than a second independent pattern.
+    vec2 warp2 = vec2(fbm(pw * 2.3 + 5.0), fbm(pw * 2.3 - 3.0)) - 0.5;
+    pw += warp2 * 0.25;
+
+    return length(pw - center);
   }
 
   void main() {
@@ -67,20 +74,12 @@ const fragmentShader = `
 
     float h = heightAt(aspectUv);
 
-    // Isoline rendering: draw a thin line wherever h crosses one of a
-    // regular series of thresholds. fwidth() gives the on-screen rate
-    // of change of h, which is what keeps the lines a consistent
-    // pixel width (anti-aliased) regardless of how steep the
-    // underlying field is at that point.
-    float freq = 13.0;
+    float freq = 22.0;
     float v = h * freq;
     float f = abs(fract(v) - 0.5) * 2.0;
     float aa = fwidth(v) * 1.5 + 0.01;
     float line = 1.0 - smoothstep(0.0, aa, f);
 
-    // Base is a light neutral grey; lines vary between soft grey and
-    // near-white depending on distance from the centre, so not every
-    // ring reads identically bright.
     vec3 baseColor = vec3(0.80, 0.81, 0.82);
     float lineBrightness = 0.45 + 0.55 * clamp(h, 0.0, 1.0);
     vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
@@ -113,10 +112,6 @@ export default function PageBackground() {
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
-    // extensions.derivatives enables fwidth() — needed for the
-    // anti-aliased contour lines above, and not guaranteed available
-    // by default on every WebGL1 context (WebGL2 has it natively, but
-    // this makes sure it works either way).
     const material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -127,7 +122,6 @@ export default function PageBackground() {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    // Static image — render once, no animation loop needed.
     renderer.render(scene, camera);
 
     function handleResize() {
