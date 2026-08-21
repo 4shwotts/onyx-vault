@@ -1,14 +1,20 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// Complete change of technique: dense flowing contour lines (like a
-// topographic map or fingerprint), static, no animation. This reuses
-// the same height-field idea from the liquid-metal attempts, but
-// instead of lighting the surface, it draws thin lines at regular
-// intervals of the height value — the standard "isoline" rendering
-// technique, which is what actually produces this look. A spiral/
-// polar domain warp around an off-centre point gives the whorled
-// fingerprint structure rather than straight or simple radial bands.
+// Static fingerprint-style contour lines. Two fixes from annotations
+// on this base:
+//
+// 1. Centre focal point ramped: ring frequency now starts low right
+//    at the focal point and increases with radius, rather than being
+//    constant everywhere — that's what was making the centre look
+//    over-busy. This only touches the radius term, not the angle
+//    term, so it doesn't risk reintroducing any seam issues (the
+//    angle term stays wrapped in sin() with its integer coefficient,
+//    which is what keeps it seamless across the atan() branch cut).
+//
+// 2. Vignette softened (0.2 -> 0.08) so the pattern doesn't fade out
+//    so aggressively toward the edges — that fade was leaving the
+//    left side and top-right corner looking empty.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -49,9 +55,8 @@ const fragmentShader = `
   }
 
   // Static height field — no time term anywhere. A spiral around an
-  // off-centre focus point (matching the reference's whorl origin
-  // sitting up and to the left of centre), with a bit of fbm-based
-  // domain warp so the spiral isn't a perfect mechanical circle.
+  // off-centre focus point, with a bit of fbm-based domain warp so
+  // it isn't a perfect mechanical circle.
   float heightAt(vec2 p) {
     vec2 center = vec2(0.38, 0.32);
     vec2 d = p - center;
@@ -59,7 +64,14 @@ const fragmentShader = `
     d += warp * 0.4;
     float angle = atan(d.y, d.x);
     float radius = length(d);
-    return sin(angle * 2.0 + radius * 5.2);
+
+    // Ring frequency ramps from calm near the centre to full density
+    // further out — this only affects the radius term, so the angle
+    // term (wrapped in sin() with an integer coefficient, which is
+    // what keeps it seamless across the atan() branch cut) is
+    // untouched and stays seam-free.
+    float ringFreq = mix(2.0, 5.2, smoothstep(0.0, 0.3, radius));
+    return sin(angle * 2.0 + radius * ringFreq);
   }
 
   void main() {
@@ -80,17 +92,13 @@ const fragmentShader = `
     float aa = fwidth(v) * 1.5 + 0.01;
     float line = 1.0 - smoothstep(0.0, aa, f);
 
-    // Base is a light neutral grey; lines vary between soft grey and
-    // near-white depending on the underlying height, so not every
-    // line reads identically bright — matching the reference's mix
-    // of bright and muted lines rather than one flat line colour.
     vec3 baseColor = vec3(0.80, 0.81, 0.82);
     float lineBrightness = 0.55 + 0.45 * (h * 0.5 + 0.5);
     vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
 
     vec3 color = mix(baseColor, lineColor, line);
 
-    float vignette = 1.0 - length(aspectUv - 0.5) * 0.2;
+    float vignette = 1.0 - length(aspectUv - 0.5) * 0.08;
     color *= vignette;
 
     gl_FragColor = vec4(color, 1.0);
@@ -116,10 +124,6 @@ export default function PageBackground() {
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
-    // extensions.derivatives enables fwidth() — needed for the
-    // anti-aliased contour lines above, and not guaranteed available
-    // by default on every WebGL1 context (WebGL2 has it natively, but
-    // this makes sure it works either way).
     const material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
