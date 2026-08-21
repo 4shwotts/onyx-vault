@@ -99,31 +99,15 @@ export default function Login() {
       alignItems: 'center', justifyContent: 'center', padding: 24,
       position: 'relative', zIndex: 1,
     }}>
-      {/* Switched from .glass-surface (dark) to .chrome-surface (light
-          metal) — same treatment as the account/balance cards
-          elsewhere in the app. The redundant inline dark border that
-          used to sit on top of glass-surface's own border is dropped
-          here, since chrome-surface already defines its own light
-          border that fits the metal look. */}
       <div className="chrome-surface" style={{
             borderRadius: 12, padding: '36px 32px',
             width: 300, height: 480,
             position: 'relative', zIndex: 1, boxSizing: 'border-box',
           }}>
             <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 10, background: 'var(--nav-bg)',
-            border: '0.5px solid #454b50', borderTop: '0.5px solid #8a9096',
-            margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <SpinningGem size={26} variant="dark" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+            <SpinningGem size={64} variant="dark" />
           </div>
-          {/* Both halves of the title, and the subtitle below, were
-              relying on var(--text-primary)/var(--text-secondary) —
-              light greys meant for a dark card. On the new light
-              chrome card those went nearly invisible, so both are now
-              explicit dark tones matching the same values the
-              dashboard already uses on its own chrome-surface cards. */}
           <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
             <span style={{ fontWeight: 700, color: '#101112' }}>Onyx</span>{' '}
             <span style={{ fontWeight: 700, color: '#101112' }}>Vault</span>
@@ -148,9 +132,6 @@ export default function Login() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
-            {/* Inputs unchanged — dark background with light text
-                already contrasts cleanly against the light chrome
-                card, no adjustment needed here. */}
             <input
               type="email"
               placeholder="Email"
@@ -238,12 +219,12 @@ export default function Login() {
 const inputStyle = {
   width: '100%',
   boxSizing: 'border-box',
-  background: '#15181a',
-  border: '0.5px solid #2e3336',
+  background: '#f5f6f7',
+  border: '0.5px solid rgba(0,0,0,0.15)',
   borderRadius: 8,
   padding: '11px 12px',
   fontSize: 14,
-  color: 'var(--text-primary)',
+  color: '#101112',
 };
 
 const buttonStyle = {

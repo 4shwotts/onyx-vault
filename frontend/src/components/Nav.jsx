@@ -51,7 +51,7 @@ export default function Nav() {
             fontSize: 13, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-secondary)',
             cursor: 'pointer', padding: '10px 16px', borderRadius: 8, fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: 1,
-            background: 'transparent', border: 'none', font: 'inherit',
+            background: 'transparent', border: 'none',
           }}
         >
           Search
@@ -98,7 +98,7 @@ export default function Nav() {
           style={{
             fontSize: 13, letterSpacing: 0.5, color: 'var(--text-secondary)', cursor: 'pointer',
             textTransform: 'uppercase', padding: '10px 18px', fontWeight: 600, position: 'relative', zIndex: 1,
-            background: 'transparent', border: 'none', font: 'inherit',
+            background: 'transparent', border: 'none',
           }}
         >
           Logout
