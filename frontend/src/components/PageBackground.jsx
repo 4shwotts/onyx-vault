@@ -4,17 +4,14 @@ import * as THREE from 'three';
 // Static fingerprint-style contour lines. Two fixes from annotations
 // on this base:
 //
-// 1. Centre focal point ramped: ring frequency now starts low right
-//    at the focal point and increases with radius, rather than being
-//    constant everywhere — that's what was making the centre look
-//    over-busy. This only touches the radius term, not the angle
-//    term, so it doesn't risk reintroducing any seam issues (the
-//    angle term stays wrapped in sin() with its integer coefficient,
-//    which is what keeps it seamless across the atan() branch cut).
+// 1. Centre focal point ramped: ring frequency starts calm right at
+//    the focal point and increases with radius, widened and lowered
+//    significantly from the first attempt — that one was real but
+//    confined to too small an area to actually be visible.
 //
-// 2. Vignette softened (0.2 -> 0.08) so the pattern doesn't fade out
-//    so aggressively toward the edges — that fade was leaving the
-//    left side and top-right corner looking empty.
+// 2. Vignette removed entirely — the previous softened version was
+//    still only a 5-10% brightness difference, not enough to read as
+//    "the pattern reaches further" toward the edges.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -66,11 +63,11 @@ const fragmentShader = `
     float radius = length(d);
 
     // Ring frequency ramps from calm near the centre to full density
-    // further out — this only affects the radius term, so the angle
-    // term (wrapped in sin() with an integer coefficient, which is
-    // what keeps it seamless across the atan() branch cut) is
-    // untouched and stays seam-free.
-    float ringFreq = mix(2.0, 5.2, smoothstep(0.0, 0.3, radius));
+    // further out. Widened and lowered substantially from the first
+    // attempt (0.3 radius / 2.0 start -> 0.55 radius / 0.6 start) —
+    // that version's effect was real but confined to too small an
+    // area to actually notice.
+    float ringFreq = mix(0.6, 5.2, smoothstep(0.0, 0.55, radius));
     return sin(angle * 2.0 + radius * ringFreq);
   }
 
@@ -98,9 +95,10 @@ const fragmentShader = `
 
     vec3 color = mix(baseColor, lineColor, line);
 
-    float vignette = 1.0 - length(aspectUv - 0.5) * 0.08;
-    color *= vignette;
-
+    // Vignette removed entirely — even the softened 0.08 version was
+    // only a 5-10% brightness difference near the edges, not enough
+    // to actually read as "the pattern reaches further." No fade now,
+    // full pattern strength edge to edge.
     gl_FragColor = vec4(color, 1.0);
   }
 `;
