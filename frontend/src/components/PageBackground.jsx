@@ -14,83 +14,49 @@ const fragmentShader = `
   varying vec2 vUv;
   uniform vec2 uResolution;
 
-  // Smooth Simplex-style Perlin Noise
-  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
-
-  float snoise(vec2 v) {
-    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-                       -0.577350269189626, 0.024390243902439);
-    vec2 i  = floor(v + dot(v, C.yy));
-    vec2 x0 = v - i + dot(i, C.xx);
-    vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-    vec4 x12 = x0.xyxy + C.xxzz;
-    x12.xy -= i1;
-    i = mod289(i);
-    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
-    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-    m = m*m; m = m*m;
-    vec3 x = 2.0 * fract(p * C.www) - 1.0;
-    vec3 h = abs(x) - 0.5;
-    vec3 ox = floor(x + 0.5);
-    vec3 a0 = x - ox;
-    m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
-    vec3 g;
-    g.x  = a0.x  * x0.x  + h.x  * x0.y;
-    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-    return 130.0 * dot(m, g);
-  }
-
-  // Broad fluid domain-warping for sweeping marble curves
+  // Ultra-smooth low-frequency ripple displacement
   float heightAt(vec2 p) {
-    vec2 q = vec2(snoise(p * 0.85), snoise(p * 0.85 + vec2(5.2, 1.3)));
-    vec2 r = vec2(snoise(p + 1.8 * q + vec2(1.7, 9.2)), snoise(p + 1.8 * q + vec2(8.3, 2.8)));
-    return snoise(p + 2.2 * r);
+    // Large, gentle sine waves running diagonally
+    float wave1 = sin(p.x * 2.5 + p.y * 2.0);
+    float wave2 = cos(p.x * 1.8 - p.y * 2.2);
+    
+    // Broad warp to bend lines into smooth liquid ribbons
+    vec2 warp = vec2(wave1, wave2) * 0.35;
+    vec2 pw = p + warp;
+
+    return sin(pw.x * 3.2 + pw.y * 2.8) * 0.5 + 0.5;
   }
 
   void main() {
     vec2 st = (vUv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0) + 0.5;
 
-    // Height field and partial derivatives for dynamic surface slope
-    float h = heightAt(st * 1.8);
-    vec2 e = vec2(0.003, 0.0);
-    float dhx = (heightAt((st + e.xy) * 1.8) - heightAt((st - e.xy) * 1.8)) / (2.0 * e.x);
-    float dhy = (heightAt((st + e.yx) * 1.8) - heightAt((st - e.yx) * 1.8)) / (2.0 * e.x);
-    float slope = length(vec2(dhx, dhy));
+    // Sample height field
+    float h = heightAt(st * 1.2);
 
-    // Contour isoline frequency
-    float freq = 11.0;
+    // Low frequency isoline rings (keeps lines spaced out and clear)
+    float freq = 14.0;
     float val = h * freq;
-    float wave = abs(fract(val) - 0.5) * 2.0;
+    
+    // Smooth, anti-aliased line rendering
+    float f = abs(fract(val) - 0.5) * 2.0;
+    float df = fwidth(val);
+    float line = 1.0 - smoothstep(0.0, df * 1.8 + 0.08, f);
 
-    // Variable line thickness based on local height slope (matches reference swell)
-    float lineThickness = mix(0.12, 0.45, smoothstep(0.2, 1.8, slope));
-    float line = 1.0 - smoothstep(lineThickness - 0.08, lineThickness + 0.08, wave);
+    // Liquid chrome metallic palette matching reference image
+    vec3 baseBg = vec3(0.72, 0.74, 0.76);
+    vec3 darkShadow = vec3(0.20, 0.22, 0.25);
+    vec3 brightHighlight = vec3(0.98, 0.99, 1.0);
 
-    // Light direction (top-left studio light)
-    vec2 lightDir = normalize(vec2(-0.6, 0.8));
-    float specular = max(0.0, dot(normalize(vec2(dhx, dhy)), lightDir));
+    // Subtle lighting gradient across lines
+    float shadowMask = smoothstep(0.0, 0.5, fract(val));
+    vec3 lineColor = mix(darkShadow, brightHighlight, shadowMask);
 
-    // Metallic foil palette matching the silver reference
-    vec3 matteGrey = vec3(0.68, 0.70, 0.72);
-    vec3 darkSteel = vec3(0.25, 0.27, 0.30);
-    vec3 brightChrome = vec3(0.98, 0.99, 1.0);
+    // Blend base background with metallic ripples
+    vec3 color = mix(baseBg, lineColor, line * 0.85);
 
-    // Base background tone with soft gradient
-    vec3 color = mix(vec3(0.60, 0.62, 0.65), vec3(0.78, 0.80, 0.83), st.y);
-
-    // Apply fluid ribbon lines with chrome highlights and dark shadow edges
-    vec3 ribbonColor = mix(darkSteel, brightChrome, pow(specular, 2.0) * 0.85);
-    color = mix(color, ribbonColor, line);
-
-    // Hotspot specular highlights on peak curve edges
-    float glint = pow(specular, 6.0) * line;
-    color += brightChrome * glint * 0.6;
-
-    // Subtle corner vignette
-    float vignette = smoothstep(1.2, 0.2, length(vUv - 0.5));
-    color = mix(color * 0.88, color, vignette);
+    // Soft, clean lighting vignette
+    float vignette = 1.0 - length(vUv - 0.5) * 0.15;
+    color *= vignette;
 
     gl_FragColor = vec4(color, 1.0);
   }
