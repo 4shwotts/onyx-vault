@@ -52,28 +52,28 @@ const fragmentShader = `
   float heightAt(vec2 p) {
     vec2 center = vec2(0.38, 0.32);
     vec2 d = p - center;
+
+    // Extra density on the left is now done by amplifying the SAME
+    // domain warp there, not by adding a second independent wave
+    // layer on top. Summing two differently-phased fields (the
+    // previous approach) creates sharp seam/crease artifacts exactly
+    // where they clash — that's the "torn" look from last time.
+    // Warping one coherent field's coordinates more strongly in one
+    // region avoids that entirely, since there's only ever one field.
+    float leftMask = smoothstep(0.65, 0.0, p.x);
     vec2 warp = vec2(fbm(p * 1.8), fbm(p * 1.8 + vec2(4.2, 1.7))) - 0.5;
-    d += warp * 0.4;
+    d += warp * (0.4 + leftMask * 0.5);
+
     float angle = atan(d.y, d.x);
     float radius = length(d);
 
-    // The angle term has a true singularity at radius 0 — angle
-    // itself is meaningless there, and its frequency effectively
-    // blows up right at the vortex point, which is what caused the
-    // over-congested centre. Fading the angular term's weight in
-    // gradually as radius grows (rather than using it at full
-    // strength everywhere) turns that pinch into smooth soft rings
-    // near the very centre instead.
+    // Soften the true singularity at radius 0 (angle is meaningless
+    // there) by fading the angular term in gradually with radius,
+    // rather than using it at full strength right at the vortex —
+    // keeps the very centre as smooth soft rings, not an infinitely
+    // dense pinch.
     float angleWeight = smoothstep(0.0, 0.18, radius);
-    float val = sin(angle * 2.0 * angleWeight + radius * 5.2);
-
-    // Extra ripple density on the left side only — a second wave
-    // layer masked by a left-to-right falloff, so it's strong at the
-    // far left and fades out before reaching the centre/right.
-    float leftMask = smoothstep(0.65, 0.0, p.x);
-    val += sin(p.x * 20.0 + p.y * 7.0 + 1.0) * 0.22 * leftMask;
-
-    return val;
+    return sin(angle * 2.0 * angleWeight + radius * 5.2);
   }
 
   void main() {
