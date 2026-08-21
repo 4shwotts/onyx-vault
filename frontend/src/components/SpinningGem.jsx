@@ -2,18 +2,6 @@ import { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// Builds the actual bipyramid geometry once (not on every render): two
-// low-poly cones (4 radial segments, so the sides read as flat faceted
-// planes rather than a smooth cone) joined base-to-base, rotated 45°
-// so the square cross-section reads as a diamond outline matching the
-// original flat mark.
-//
-// variant controls shading so the gem stays legible against whichever
-// background it sits on: "light" (the chrome nav pill) can afford deep
-// shadow facets since the light backdrop keeps them readable; "dark"
-// (the near-black login card) needs a brighter base tone plus a touch
-// of emissive self-glow, otherwise shadowed facets sink to the same
-// near-black as the card itself and the shape disappears.
 function GemMesh({ variant }) {
   const groupRef = useRef();
 
@@ -27,8 +15,9 @@ function GemMesh({ variant }) {
     return { topGeometry: topCone, bottomGeometry: bottomCone };
   }, []);
 
+  // Slowed from 0.012 to 0.006 — roughly half the previous speed.
   useFrame(() => {
-    if (groupRef.current) groupRef.current.rotation.y += 0.012;
+    if (groupRef.current) groupRef.current.rotation.y += 0.006;
   });
 
   const isDark = variant === 'dark';
@@ -62,11 +51,6 @@ function GemMesh({ variant }) {
   );
 }
 
-// variant: "light" (default) for use on the chrome nav pill's light
-// metal background; "dark" for use on the near-black login card. Both
-// use the same geometry/rotation, only material brightness, emissive
-// glow, and ambient/hemisphere fill differ, tuned so shadowed facets
-// stay visibly lighter than whatever backdrop they sit on.
 export default function SpinningGem({ size = 36, variant = 'light' }) {
   const isDark = variant === 'dark';
 

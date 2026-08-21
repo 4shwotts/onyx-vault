@@ -105,8 +105,15 @@ export default function Login() {
             position: 'relative', zIndex: 1, boxSizing: 'border-box',
           }}>
             <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
+          {/* Dropped variant="dark" — that variant is deliberately
+              light-colored, tuned to stay visible against a
+              near-black card. This card is now the light chrome
+              surface, so the default "light" variant (which reads
+              darker, the same one the nav bar's gem uses) is the
+              correct match — that's what actually gives the dark
+              onyx look against a light background. */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-            <SpinningGem size={64} variant="dark" />
+            <SpinningGem size={64} />
           </div>
           <p className="font-mono" style={{ fontSize: 19, margin: 0 }}>
             <span style={{ fontWeight: 700, color: '#101112' }}>Onyx</span>{' '}
