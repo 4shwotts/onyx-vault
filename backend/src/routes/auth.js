@@ -20,6 +20,38 @@ const COOKIE_OPTIONS = {
 const VERIFICATION_TOKEN_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 60; // 1 hour
 
+// Mirrors the frontend's Login.jsx checks exactly. Client-side
+// validation is a UX nicety, not enforcement — a direct API call
+// bypasses the browser entirely, so this needs to exist here too, not
+// just there.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const ALLOWED_DOMAINS = [
+  'gmail.com', 'googlemail.com',
+  'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.co.uk', 'msn.com',
+  'yahoo.com', 'yahoo.co.uk', 'ymail.com', 'rocketmail.com',
+  'icloud.com', 'me.com', 'mac.com',
+  'aol.com',
+  'protonmail.com', 'proton.me', 'pm.me',
+  'zoho.com', 'zohomail.com',
+  'gmx.com', 'gmx.us',
+  'mail.com',
+  'yandex.com', 'yandex.ru',
+  'fastmail.com', 'fastmail.fm',
+  'tutanota.com', 'tuta.io',
+];
+
+function getEmailError(email) {
+  if (!EMAIL_SHAPE.test(email)) {
+    return 'That doesn\'t look like a valid email address';
+  }
+  const domain = email.split('@')[1];
+  if (!ALLOWED_DOMAINS.includes(domain)) {
+    return 'Please use a verified email provider, such as Gmail';
+  }
+  return null;
+}
+
 // Precomputed bcrypt hash of an arbitrary fixed string. Used only as a
 // comparison target when no matching user is found, so bcrypt.compare
 // still runs and takes roughly the same time as a real password check.
@@ -78,6 +110,11 @@ router.post('/register', registerLimiter, async (req, res) => {
 
   if (!email || !password || password.length < 8 || password.length > 72) {
     return res.status(400).json({ error: 'Email and a password between 8 and 72 characters are required' });
+  }
+
+  const emailError = getEmailError(email);
+  if (emailError) {
+    return res.status(400).json({ error: emailError });
   }
 
   try {
@@ -159,8 +196,6 @@ router.post('/resend-verification', resendVerificationLimiter, async (req, res) 
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  // Same generic response regardless of outcome — otherwise this becomes
-  // a way to check which emails are registered or already verified.
   const genericResponse = {
     message: 'If an account with that email exists and is not yet verified, a new verification link has been sent.',
   };
@@ -170,8 +205,6 @@ router.post('/resend-verification', resendVerificationLimiter, async (req, res) 
     const user = result.rows[0];
 
     if (user && !user.email_verified) {
-      // Clear out old tokens first so an expired or previously issued
-      // link stops working once a new one is sent.
       await pool.query('DELETE FROM email_verification_tokens WHERE user_id = $1', [user.id]);
 
       const { token, tokenHash } = generateToken();
@@ -210,8 +243,6 @@ router.post('/login', authLimiter, async (req, res) => {
     );
     const user = result.rows[0];
 
-    // Always run bcrypt.compare, against a dummy hash if no user was
-    // found, so this route takes the same amount of time either way.
     const valid = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
 
     if (!user || !valid) {
@@ -243,9 +274,6 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  // Always return the same generic message whether or not the account
-  // exists, otherwise this endpoint becomes a way to check which emails
-  // are registered.
   const genericResponse = {
     message: 'If an account with that email exists, a password reset link has been sent.',
   };
@@ -272,8 +300,6 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
     res.json(genericResponse);
   } catch (err) {
     console.error('Forgot password error:', err.message);
-    // Still return the generic message, do not leak whether something
-    // failed server side.
     res.json(genericResponse);
   }
 });
@@ -300,8 +326,6 @@ router.post('/reset-password', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
-    // Invalidate every outstanding reset token for this user, not just
-    // the one used, in case several were requested.
     await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
 
     res.json({ message: 'Password updated. You can now log in with your new password.' });
@@ -311,8 +335,6 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-// Lets the frontend check "am I still logged in?" without triggering
-// a 500 on some unrelated page, used by ProtectedRoute.
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, email FROM users WHERE id = $1', [req.userId]);
@@ -346,8 +368,6 @@ router.delete('/account', requireAuth, async (req, res) => {
       return res.status(401).json({ error: 'Incorrect password' });
     }
 
-    // Cascades to accounts, categories, transactions, and both token
-    // tables through the existing ON DELETE CASCADE foreign keys.
     await pool.query('DELETE FROM users WHERE id = $1', [req.userId]);
 
     res.clearCookie('token', COOKIE_OPTIONS);

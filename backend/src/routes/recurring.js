@@ -43,10 +43,6 @@ router.post('/', async (req, res) => {
     return res.status(403).json({ error: 'That account does not belong to you' });
   }
 
-  // Same reasoning as the transactions route: without this, a user could
-  // reference another user's category_id, which would then leak that
-  // category's name into their own recurring-rules list via the
-  // unfiltered JOIN in GET /.
   if (category_id) {
     const ownsCategory = await pool.query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [category_id, req.userId]);
     if (ownsCategory.rows.length === 0) {
@@ -68,10 +64,6 @@ router.post('/', async (req, res) => {
     let rule = inserted.rows[0];
     let firstTransactionCreated = false;
 
-    // If the chosen start date is today (or already in the past), process
-    // it immediately rather than leaving it waiting for the next cron run
-    // — mirrors real subscription billing: charged today, not "scheduled
-    // to eventually be charged today."
     const dueCheck = await pool.query(
       "SELECT $1::date <= (NOW() AT TIME ZONE 'UTC')::date AS is_due",
       [rule.next_run_date]
@@ -116,13 +108,40 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Manually triggers processing of all due recurring rules across all users.
-// Exists so you (and anyone reviewing the project) can see the feature work
-// immediately instead of waiting for the real daily cron to fire.
+// Manually triggers processing of the REQUESTING USER'S OWN due
+// recurring rules only. Previously this called processRecurringTransactions()
+// directly, which processes every user's due rules with no scoping at
+// all — any authenticated user could trigger a batch job touching the
+// entire user base, not just their own data, and with no rate limit on
+// top of that. Reimplemented here using the same processRule pattern
+// the POST / handler already uses for immediate processing, scoped to
+// req.userId via the WHERE clause below, so it can only ever affect
+// the calling user's own rules.
 router.post('/run-now', async (req, res) => {
   try {
-    const count = await processRecurringTransactions();
-    res.json({ processed: count });
+    const dueRules = await pool.query(
+      `SELECT * FROM recurring_transactions
+       WHERE user_id = $1 AND next_run_date <= (NOW() AT TIME ZONE 'UTC')::date`,
+      [req.userId]
+    );
+
+    let processed = 0;
+    for (const rule of dueRules.rows) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await processRule(client, rule);
+        await client.query('COMMIT');
+        processed += 1;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Manual recurring run error for rule', rule.id, ':', err.message);
+      } finally {
+        client.release();
+      }
+    }
+
+    res.json({ processed });
   } catch (err) {
     console.error('Manual recurring run error:', err.message);
     res.status(500).json({ error: 'Could not process recurring transactions' });
