@@ -14,48 +14,73 @@ const fragmentShader = `
   varying vec2 vUv;
   uniform vec2 uResolution;
 
-  // Ultra-smooth low-frequency ripple displacement
-  float heightAt(vec2 p) {
-    // Large, gentle sine waves running diagonally
-    float wave1 = sin(p.x * 2.5 + p.y * 2.0);
-    float wave2 = cos(p.x * 1.8 - p.y * 2.2);
-    
-    // Broad warp to bend lines into smooth liquid ribbons
-    vec2 warp = vec2(wave1, wave2) * 0.35;
-    vec2 pw = p + warp;
+  // Ultra-smooth 2D value noise (avoids high-frequency grain)
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123);
+  }
 
-    return sin(pw.x * 3.2 + pw.y * 2.8) * 0.5 + 0.5;
+  float smoothNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+  }
+
+  // Fluid organic height displacement (swirling liquid marble)
+  float heightAt(vec2 p) {
+    // Primary fluid swirl vectors
+    vec2 q = vec2(
+      smoothNoise(p * 0.75 + vec2(0.0, 0.0)),
+      smoothNoise(p * 0.75 + vec2(5.2, 1.3))
+    );
+
+    // Secondary warp pass to create randomized bends and ripples
+    vec2 r = vec2(
+      smoothNoise(p + 1.4 * q + vec2(1.7, 9.2)),
+      smoothNoise(p + 1.4 * q + vec2(8.3, 2.8))
+    );
+
+    return smoothNoise(p + 1.8 * r);
   }
 
   void main() {
     vec2 st = (vUv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0) + 0.5;
 
-    // Sample height field
-    float h = heightAt(st * 1.2);
+    // Sample randomized fluid height
+    float h = heightAt(st * 1.5);
 
-    // Low frequency isoline rings (keeps lines spaced out and clear)
-    float freq = 14.0;
+    // Dynamic frequency for isoline bands
+    float freq = 16.0;
     float val = h * freq;
-    
-    // Smooth, anti-aliased line rendering
+
+    // Calculate derivative for smooth anti-aliased line rendering
     float f = abs(fract(val) - 0.5) * 2.0;
     float df = fwidth(val);
-    float line = 1.0 - smoothstep(0.0, df * 1.8 + 0.08, f);
+    
+    // Dynamic line width matching liquid chrome thickness variations
+    float lineWidth = mix(0.15, 0.35, smoothNoise(st * 3.0));
+    float line = 1.0 - smoothstep(0.0, df * 2.0 + lineWidth, f);
 
-    // Liquid chrome metallic palette matching reference image
-    vec3 baseBg = vec3(0.72, 0.74, 0.76);
-    vec3 darkShadow = vec3(0.20, 0.22, 0.25);
+    // Silver metallic palette
+    vec3 baseBg = vec3(0.70, 0.72, 0.74);
+    vec3 darkEdge = vec3(0.22, 0.24, 0.27);
     vec3 brightHighlight = vec3(0.98, 0.99, 1.0);
 
-    // Subtle lighting gradient across lines
-    float shadowMask = smoothstep(0.0, 0.5, fract(val));
-    vec3 lineColor = mix(darkShadow, brightHighlight, shadowMask);
+    // Subtle edge shading across individual ribbon bands
+    float bandGradient = smoothstep(0.0, 0.6, fract(val));
+    vec3 lineColor = mix(darkEdge, brightHighlight, bandGradient);
 
-    // Blend base background with metallic ripples
-    vec3 color = mix(baseBg, lineColor, line * 0.85);
+    // Blend base plate with metallic swirl lines
+    vec3 color = mix(baseBg, lineColor, line * 0.82);
 
-    // Soft, clean lighting vignette
-    float vignette = 1.0 - length(vUv - 0.5) * 0.15;
+    // Edge vignette
+    float vignette = 1.0 - length(vUv - 0.5) * 0.18;
     color *= vignette;
 
     gl_FragColor = vec4(color, 1.0);
