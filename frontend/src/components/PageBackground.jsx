@@ -35,16 +35,12 @@ const fragmentShader = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
-  // Fractal Brownian motion — several octaves of the noise function
-  // above, layered at increasing frequency/decreasing amplitude. This
-  // (not sine waves) is the real technique behind organic liquid/marble
-  // renders. Sine waves are inherently periodic, which is exactly why
-  // the previous version looked like regular stripes rather than
-  // liquid — noise-based fbm never repeats.
+  // Fewer octaves (5 -> 3) — each extra octave adds finer, busier
+  // detail, and the previous version had too much of it.
   float fbm(vec2 p) {
     float value = 0.0;
     float amp = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
       value += amp * noise(p);
       p *= 2.0;
       amp *= 0.5;
@@ -52,18 +48,18 @@ const fragmentShader = `
     return value;
   }
 
-  // Domain warping: feed fbm's own output back in as a coordinate
-  // offset for a second fbm pass. This is the standard technique for
-  // the chaotic, swirling folds you see in real liquid-metal/marble
-  // renders — a single fbm layer alone still looks like blobby clouds,
-  // warping the domain is what gives it that flowing, folded quality.
+  // Scale dropped substantially (2.2 -> 0.5) so features are much
+  // larger — a handful of broad folds across the whole screen, not
+  // dozens of small ripples. Warp strength also cut (1.8 -> 0.6) so
+  // the folds stay large and readable rather than getting chopped up
+  // into chaotic camo-like detail.
   float heightAt(vec2 p) {
-    vec2 q = p * 2.2;
+    vec2 q = p * 0.5;
     vec2 warp = vec2(
-      fbm(q + uTime * 0.025),
-      fbm(q + vec2(5.2, 1.3) - uTime * 0.02)
+      fbm(q + uTime * 0.012),
+      fbm(q + vec2(5.2, 1.3) - uTime * 0.01)
     );
-    float h = fbm(q + warp * 1.8);
+    float h = fbm(q + warp * 0.6);
     return h - 0.5;
   }
 
@@ -72,26 +68,26 @@ const fragmentShader = `
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
-    float epsN = 0.003;
+    float epsN = 0.004;
     float hC = heightAt(uv);
     float hX = heightAt(uv + vec2(epsN, 0.0));
     float hY = heightAt(uv + vec2(0.0, epsN));
-    vec3 normal = normalize(vec3(-(hX - hC) / epsN * 2.6, -(hY - hC) / epsN * 2.6, 1.0));
+    vec3 normal = normalize(vec3(-(hX - hC) / epsN * 4.5, -(hY - hC) / epsN * 4.5, 1.0));
 
     vec3 lightDir = normalize(vec3(0.7, 0.35, 0.35));
     vec3 viewDir = vec3(0.0, 0.0, 1.0);
     vec3 halfDir = normalize(lightDir + viewDir);
     float diff = max(dot(normal, lightDir), 0.0);
-    float spec = pow(max(dot(normal, halfDir), 0.0), 20.0);
+    float spec = pow(max(dot(normal, halfDir), 0.0), 18.0);
 
-    float tone = clamp(0.18 + diff * 0.55 + spec * 0.85, 0.0, 1.0);
+    float tone = clamp(0.22 + diff * 0.5 + spec * 0.8, 0.0, 1.0);
 
-    vec3 shadowColor = vec3(0.09, 0.10, 0.12);
-    vec3 highColor = vec3(0.97, 0.98, 0.99);
+    vec3 shadowColor = vec3(0.14, 0.15, 0.17);
+    vec3 highColor = vec3(0.96, 0.97, 0.98);
     vec3 base = mix(shadowColor, highColor, tone);
 
     float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
-    base += (grain - 0.5) * 0.025;
+    base += (grain - 0.5) * 0.02;
 
     float vignette = 1.0 - length(aspectUv - 0.5) * 0.28;
     base *= vignette;
