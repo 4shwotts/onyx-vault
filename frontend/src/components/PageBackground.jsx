@@ -46,25 +46,29 @@ const fragmentShader = `
     return value;
   }
 
-  // Static height field — no time term anywhere. Distance from a
-  // focal point, but the coordinates get warped twice at different
-  // scales before that distance is measured — a compound warp like
-  // this is what gives flowing, curvy rings (curves within curves)
-  // rather than one uniform wobble on an otherwise perfect circle.
+  // Static height field — no time term anywhere. This combines two
+  // things: the spiral (angle + radius together) that gives genuine
+  // fingerprint-whorl rotational flow — pure concentric rings alone
+  // don't have that — and the compound double-warp for organic,
+  // flowing curves rather than mechanically perfect spirals.
   float heightAt(vec2 p) {
-    vec2 center = vec2(0.54, 0.47);
+    vec2 center = vec2(0.38, 0.32);
 
-    // First pass: larger-scale, stronger warp for big flowing bends.
     vec2 warp1 = vec2(fbm(p * 1.1), fbm(p * 1.1 + vec2(4.2, 1.7))) - 0.5;
-    vec2 pw = p + warp1 * 0.55;
-
-    // Second pass: smaller-scale warp applied to the already-warped
-    // coordinates, adding finer flowing detail on top of the big
-    // bends rather than a second independent pattern.
+    vec2 pw = p + warp1 * 0.5;
     vec2 warp2 = vec2(fbm(pw * 2.3 + 5.0), fbm(pw * 2.3 - 3.0)) - 0.5;
-    pw += warp2 * 0.25;
+    pw += warp2 * 0.22;
 
-    return length(pw - center);
+    vec2 d = pw - center;
+    float radius = length(d);
+    float angle = atan(d.y, d.x);
+
+    // Fade the angular contribution in with radius — angle is
+    // meaningless at radius 0, and using it at full strength there
+    // is what caused the over-congested pinch at the very centre
+    // before.
+    float angleWeight = smoothstep(0.0, 0.15, radius);
+    return radius * 3.0 + angle * angleWeight / 6.2832;
   }
 
   void main() {
@@ -81,7 +85,7 @@ const fragmentShader = `
     float line = 1.0 - smoothstep(0.0, aa, f);
 
     vec3 baseColor = vec3(0.80, 0.81, 0.82);
-    float lineBrightness = 0.45 + 0.55 * clamp(h, 0.0, 1.0);
+    float lineBrightness = 0.45 + 0.55 * fract(h * 1.7);
     vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
 
     vec3 color = mix(baseColor, lineColor, line);
