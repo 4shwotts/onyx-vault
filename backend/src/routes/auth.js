@@ -20,10 +20,6 @@ const COOKIE_OPTIONS = {
 const VERIFICATION_TOKEN_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 60; // 1 hour
 
-// Mirrors the frontend's Login.jsx checks exactly. Client-side
-// validation is a UX nicety, not enforcement — a direct API call
-// bypasses the browser entirely, so this needs to exist here too, not
-// just there.
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const ALLOWED_DOMAINS = [
@@ -50,6 +46,30 @@ function getEmailError(email) {
     return 'Please use a verified email provider, such as Gmail';
   }
   return null;
+}
+
+// Bot protection for registration — no CAPTCHA, no third-party
+// service, both checks are self-contained. honeypot is a field the
+// frontend renders off-screen with no tab stop; a real person never
+// sees or fills it, but many automated form-fillers populate every
+// field they find. formRenderedAt is a timestamp the frontend records
+// when the form appeared; MIN_SUBMIT_MS rejects submissions that
+// arrive faster than a human could plausibly have typed an email and
+// password. Both are checked before touching the database.
+const MIN_SUBMIT_MS = 1500;
+
+// Deliberately identical to a real success response. If a bot got a
+// distinguishable error here, it could learn to detect and route
+// around the honeypot/timing checks — a real user will never trip
+// either one, so they never see this path regardless.
+const FAKE_SUCCESS_RESPONSE = {
+  message: 'Account created. Please check your email to verify your account before logging in.',
+};
+
+function looksLikeBot(honeypot, formRenderedAt) {
+  if (honeypot) return true;
+  if (!formRenderedAt || typeof formRenderedAt !== 'number') return true;
+  return Date.now() - formRenderedAt < MIN_SUBMIT_MS;
 }
 
 // Precomputed bcrypt hash of an arbitrary fixed string. Used only as a
@@ -106,7 +126,14 @@ function normalizeEmail(email) {
 
 router.post('/register', registerLimiter, async (req, res) => {
   const email = normalizeEmail(req.body.email);
-  const { password } = req.body;
+  const { password, honeypot, formRenderedAt } = req.body;
+
+  // Checked first, before any validation or DB work — a bot-like
+  // submission gets the same response a real success would, without
+  // ever creating an account or touching the database.
+  if (looksLikeBot(honeypot, formRenderedAt)) {
+    return res.status(201).json(FAKE_SUCCESS_RESPONSE);
+  }
 
   if (!email || !password || password.length < 8 || password.length > 72) {
     return res.status(400).json({ error: 'Email and a password between 8 and 72 characters are required' });
@@ -142,12 +169,8 @@ router.post('/register', registerLimiter, async (req, res) => {
       await sendVerificationEmail(user.email, token);
     } catch (emailErr) {
       console.error('Verification email failed to send:', emailErr.message);
-      // The account still exists, do not fail the request, the user can
-      // use the resend-verification endpoint if this becomes a real problem.
     }
 
-    // No cookie is set here, accounts are inactive until the email link
-    // is clicked, so login is not possible yet regardless.
     res.status(201).json({
       message: 'Account created. Please check your email to verify your account before logging in.',
     });
@@ -178,8 +201,6 @@ router.post('/verify-email', async (req, res) => {
     const { user_id: userId } = result.rows[0];
 
     await pool.query('UPDATE users SET email_verified = TRUE WHERE id = $1', [userId]);
-    // Clean up all outstanding verification tokens for this user, not
-    // just the one used, so an older copied link cannot be reused.
     await pool.query('DELETE FROM email_verification_tokens WHERE user_id = $1', [userId]);
 
     res.json({ message: 'Email verified. You can now log in.' });

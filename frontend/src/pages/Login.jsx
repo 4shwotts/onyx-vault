@@ -42,6 +42,8 @@ export default function Login() {
   const [registered, setRegistered] = useState(false);
   const [unverified, setUnverified] = useState(false);
   const [resendStatus, setResendStatus] = useState('idle'); // idle | sending | sent
+  const [honeypot, setHoneypot] = useState('');
+  const [formRenderedAt] = useState(() => Date.now());
   const navigate = useNavigate();
 
   function handleEmailBlur() {
@@ -67,7 +69,7 @@ export default function Login() {
     setLoading(true);
     try {
       if (mode === 'register') {
-        await api.register(email, password);
+        await api.register(email, password, honeypot, formRenderedAt);
         setRegistered(true);
       } else {
         await api.login(email, password);
@@ -105,13 +107,6 @@ export default function Login() {
             position: 'relative', zIndex: 1, boxSizing: 'border-box',
           }}>
             <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative', zIndex: 1 }}>
-          {/* Dropped variant="dark" — that variant is deliberately
-              light-colored, tuned to stay visible against a
-              near-black card. This card is now the light chrome
-              surface, so the default "light" variant (which reads
-              darker, the same one the nav bar's gem uses) is the
-              correct match — that's what actually gives the dark
-              onyx look against a light background. */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
             <SpinningGem size={64} />
           </div>
@@ -139,6 +134,17 @@ export default function Login() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
+            <input
+              type="text"
+              name="website"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+            />
+
             <input
               type="email"
               placeholder="Email"
