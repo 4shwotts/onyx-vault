@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// Static topographic-contour pattern — nested loops, no single
-// convergence point, crisp black lines on white.
+// A genuine WebGL fragment shader rather than layered CSS gradients —
+// CSS radial gradients can approximate light/dark banding but can't
+// produce real procedural roughness or a moving specular response,
+// which is what actually reads as "rendered metal" rather than "grey
+// gradient". Uses Three.js, already a dependency here via SpinningGem.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -14,6 +17,7 @@ const vertexShader = `
 const fragmentShader = `
   precision highp float;
   varying vec2 vUv;
+  uniform float uTime;
   uniform vec2 uResolution;
 
   float hash(vec2 p) {
@@ -31,49 +35,40 @@ const fragmentShader = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amp = 0.5;
-    for (int i = 0; i < 3; i++) {
-      value += amp * noise(p);
-      p *= 2.0;
-      amp *= 0.5;
-    }
-    return value;
-  }
-
-  // Pure domain-warped flow noise — no single focal point anywhere,
-  // so there's nowhere for lines to visibly converge toward. Density
-  // varies naturally across the canvas.
-  float heightAt(vec2 p) {
-    vec2 warp1 = vec2(fbm(p * 1.1), fbm(p * 1.1 + vec2(4.2, 1.7))) - 0.5;
-    vec2 pw = p + warp1 * 0.55;
-    vec2 warp2 = vec2(fbm(pw * 2.2 + 5.0), fbm(pw * 2.2 - 3.0)) - 0.5;
-    pw += warp2 * 0.2;
-    return fbm(pw * 1.5);
-  }
-
   void main() {
     vec2 uv = vUv;
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
-    float h = heightAt(aspectUv);
+    // Base metal tone — lighter grey than the previous version.
+    vec3 base = vec3(0.83, 0.84, 0.85);
 
-    float freq = 10.0;
-    float v = h * freq;
-    float f = abs(fract(v) - 0.5) * 2.0;
-    float aa = fwidth(v) * 1.0 + 0.006;
-    float line = 1.0 - smoothstep(0.0, aa, f);
+    // Brushed-metal roughness: fine directional grain, horizontal
+    // strokes dominant (like a brushed aluminium sheet).
+    float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
+    base += (grain - 0.5) * 0.045;
 
-    // Pure white background, solid black lines, constant weight —
-    // matches the reference's crisp topographic-map look exactly,
-    // rather than the softer grey-on-grey from before.
-    vec3 whiteBg = vec3(0.995, 0.995, 0.995);
-    vec3 blackLine = vec3(0.08, 0.08, 0.09);
-    vec3 color = mix(whiteBg, blackLine, line);
+    // Several soft vertical light-catch bands across the width,
+    // simulating multiple reflected light sources on a curved
+    // metal surface.
+    float band1 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.12) * 3.2);
+    float band2 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.48) * 3.2);
+    float band3 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.86) * 3.2);
+    base += band1 * 0.11 + band2 * 0.08 + band3 * 0.11;
 
-    gl_FragColor = vec4(color, 1.0);
+    // Slow-drifting specular sweep — a highlight that moves across
+    // the surface over time, the way light shifts on brushed metal
+    // as an object (or the viewer) moves.
+    float sweepPos = mod(uTime * 0.025, 1.8) - 0.4;
+    float sweep = smoothstep(0.0, 1.0, 1.0 - abs((uv.x + uv.y * 0.35) - sweepPos) * 5.5);
+    base += sweep * 0.07;
+
+    // Gentle vignette for a slightly domed, dimensional read rather
+    // than a flat sheet.
+    float vignette = 1.0 - length(aspectUv - 0.5) * 0.32;
+    base *= vignette;
+
+    gl_FragColor = vec4(base, 1.0);
   }
 `;
 
@@ -93,31 +88,35 @@ export default function PageBackground() {
     mount.appendChild(renderer.domElement);
 
     const uniforms = {
+      uTime: { value: 0 },
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
-    const material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms,
-      extensions: { derivatives: true },
-    });
+    const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms });
     const geometry = new THREE.PlaneGeometry(2, 2);
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    renderer.render(scene, camera);
+    let frameId;
+    const clock = new THREE.Clock();
+
+    function animate() {
+      uniforms.uTime.value = clock.getElapsedTime();
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(animate);
+    }
+    animate();
 
     function handleResize() {
       const w = mount.clientWidth;
       const h = mount.clientHeight;
       renderer.setSize(w, h);
       uniforms.uResolution.value.set(w, h);
-      renderer.render(scene, camera);
     }
     window.addEventListener('resize', handleResize);
 
     return () => {
+      cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
       mount.removeChild(renderer.domElement);
       geometry.dispose();
