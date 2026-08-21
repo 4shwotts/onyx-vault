@@ -90,8 +90,8 @@ const fragmentShader = `
     // signature of the reference, and needs a much higher specular
     // power (60 here vs 18-26 before) to stay thin rather than
     // spreading out.
-    float spec = pow(max(dot(normal, halfDir), 0.0), 60.0);
-    float antiSpec = pow(max(dot(-normal, halfDir), 0.0), 60.0);
+    float spec = pow(max(dot(normal, halfDir), 0.0), 100.0);
+    float antiSpec = pow(max(dot(-normal, halfDir), 0.0), 100.0);
 
     float tone = clamp(toneBase + spec * 0.85 - antiSpec * 0.45, 0.0, 1.0);
 
