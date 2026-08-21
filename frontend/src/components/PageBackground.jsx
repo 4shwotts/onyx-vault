@@ -35,48 +35,57 @@ const fragmentShader = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
+  // Height field for the flowing liquid-metal surface — a few large,
+  // slow-moving sine folds rather than many small ones, matching the
+  // reference's handful of broad flowing bands rather than a busy
+  // pattern.
+  float heightAt(vec2 p) {
+    float h = 0.0;
+    h += sin(p.x * 2.0 + uTime * 0.12) * 0.5;
+    h += sin(p.x * 3.3 - uTime * 0.08 + 1.7) * 0.32;
+    h += sin(p.y * 1.4 + uTime * 0.05 + 0.6) * 0.18;
+    return h;
+  }
+
   void main() {
     vec2 uv = vUv;
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
-    // Base metal tone.
-    vec3 base = vec3(0.83, 0.84, 0.85);
+    // Derive a real surface normal from the height field (finite
+    // difference), then light it properly (diffuse + specular) — this
+    // is what produces genuine dark folds AND bright highlights
+    // together, rather than just adding brightness on top of a flat
+    // grey base. That combination is what actually reads as thick,
+    // glossy liquid metal instead of brushed metal with glow lines.
+    float epsN = 0.0025;
+    float hC = heightAt(uv);
+    float hX = heightAt(uv + vec2(epsN, 0.0));
+    float hY = heightAt(uv + vec2(0.0, epsN));
+    vec3 normal = normalize(vec3(-(hX - hC) / epsN * 0.22, -(hY - hC) / epsN * 0.22, 1.0));
 
-    // Brushed-metal roughness: fine directional grain, horizontal
-    // strokes dominant (like a brushed aluminium sheet).
+    vec3 lightDir = normalize(vec3(0.35, 0.55, 0.75));
+    vec3 viewDir = vec3(0.0, 0.0, 1.0);
+    vec3 halfDir = normalize(lightDir + viewDir);
+    float diff = max(dot(normal, lightDir), 0.0);
+    float spec = pow(max(dot(normal, halfDir), 0.0), 22.0);
+
+    float tone = clamp(0.3 + diff * 0.5 + spec * 0.85, 0.0, 1.0);
+
+    // Dark tone is a cool near-black (slightly blue-grey, matching the
+    // reference's cool cast in shadow), bright tone a near-white —
+    // real contrast range, not a mid-grey wash.
+    vec3 shadowColor = vec3(0.10, 0.11, 0.13);
+    vec3 highColor = vec3(0.97, 0.98, 0.99);
+    vec3 base = mix(shadowColor, highColor, tone);
+
+    // Fine roughness grain on top, subtler now that the height-field
+    // shading is doing the heavy lifting.
     float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
-    base += (grain - 0.5) * 0.045;
+    base += (grain - 0.5) * 0.03;
 
-    // Soft background light-catch bands — kept subtle, just ambient
-    // variation underneath the glossy swooshes below.
-    float band1 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.12) * 3.2);
-    float band3 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.86) * 3.2);
-    base += band1 * 0.05 + band3 * 0.05;
-
-    // Glossy liquid-chrome swooshes: curved (sine-path) specular
-    // highlights, not straight bands — this is what actually reads as
-    // liquid/fluid rather than plain brushed metal. Each follows a
-    // curved path across the surface and drifts slowly over time.
-    float curve1 = 0.42 + 0.16 * sin(uv.x * 2.6 + uTime * 0.12) + sin(uTime * 0.05) * 0.05;
-    float dist1 = abs(uv.y - curve1);
-    float swoosh1 = smoothstep(0.05, 0.0, dist1);
-    base += swoosh1 * 0.32;
-
-    float curve2 = 0.62 + 0.12 * sin(uv.x * 3.4 - uTime * 0.09 + 2.0) - sin(uTime * 0.04) * 0.06;
-    float dist2 = abs(uv.y - curve2);
-    float swoosh2 = smoothstep(0.035, 0.0, dist2);
-    base += swoosh2 * 0.22;
-
-    // A third, thinner, faster-moving glint for extra liquidity.
-    float curve3 = 0.25 + 0.1 * sin(uv.x * 4.5 + uTime * 0.22);
-    float dist3 = abs(uv.y - curve3);
-    float swoosh3 = smoothstep(0.018, 0.0, dist3);
-    base += swoosh3 * 0.16;
-
-    // Gentle vignette for a slightly domed, dimensional read rather
-    // than a flat sheet.
-    float vignette = 1.0 - length(aspectUv - 0.5) * 0.32;
+    // Gentle vignette for a slightly domed, dimensional read.
+    float vignette = 1.0 - length(aspectUv - 0.5) * 0.28;
     base *= vignette;
 
     gl_FragColor = vec4(base, 1.0);
