@@ -6,9 +6,7 @@ import * as THREE from 'three';
 // the same height-field idea from the liquid-metal attempts, but
 // instead of lighting the surface, it draws thin lines at regular
 // intervals of the height value — the standard "isoline" rendering
-// technique, which is what actually produces this look. A spiral/
-// polar domain warp around an off-centre point gives the whorled
-// fingerprint structure rather than straight or simple radial bands.
+// technique, which is what actually produces this look.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -48,32 +46,18 @@ const fragmentShader = `
     return value;
   }
 
-  // Static height field — no time term anywhere.
+  // Static height field — no time term anywhere. Just distance from a
+  // focal point (nudged slightly off dead-centre so it doesn't read
+  // as too mechanically perfect), plus a touch of domain warp for
+  // organic irregularity in the rings. Distance fields are monotonic,
+  // so feeding this straight into the isoline logic below naturally
+  // produces expanding concentric rings — no sin()/angle math needed.
   float heightAt(vec2 p) {
-    vec2 center = vec2(0.38, 0.32);
+    vec2 center = vec2(0.54, 0.47);
     vec2 d = p - center;
-
-    // Extra density on the left is now done by amplifying the SAME
-    // domain warp there, not by adding a second independent wave
-    // layer on top. Summing two differently-phased fields (the
-    // previous approach) creates sharp seam/crease artifacts exactly
-    // where they clash — that's the "torn" look from last time.
-    // Warping one coherent field's coordinates more strongly in one
-    // region avoids that entirely, since there's only ever one field.
-    float leftMask = smoothstep(0.65, 0.0, p.x);
-    vec2 warp = vec2(fbm(p * 1.8), fbm(p * 1.8 + vec2(4.2, 1.7))) - 0.5;
-    d += warp * (0.4 + leftMask * 0.5);
-
-    float angle = atan(d.y, d.x);
-    float radius = length(d);
-
-    // Soften the true singularity at radius 0 (angle is meaningless
-    // there) by fading the angular term in gradually with radius,
-    // rather than using it at full strength right at the vortex —
-    // keeps the very centre as smooth soft rings, not an infinitely
-    // dense pinch.
-    float angleWeight = smoothstep(0.0, 0.18, radius);
-    return sin(angle * 2.0 * angleWeight + radius * 5.2);
+    vec2 warp = vec2(fbm(p * 1.6), fbm(p * 1.6 + vec2(4.2, 1.7))) - 0.5;
+    d += warp * 0.3;
+    return length(d);
   }
 
   void main() {
@@ -95,11 +79,10 @@ const fragmentShader = `
     float line = 1.0 - smoothstep(0.0, aa, f);
 
     // Base is a light neutral grey; lines vary between soft grey and
-    // near-white depending on the underlying height, so not every
-    // line reads identically bright — matching the reference's mix
-    // of bright and muted lines rather than one flat line colour.
+    // near-white depending on distance from the centre, so not every
+    // ring reads identically bright.
     vec3 baseColor = vec3(0.80, 0.81, 0.82);
-    float lineBrightness = 0.55 + 0.45 * (h * 0.5 + 0.5);
+    float lineBrightness = 0.45 + 0.55 * clamp(h, 0.0, 1.0);
     vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
 
     vec3 color = mix(baseColor, lineColor, line);
