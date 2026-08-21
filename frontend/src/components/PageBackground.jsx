@@ -1,17 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// Static fingerprint-style contour lines. Two fixes from annotations
-// on this base:
-//
-// 1. Centre focal point ramped: ring frequency starts calm right at
-//    the focal point and increases with radius, widened and lowered
-//    significantly from the first attempt — that one was real but
-//    confined to too small an area to actually be visible.
-//
-// 2. Vignette removed entirely — the previous softened version was
-//    still only a 5-10% brightness difference, not enough to read as
-//    "the pattern reaches further" toward the edges.
+// Static fingerprint-style contour lines.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -62,13 +52,7 @@ const fragmentShader = `
     float angle = atan(d.y, d.x);
     float radius = length(d);
 
-    // Ring frequency ramps from calm near the centre to full density
-    // further out. Widened and lowered substantially from the first
-    // attempt (0.3 radius / 2.0 start -> 0.55 radius / 0.6 start) —
-    // that version's effect was real but confined to too small an
-    // area to actually notice.
-    float ringFreq = mix(0.6, 5.2, smoothstep(0.0, 0.55, radius));
-    return sin(angle * 2.0 + radius * ringFreq);
+    return sin(angle * 2.0 + radius * 5.2);
   }
 
   void main() {
@@ -88,6 +72,37 @@ const fragmentShader = `
     float f = abs(fract(v) - 0.5) * 2.0;
     float aa = fwidth(v) * 1.5 + 0.01;
     float line = 1.0 - smoothstep(0.0, aa, f);
+
+    // The centre congestion wasn't actually fixed by slowing the
+    // radius frequency — the angle term sweeps a full 360 degrees at
+    // ANY radius, however small, so tracing even a tiny circle around
+    // the focal point still crosses the pattern many times regardless
+    // of how "calm" the radius term is made. Fixing that properly
+    // means not fighting the math — just fade the lines to nothing
+    // within a small radius of the focal point, leaving a clean blank
+    // area there instead.
+    vec2 focus = vec2(0.38, 0.32);
+    float distToFocus = length(aspectUv - focus);
+    line *= smoothstep(0.0, 0.14, distToFocus);
+
+    // Two independent, plain concentric-ring sources (no angle term
+    // at all, so no seam risk) added on the left and top-right,
+    // composited via max() rather than summed into the height field —
+    // max() of two separately-rendered line masks can't produce the
+    // interference/seam artifacts that summing two height fields did
+    // before, since neither pattern's own math is ever touched by
+    // the other.
+    float distLeft = length(aspectUv - vec2(-0.05, 0.55));
+    float vLeft = distLeft * 8.0;
+    float fLeft = abs(fract(vLeft) - 0.5) * 2.0;
+    float lineLeft = (1.0 - smoothstep(0.0, fwidth(vLeft) * 1.5 + 0.01, fLeft)) * 0.75;
+
+    float distTR = length(aspectUv - vec2(1.55, 0.08));
+    float vTR = distTR * 8.0;
+    float fTR = abs(fract(vTR) - 0.5) * 2.0;
+    float lineTR = (1.0 - smoothstep(0.0, fwidth(vTR) * 1.5 + 0.01, fTR)) * 0.75;
+
+    line = max(line, max(lineLeft, lineTR));
 
     vec3 baseColor = vec3(0.80, 0.81, 0.82);
     float lineBrightness = 0.55 + 0.45 * (h * 0.5 + 0.5);
