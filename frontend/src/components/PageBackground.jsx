@@ -1,11 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// Same metal texture as before (grain, light-catch bands, drifting
-// sweep, vignette), unchanged — now computed on a real low-poly
-// faceted 3D surface instead of a flat plane, so it also picks up
-// genuine per-facet diffuse lighting. The texture logic itself is
-// untouched; a lighting term is multiplied on top of it.
 const vertexShader = `
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -115,9 +110,14 @@ export default function PageBackground() {
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
-    const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms });
+    const material = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms,
+      side: THREE.DoubleSide,
+    });
 
-    const geometry = buildFacetedPlane(2, 2, 29, 17, 0.4, 0.14);
+    const geometry = buildFacetedPlane(2, 2, 9, 6, 0.4, 0.32);
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
