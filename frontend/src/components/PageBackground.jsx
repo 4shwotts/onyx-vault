@@ -1,20 +1,22 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
+// A genuine WebGL fragment shader rather than layered CSS gradients —
+// CSS radial gradients can approximate light/dark banding but can't
+// produce real procedural roughness or a moving specular response,
+// which is what actually reads as "rendered metal" rather than "grey
+// gradient". Uses Three.js, already a dependency here via SpinningGem.
 const vertexShader = `
   varying vec2 vUv;
-  varying vec3 vNormal;
   void main() {
     vUv = uv;
-    vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position = vec4(position, 1.0);
   }
 `;
 
 const fragmentShader = `
   precision highp float;
   varying vec2 vUv;
-  varying vec3 vNormal;
   uniform float uTime;
   uniform vec2 uResolution;
 
@@ -38,57 +40,37 @@ const fragmentShader = `
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
+    // Base metal tone — lighter grey than the previous version.
     vec3 base = vec3(0.83, 0.84, 0.85);
 
+    // Brushed-metal roughness: fine directional grain, horizontal
+    // strokes dominant (like a brushed aluminium sheet).
     float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
     base += (grain - 0.5) * 0.045;
 
+    // Several soft vertical light-catch bands across the width,
+    // simulating multiple reflected light sources on a curved
+    // metal surface.
     float band1 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.12) * 3.2);
     float band2 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.48) * 3.2);
     float band3 = smoothstep(0.0, 1.0, 1.0 - abs(uv.x - 0.86) * 3.2);
     base += band1 * 0.11 + band2 * 0.08 + band3 * 0.11;
 
+    // Slow-drifting specular sweep — a highlight that moves across
+    // the surface over time, the way light shifts on brushed metal
+    // as an object (or the viewer) moves.
     float sweepPos = mod(uTime * 0.025, 1.8) - 0.4;
     float sweep = smoothstep(0.0, 1.0, 1.0 - abs((uv.x + uv.y * 0.35) - sweepPos) * 5.5);
     base += sweep * 0.07;
 
+    // Gentle vignette for a slightly domed, dimensional read rather
+    // than a flat sheet.
     float vignette = 1.0 - length(aspectUv - 0.5) * 0.32;
     base *= vignette;
 
-    vec3 normal = normalize(vNormal);
-    vec3 keyDir = normalize(vec3(-0.5, 0.4, 0.8));
-    vec3 fillDir = normalize(vec3(0.6, -0.3, 0.6));
-    float diffKey = max(dot(normal, keyDir), 0.0);
-    float diffFill = max(dot(normal, fillDir), 0.0) * 0.35;
-    float lighting = 0.55 + diffKey * 0.65 + diffFill * 0.3;
-
-    base *= lighting;
-
-    gl_FragColor = vec4(clamp(base, 0.0, 1.0), 1.0);
+    gl_FragColor = vec4(base, 1.0);
   }
 `;
-
-function buildFacetedPlane(width, height, segX, segY, jitterAmt, bumpAmt) {
-  const geometry = new THREE.PlaneGeometry(width, height, segX, segY);
-  const posAttr = geometry.attributes.position;
-  const cellW = width / segX;
-  const cellH = height / segY;
-
-  for (let i = 0; i < posAttr.count; i++) {
-    const x = posAttr.getX(i);
-    const y = posAttr.getY(i);
-    const onEdgeX = Math.abs(x) > width / 2 - 1e-4;
-    const onEdgeY = Math.abs(y) > height / 2 - 1e-4;
-    const jx = onEdgeX ? 0 : (Math.random() - 0.5) * cellW * jitterAmt;
-    const jy = onEdgeY ? 0 : (Math.random() - 0.5) * cellH * jitterAmt;
-    const jz = (Math.random() - 0.5) * bumpAmt;
-    posAttr.setXYZ(i, x + jx, y + jy, jz);
-  }
-
-  const nonIndexed = geometry.toNonIndexed();
-  nonIndexed.computeVertexNormals();
-  return nonIndexed;
-}
 
 export default function PageBackground() {
   const mountRef = useRef(null);
@@ -110,14 +92,8 @@ export default function PageBackground() {
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
-    const material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms,
-      side: THREE.DoubleSide,
-    });
-
-    const geometry = buildFacetedPlane(2, 2, 9, 6, 0.4, 0.32);
+    const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms });
+    const geometry = new THREE.PlaneGeometry(2, 2);
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
