@@ -46,11 +46,7 @@ const fragmentShader = `
     return value;
   }
 
-  // Static height field — no time term anywhere. This combines two
-  // things: the spiral (angle + radius together) that gives genuine
-  // fingerprint-whorl rotational flow — pure concentric rings alone
-  // don't have that — and the compound double-warp for organic,
-  // flowing curves rather than mechanically perfect spirals.
+  // Static height field — no time term anywhere.
   float heightAt(vec2 p) {
     vec2 center = vec2(0.38, 0.32);
 
@@ -63,12 +59,16 @@ const fragmentShader = `
     float radius = length(d);
     float angle = atan(d.y, d.x);
 
-    // Fade the angular contribution in with radius — angle is
-    // meaningless at radius 0, and using it at full strength there
-    // is what caused the over-congested pinch at the very centre
-    // before.
-    float angleWeight = smoothstep(0.0, 0.15, radius);
-    return radius * 3.0 + angle * angleWeight / 6.2832;
+    // atan() has a hard discontinuity — it jumps from +pi to -pi
+    // along one ray from the centre. The previous version multiplied
+    // that jump by a radius-dependent weight (meant to soften the
+    // centre), but a *varying* jump size breaks the clean wraparound
+    // a spiral needs, producing a whole cluster of nearby broken
+    // seams rather than one clean line — that's the jagged crack in
+    // the screenshot. Using a constant, gentle coefficient here keeps
+    // the field a proper uniform spiral: at most one thin, barely
+    // noticeable seam, not a mess of them.
+    return radius * 3.0 + angle * 0.12;
   }
 
   void main() {
