@@ -1,11 +1,14 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// A genuine WebGL fragment shader rather than layered CSS gradients —
-// CSS radial gradients can approximate light/dark banding but can't
-// produce real procedural roughness or a moving specular response,
-// which is what actually reads as "rendered metal" rather than "grey
-// gradient". Uses Three.js, already a dependency here via SpinningGem.
+// Complete change of technique: dense flowing contour lines (like a
+// topographic map or fingerprint), static, no animation. This reuses
+// the same height-field idea from the liquid-metal attempts, but
+// instead of lighting the surface, it draws thin lines at regular
+// intervals of the height value — the standard "isoline" rendering
+// technique, which is what actually produces this look. A spiral/
+// polar domain warp around an off-centre point gives the whorled
+// fingerprint structure rather than straight or simple radial bands.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -17,7 +20,6 @@ const vertexShader = `
 const fragmentShader = `
   precision highp float;
   varying vec2 vUv;
-  uniform float uTime;
   uniform vec2 uResolution;
 
   float hash(vec2 p) {
@@ -35,8 +37,6 @@ const fragmentShader = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
-  // Fewer octaves, used only for subtle organic irregularity now
-  // rather than the main shape.
   float fbm(vec2 p) {
     float value = 0.0;
     float amp = 0.5;
@@ -48,18 +48,18 @@ const fragmentShader = `
     return value;
   }
 
-  // Back to a few large, controlled sine waves as the main shape —
-  // predictable, big, few folds — with a small amount of fbm layered
-  // on top just for organic irregularity, not as the primary
-  // structure. Pure fbm at any scale kept either flattening out
-  // (too subtle) or fragmenting into many small folds (too busy);
-  // controlled large curves give reliable, big, few folds instead.
+  // Static height field — no time term anywhere. A spiral around an
+  // off-centre focus point (matching the reference's whorl origin
+  // sitting up and to the left of centre), with a bit of fbm-based
+  // domain warp so the spiral isn't a perfect mechanical circle.
   float heightAt(vec2 p) {
-    float h = 0.0;
-    h += sin(p.x * 2.6 + p.y * 0.6 + uTime * 0.05) * 0.55;
-    h += sin(p.x * 4.1 - p.y * 0.9 + uTime * 0.035 + 1.3) * 0.3;
-    h += (fbm(p * 1.3 + uTime * 0.02) - 0.5) * 0.12;
-    return h;
+    vec2 center = vec2(0.38, 0.32);
+    vec2 d = p - center;
+    vec2 warp = vec2(fbm(p * 1.8), fbm(p * 1.8 + vec2(4.2, 1.7))) - 0.5;
+    d += warp * 0.4;
+    float angle = atan(d.y, d.x);
+    float radius = length(d);
+    return sin(angle * 2.0 + radius * 5.2);
   }
 
   void main() {
@@ -67,45 +67,33 @@ const fragmentShader = `
     float aspect = uResolution.x / uResolution.y;
     vec2 aspectUv = (uv - 0.5) * vec2(aspect, 1.0) + 0.5;
 
-    float epsN = 0.003;
-    float hC = heightAt(uv);
-    float hX = heightAt(uv + vec2(epsN, 0.0));
-    float hY = heightAt(uv + vec2(0.0, epsN));
-    vec3 normal = normalize(vec3(-(hX - hC) / epsN * 2.4, -(hY - hC) / epsN * 2.4, 1.0));
+    float h = heightAt(aspectUv);
 
-    vec3 lightDir = normalize(vec3(0.55, 0.4, 0.5));
-    vec3 viewDir = vec3(0.0, 0.0, 1.0);
-    vec3 halfDir = normalize(lightDir + viewDir);
+    // Isoline rendering: draw a thin line wherever h crosses one of a
+    // regular series of thresholds. fwidth() gives the on-screen rate
+    // of change of h, which is what keeps the lines a consistent
+    // pixel width (anti-aliased) regardless of how steep the
+    // underlying field is at that point.
+    float freq = 13.0;
+    float v = h * freq;
+    float f = abs(fract(v) - 0.5) * 2.0;
+    float aa = fwidth(v) * 1.5 + 0.01;
+    float line = 1.0 - smoothstep(0.0, aa, f);
 
-    // Soft, broad diffuse gradient for the body of each wave — this
-    // is what stays smooth and grey across most of the surface.
-    float diff = dot(normal, lightDir);
-    float toneBase = 0.58 + diff * 0.3;
+    // Base is a light neutral grey; lines vary between soft grey and
+    // near-white depending on the underlying height, so not every
+    // line reads identically bright — matching the reference's mix
+    // of bright and muted lines rather than one flat line colour.
+    vec3 baseColor = vec3(0.80, 0.81, 0.82);
+    float lineBrightness = 0.55 + 0.45 * (h * 0.5 + 0.5);
+    vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
 
-    // Sharp, tight paired lines right at the curve edges: a bright
-    // specular line where the surface catches the light straight on,
-    // and a dark "anti-specular" line immediately next to it where
-    // the surface has just tipped past that angle. That paired
-    // thin bright/dark line — not a broad glow — is the actual
-    // signature of the reference, and needs a much higher specular
-    // power (60 here vs 18-26 before) to stay thin rather than
-    // spreading out.
-    float spec = pow(max(dot(normal, halfDir), 0.0), 100.0);
-    float antiSpec = pow(max(dot(-normal, halfDir), 0.0), 100.0);
+    vec3 color = mix(baseColor, lineColor, line);
 
-    float tone = clamp(toneBase + spec * 0.85 - antiSpec * 0.45, 0.0, 1.0);
+    float vignette = 1.0 - length(aspectUv - 0.5) * 0.2;
+    color *= vignette;
 
-    vec3 shadowColor = vec3(0.15, 0.16, 0.18);
-    vec3 highColor = vec3(0.97, 0.98, 0.99);
-    vec3 base = mix(shadowColor, highColor, tone);
-
-    float grain = noise(uv * vec2(1100.0, 70.0)) * 0.6 + noise(uv * vec2(160.0, 900.0)) * 0.4;
-    base += (grain - 0.5) * 0.018;
-
-    float vignette = 1.0 - length(aspectUv - 0.5) * 0.25;
-    base *= vignette;
-
-    gl_FragColor = vec4(base, 1.0);
+    gl_FragColor = vec4(color, 1.0);
   }
 `;
 
@@ -125,35 +113,36 @@ export default function PageBackground() {
     mount.appendChild(renderer.domElement);
 
     const uniforms = {
-      uTime: { value: 0 },
       uResolution: { value: new THREE.Vector2(mount.clientWidth, mount.clientHeight) },
     };
 
-    const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms });
+    // extensions.derivatives enables fwidth() — needed for the
+    // anti-aliased contour lines above, and not guaranteed available
+    // by default on every WebGL1 context (WebGL2 has it natively, but
+    // this makes sure it works either way).
+    const material = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms,
+      extensions: { derivatives: true },
+    });
     const geometry = new THREE.PlaneGeometry(2, 2);
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    let frameId;
-    const clock = new THREE.Clock();
-
-    function animate() {
-      uniforms.uTime.value = clock.getElapsedTime();
-      renderer.render(scene, camera);
-      frameId = requestAnimationFrame(animate);
-    }
-    animate();
+    // Static image — render once, no animation loop needed.
+    renderer.render(scene, camera);
 
     function handleResize() {
       const w = mount.clientWidth;
       const h = mount.clientHeight;
       renderer.setSize(w, h);
       uniforms.uResolution.value.set(w, h);
+      renderer.render(scene, camera);
     }
     window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
       mount.removeChild(renderer.domElement);
       geometry.dispose();
