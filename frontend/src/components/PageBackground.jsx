@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// Static fingerprint-style contour lines.
+// Static topographic-contour pattern — nested loops, no single
+// convergence point, crisp black lines on white.
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -41,19 +42,15 @@ const fragmentShader = `
     return value;
   }
 
-  // Static height field — no time term anywhere, and critically, no
-  // single focal point anywhere either. Pure domain-warped flow noise
-  // instead of a spiral around a center point — this has no
-  // singularity by construction, so there's nowhere for lines to
-  // visibly converge toward. Density still varies naturally across
-  // the canvas (that's what fbm does), just without a single point
-  // everything funnels into.
+  // Pure domain-warped flow noise — no single focal point anywhere,
+  // so there's nowhere for lines to visibly converge toward. Density
+  // varies naturally across the canvas.
   float heightAt(vec2 p) {
     vec2 warp1 = vec2(fbm(p * 1.1), fbm(p * 1.1 + vec2(4.2, 1.7))) - 0.5;
-    vec2 pw = p + warp1 * 0.7;
+    vec2 pw = p + warp1 * 0.55;
     vec2 warp2 = vec2(fbm(pw * 2.2 + 5.0), fbm(pw * 2.2 - 3.0)) - 0.5;
-    pw += warp2 * 0.3;
-    return fbm(pw * 1.6);
+    pw += warp2 * 0.2;
+    return fbm(pw * 1.5);
   }
 
   void main() {
@@ -63,17 +60,18 @@ const fragmentShader = `
 
     float h = heightAt(aspectUv);
 
-    float freq = 12.0;
+    float freq = 10.0;
     float v = h * freq;
     float f = abs(fract(v) - 0.5) * 2.0;
-    float aa = fwidth(v) * 1.5 + 0.01;
+    float aa = fwidth(v) * 1.0 + 0.006;
     float line = 1.0 - smoothstep(0.0, aa, f);
 
-    vec3 baseColor = vec3(0.80, 0.81, 0.82);
-    float lineBrightness = 0.55 + 0.45 * (h * 0.5 + 0.5);
-    vec3 lineColor = mix(vec3(0.55, 0.56, 0.57), vec3(0.99, 0.99, 1.0), lineBrightness);
-
-    vec3 color = mix(baseColor, lineColor, line);
+    // Pure white background, solid black lines, constant weight —
+    // matches the reference's crisp topographic-map look exactly,
+    // rather than the softer grey-on-grey from before.
+    vec3 whiteBg = vec3(0.995, 0.995, 0.995);
+    vec3 blackLine = vec3(0.08, 0.08, 0.09);
+    vec3 color = mix(whiteBg, blackLine, line);
 
     gl_FragColor = vec4(color, 1.0);
   }
