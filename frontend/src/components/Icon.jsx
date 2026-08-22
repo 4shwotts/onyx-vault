@@ -1,13 +1,10 @@
 import { useState } from 'react';
 
-// Category icons load from /public/icons/*.svg by convention. "Other"
-// (the real category every uncategorised transaction now gets assigned
-// to server-side, never left null) and "Individual" (a real selectable
-// category for payments to a person rather than a business) both use
-// the same Individual.svg — a person represents "unspecified/personal"
-// better than a generic folder icon. Anything else unmapped falls back
-// to Individual.svg too, and if even that fails to load, back to the
-// original letter-in-a-circle treatment.
+// Maps a category's display name (lowercased) to the actual icon SVG
+// filename on disk. Several display names intentionally share one
+// icon — "Eating Out" and "Dining" both use EatingOut.svg, "Utilities"
+// and "Bills" both use Bills.svg — since there's no need for visually
+// distinct icons for what are effectively synonyms.
 const CATEGORY_ICON_MAP = {
   groceries: 'Groceries',
   transport: 'Transport',
@@ -23,12 +20,18 @@ const CATEGORY_ICON_MAP = {
   other: 'Individual',
 };
 
+// Falls back to the "other" mapping (-> Individual.svg) for an empty
+// name or any category not present in CATEGORY_ICON_MAP — covers
+// custom categories a user creates that don't have a dedicated icon.
 function resolveCategoryFile(name) {
   const trimmed = (name || '').trim();
   const key = trimmed ? trimmed.toLowerCase() : 'other';
   return CATEGORY_ICON_MAP[key] || 'Individual';
 }
 
+// Renders a category's icon as a rounded tile. If the mapped SVG fails
+// to load (onError), falls back to a plain tile showing the category
+// name's first letter, rather than a broken image icon.
 export function CategoryIcon({ name, size = 46 }) {
   const [failed, setFailed] = useState(false);
   const filename = resolveCategoryFile(name);
@@ -60,11 +63,13 @@ export function CategoryIcon({ name, size = 46 }) {
   );
 }
 
-// No account-type icon files exist yet (current/savings/credit), so
-// this quietly renders nothing rather than a placeholder — same
-// graceful-fallback approach, just with "nothing" as the fallback
-// instead of a letter circle, since the account cards don't currently
-// have an icon slot at all without this.
+// Renders a small icon for an account type (current / savings /
+// credit), derived directly from the type string rather than a lookup
+// map, since account type names already match their icon filenames
+// once capitalised. Unlike CategoryIcon, there's no letter-avatar
+// fallback here — this icon sits inline next to other UI (not as a
+// standalone tile), so failing silently (rendering nothing) is the
+// better fallback than an oddly-placed avatar.
 export function AccountTypeIcon({ type, size = 20 }) {
   const [failed, setFailed] = useState(false);
   const filename = (type || '').charAt(0).toUpperCase() + (type || '').slice(1).toLowerCase();

@@ -75,7 +75,10 @@ async function processRule(client, rule) {
 
 // Finds every recurring rule that's due (next_run_date <= today, compared
 // explicitly in UTC to avoid any server-timezone ambiguity) and processes
-// each one via processRule, atomically per-rule.
+// each one via processRule, atomically per-rule — one rule's failure
+// (caught and logged below) doesn't roll back or block any other rule
+// in the same sweep, since each gets its own connection and its own
+// BEGIN/COMMIT/ROLLBACK.
 async function processRecurringTransactions() {
   const due = await pool.query(
     "SELECT * FROM recurring_transactions WHERE next_run_date <= (NOW() AT TIME ZONE 'UTC')::date"

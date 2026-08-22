@@ -36,6 +36,10 @@ export default function ForgotPassword() {
         width: 300, minHeight: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
         position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
       }}>
+        {/* Heading only shows in the pre-submit state — once submitted,
+            the confirmation message itself communicates the same
+            context ("we sent a link"), so a separate heading above it
+            would just be redundant. */}
         {!submitted && (
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <p className="font-mono" style={{ fontSize: 15, margin: 0 }}>Reset your password</p>
@@ -45,6 +49,10 @@ export default function ForgotPassword() {
           </div>
         )}
 
+        {/* flex:1 + justifyContent:center keeps both the form and the
+            post-submit message vertically centred within the same
+            fixed-height card, so the card doesn't visibly resize or
+            jump between the two states. */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {submitted ? (
             <p className="font-mono" style={{ fontSize: 16, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.6 }}>

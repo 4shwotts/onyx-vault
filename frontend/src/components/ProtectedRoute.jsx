@@ -7,6 +7,10 @@ import { api } from '../api/client';
 // valid, unexpired JWT). Renders nothing meaningful until that check
 // resolves, so a logged-out user never sees a flash of protected content.
 export default function ProtectedRoute({ children }) {
+  // Three explicit states rather than a boolean, since "checking" is
+  // genuinely a distinct render (a loading screen) from "unauthed"
+  // (a redirect) — collapsing this into isLoggedIn/isLoading pairs
+  // would need two booleans to express the same three states.
   const [status, setStatus] = useState('checking'); // 'checking' | 'authed' | 'unauthed'
 
   useEffect(() => {
