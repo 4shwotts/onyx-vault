@@ -7,7 +7,9 @@ import { getAvailableMonths } from '../utils/months';
 import { BASE_CATEGORIES } from '../constants/categories';
 import { CategoryIcon } from '../components/Icon';
 
-
+// 9 per page. (8 was tried at one point -- it left too much empty
+// space below the list before the Previous/Next controls -- and this
+// was reverted back to 9.)
 const PAGE_SIZE = 9;
 
 const FAKE_TRANSACTIONS = [
@@ -189,7 +191,7 @@ export default function Transactions() {
           start_date: date,
         });
         if (created.first_transaction_created) {
-          setInfo("Recurring rule created — today's payment was processed immediately. It'll run automatically from here on.");
+          setInfo("Recurring rule created -- today's payment was processed immediately. It'll run automatically from here on.");
         } else {
           setInfo('Recurring rule created. It will run automatically on its scheduled date.');
         }
@@ -312,8 +314,8 @@ export default function Transactions() {
           </form>
         )}
 
-        {error && <p style={{ color: 'var(--expense)', fontSize: 14, marginBottom: 14 }}>{error}</p>}
-        {info && <p style={{ color: 'var(--accent)', fontSize: 14, marginBottom: 14 }}>{info}</p>}
+        {error && <p className="font-mono" style={{ color: 'var(--expense)', fontSize: 14, marginBottom: 14 }}>{error}</p>}
+        {info && <p className="font-mono" style={{ color: 'var(--accent)', fontSize: 14, marginBottom: 14 }}>{info}</p>}
 
         {recurring.length > 0 && (
           <div style={{ marginBottom: 20 }}>
