@@ -40,26 +40,26 @@ A full-stack personal finance tracker built to explore end-to-end fintech app pa
 ## Project Structure
 
 onyx-vault/
-├── backend/
-│ ├── src/
-│ │ ├── routes/ # auth, accounts, categories, transactions, recurring
-│ │ ├── middleware/ # requireAuth (JWT verification)
-│ │ ├── cron/ # recurring transaction processing
-│ │ ├── utils/ # anomaly detection, token generation
-│ │ ├── email.js # transactional email (verification, password reset)
-│ │ ├── db.js
-│ │ └── index.js
-│ └── db/
-│ └── schema.sql
-└── frontend/
-├── public/
-└── src/
-├── pages/ # Login, Dashboard, Transactions, Accounts, Import,
-│ # ForgotPassword, ResetPassword, VerifyEmail
-├── components/ # Nav, MonthPicker, ProtectedRoute, PageBackground,
-│ # CommandPalette, SpinningGem, Icon
-├── api/client.js
-└── utils/months.js
+  backend/
+    src/
+      routes/          auth, accounts, categories, transactions, recurring
+      middleware/      requireAuth (JWT verification)
+      cron/            recurring transaction processing
+      utils/           anomaly detection, token generation
+      email.js         transactional email (verification, password reset)
+      db.js
+      index.js
+    db/
+      schema.sql
+  frontend/
+    public/
+    src/
+      pages/           Login, Dashboard, Transactions, Accounts, Import,
+                        ForgotPassword, ResetPassword, VerifyEmail
+      components/      Nav, MonthPicker, ProtectedRoute, PageBackground,
+                        CommandPalette, SpinningGem, Icon
+      api/client.js
+      utils/months.js
 
 
 ## Getting Started
