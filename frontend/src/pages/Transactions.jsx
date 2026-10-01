@@ -399,7 +399,7 @@ export default function Transactions() {
           <p style={{ color: '#888', fontSize: 14 }}>Loading transactions...</p>
         ) : (
           <>
-            <div ref={listSlotRef} style={isMobile ? { position: 'relative' } : { position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <div ref={listSlotRef} style={isMobile ? { position: 'relative' } : { position: 'relative', flex: 1, minHeight: 0 }}>
               <div className="chrome-surface" style={{
                 borderRadius: 14, padding: `${LIST_PADDING_Y}px ${isMobile ? 4 : 8}px`,
                 filter: transactions.length === 0 ? 'blur(3px)' : 'none',
