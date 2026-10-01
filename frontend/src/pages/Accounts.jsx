@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Nav from '../components/Nav';
 import { api } from '../api/client';
 import { AccountTypeIcon } from '../components/Icon';
+import useIsMobile from '../hooks/useIsMobile';
 
 const ACCOUNT_TYPES = ['current', 'savings', 'credit'];
 
@@ -30,6 +31,7 @@ export default function Accounts() {
   const [showForm, setShowForm] = useState(false);
   const [type, setType] = useState('current');
   const [submitting, setSubmitting] = useState(false);
+  const isMobile = useIsMobile();
 
   async function loadAccounts() {
     try {
@@ -69,12 +71,12 @@ export default function Accounts() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '24px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       <div className="page-container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <p className="font-mono" style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#000' }}>Accounts</p>
+          <p className="font-mono" style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, margin: 0, color: '#000' }}>Accounts</p>
           <button onClick={() => setShowForm(!showForm)} className="font-mono" style={buttonStyle}>
             {showForm ? 'Cancel' : '+ Add account'}
           </button>
@@ -97,15 +99,15 @@ export default function Accounts() {
           <p style={{ color: '#888', fontSize: 14 }}>Loading accounts...</p>
         ) : accounts.length === 0 ? (
           <div style={{ position: 'relative' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18, filter: 'blur(3px)', opacity: 0.55, pointerEvents: 'none' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: isMobile ? 12 : 18, filter: 'blur(3px)', opacity: 0.55, pointerEvents: 'none' }}>
               {GHOST_ACCOUNTS.map(({ label, balance }) => (
-                <div key={label} className="chrome-surface" style={cardStyle}>
+                <div key={label} className="chrome-surface" style={isMobile ? mobileCardStyle : cardStyle}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
                     <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                       {label}
                     </p>
                   </div>
-                  <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>
+                  <p className="font-mono" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, margin: '0 0 10px', color: '#101112', overflowWrap: 'anywhere' }}>
                     £{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                   <p className="font-mono" style={{ fontSize: 12, color: '#6b6b6b', margin: 0, fontWeight: 400, letterSpacing: 0.5 }}>•••• 0000</p>
@@ -124,16 +126,16 @@ export default function Accounts() {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: isMobile ? 12 : 18 }}>
             {accounts.map((acc) => (
-              <div key={acc.id} className="chrome-surface" style={cardStyle}>
+              <div key={acc.id} className="chrome-surface" style={isMobile ? mobileCardStyle : cardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
                   <p className="font-mono" style={{ fontSize: 13, color: '#1a1a1a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {acc.name}
                   </p>
                   <span onClick={() => handleDelete(acc)} style={{ cursor: 'pointer', color: '#1a1a1a', fontSize: 18, opacity: 0.6 }}>×</span>
                 </div>
-                <p className="font-mono" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 10px', color: '#101112' }}>
+                <p className="font-mono" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, margin: '0 0 10px', color: '#101112', overflowWrap: 'anywhere' }}>
                   £{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
                 <p className="font-mono" style={{ fontSize: 12, color: '#6b6b6b', margin: 0, fontWeight: 400, letterSpacing: 0.5 }}>
@@ -150,6 +152,7 @@ export default function Accounts() {
 }
 
 const cardStyle = { borderRadius: 14, padding: 26, minHeight: 150 };
+const mobileCardStyle = { borderRadius: 14, padding: 20, minHeight: 0 };
 
 const selectStyle = {
   width: '100%', boxSizing: 'border-box', background: '#1a1a1a', border: '0.5px solid #333',

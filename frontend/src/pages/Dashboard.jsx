@@ -4,6 +4,7 @@ import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
+import useIsMobile from '../hooks/useIsMobile';
 
 // All-purple palette, light to dark. When there are more categories than
 // base shades, later ones cycle through further lightened/darkened
@@ -192,21 +193,21 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
   return <>{formatter(display)}</>;
 }
 
-function DashboardSkeleton() {
+function DashboardSkeleton({ isMobile }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
       <div>
         <div className="skeleton-block" style={{ width: 140, height: 15, marginBottom: 4 }} />
         <div className="skeleton-block" style={{ width: 220, height: 44, marginBottom: 8 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 16 }}>
           {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton-block-dark" style={{ height: 84, borderRadius: 12 }} />
+            <div key={i} className="skeleton-block-dark" style={{ height: isMobile ? 50 : 84, borderRadius: 12 }} />
           ))}
         </div>
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 18, marginBottom: 8 }} />
-        <div className="skeleton-block" style={{ height: CARD_HEIGHT, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: isMobile ? 520 : CARD_HEIGHT, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 18, marginBottom: 8 }} />
@@ -226,6 +227,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [accountPage, setAccountPage] = useState(0);
   const [chartsMounted, setChartsMounted] = useState(false);
+  const isMobile = useIsMobile();
 
   const availableMonths = getAvailableMonths(allTransactions);
 
@@ -382,14 +384,19 @@ export default function Dashboard() {
 
   const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
+  // Desktop is a fixed one-screen layout; on phones the sections stack
+  // and the page scrolls normally.
   return (
-    <div style={{ height: '100vh', padding: '16px 32px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+    <div style={{
+      ...(isMobile ? { minHeight: '100vh', padding: 16 } : { height: '100vh', padding: '16px 32px', overflow: 'hidden' }),
+      display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1,
+    }}>
       <Nav />
 
       {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
 
       {loading ? (
-        <DashboardSkeleton />
+        <DashboardSkeleton isMobile={isMobile} />
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, overflow: 'hidden' }}>
 
@@ -399,7 +406,7 @@ export default function Dashboard() {
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
             </p>
-            <p className="font-mono" style={{ fontSize: 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5 }}>
+            <p className="font-mono" style={{ fontSize: isMobile ? 'clamp(22px, 8.5vw, 44px)' : 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5, overflowWrap: 'anywhere' }}>
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
@@ -409,19 +416,21 @@ export default function Dashboard() {
                 className={hasAccounts ? 'account-page-fade' : ''}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
-                  gap: 16,
+                  gridTemplateColumns: isMobile ? '1fr' : `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
+                  gap: isMobile ? 10 : 16,
                   filter: hasAccounts ? 'none' : 'blur(3px)',
                   opacity: hasAccounts ? 1 : 0.55,
                   pointerEvents: hasAccounts ? 'auto' : 'none',
                 }}
               >
+                {/* On phones each card is a single row (name left,
+                    balance right) so three stacked cards stay compact. */}
                 {(hasAccounts ? currentAccountPage : FAKE_ACCOUNTS).map((acc) => (
-                  <div key={acc.id} className="dark-surface" style={darkCardStyle}>
-                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: '0 0 6px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
+                  <div key={acc.id} className="dark-surface" style={isMobile ? mobileDarkCardStyle : darkCardStyle}>
+                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: isMobile ? 0 : '0 0 6px', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 700, position: 'relative', zIndex: 1 }}>
                       {acc.name}
                     </p>
-                    <p className="font-mono" style={{ fontSize: 25, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1 }}>
+                    <p className="font-mono" style={{ fontSize: isMobile ? 17 : 25, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1, whiteSpace: 'nowrap' }}>
                       £<AnimatedNumber value={Number(acc.balance)} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                     </p>
                   </div>
@@ -462,20 +471,20 @@ export default function Dashboard() {
               smaller than its fixed inner height and visually overlap
               the section below it. */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <p className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
               {availableMonths.length > 0 && (
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
               )}
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: `${CARD_PADDING_Y}px 28px`, height: CARD_HEIGHT,
+              borderRadius: 16, padding: isMobile ? 18 : `${CARD_PADDING_Y}px 28px`, height: isMobile ? 'auto' : CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
               boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 2px 6px rgba(0,0,0,0.18)',
             }}>
               <div style={{
-                display: 'flex', width: '100%', height: '100%', gap: 0,
+                display: 'flex', flexDirection: isMobile ? 'column' : 'row', width: '100%', height: '100%', gap: 0,
                 filter: hasSpendData ? 'none' : 'blur(3px)',
                 opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
@@ -485,8 +494,8 @@ export default function Dashboard() {
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 26, flex: 1, minHeight: 0 }}>
-                    <svg viewBox="0 0 120 120" style={{ width: 175, height: 175, flexShrink: 0, overflow: 'visible' }}>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: isMobile ? 18 : 26, flex: 1, minHeight: 0 }}>
+                    <svg viewBox="0 0 120 120" style={{ width: isMobile ? 160 : 175, height: isMobile ? 160 : 175, flexShrink: 0, overflow: 'visible' }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
                           <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity="0.28" />
@@ -514,7 +523,7 @@ export default function Dashboard() {
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: '100%' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: isMobile ? 'auto' : '100%', gap: isMobile ? 10 : 0, width: isMobile ? '100%' : 'auto' }}>
                       {displayArcs.map((arc) => {
                         const arrowSize = Math.max(10, legendSizing.fontSize - 3);
                         // minWidth (not a fixed width) — a fixed width
@@ -528,7 +537,10 @@ export default function Dashboard() {
                         const badgeMinWidth = Math.round(badgeFontSize * 4.2);
                         return (
                           <div key={arc.name} style={{
-                            display: 'grid', gridTemplateColumns: `${legendSizing.swatch}px 138px minmax(48px, auto) minmax(0, 1fr)`,
+                            display: 'grid',
+                            gridTemplateColumns: isMobile
+                              ? `${legendSizing.swatch}px minmax(0, 1fr) auto ${badgeMinWidth + 18}px`
+                              : `${legendSizing.swatch}px 138px minmax(48px, auto) minmax(0, 1fr)`,
                             alignItems: 'center', columnGap: 10,
                           }}>
                             <span style={{
@@ -542,6 +554,7 @@ export default function Dashboard() {
                               style={{
                                 fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700,
                                 cursor: 'pointer',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 textDecoration: 'underline',
                                 textDecorationColor: 'rgba(0,0,0,0.15)',
                                 textUnderlineOffset: 3,
@@ -586,14 +599,14 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
+                <div style={{ ...(isMobile ? { height: 1, margin: '20px 0' } : { width: 1, margin: '0 26px' }), background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 2: pace / projection */}
-                <div style={{ width: 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
+                <div style={{ width: isMobile ? 'auto' : 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
-                  <p className="font-mono" style={{ fontSize: 36, color: '#101112', margin: '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
+                  <p className="font-mono" style={{ fontSize: isMobile ? 30 : 36, color: '#101112', margin: isMobile ? '8px 0 6px' : '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
                   <p className="font-mono" style={{
@@ -619,14 +632,14 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.15)', margin: '0 26px', position: 'relative', zIndex: 1 }} />
+                <div style={{ ...(isMobile ? { height: 1, margin: '20px 0' } : { width: 1, margin: '0 26px' }), background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 3: this month vs last month bars */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: '100%' }}>
+                <div style={{ flex: isMobile ? 'none' : 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: isMobile ? 'auto' : '100%' }}>
                   <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: barSizing.gap, flex: 1, minHeight: 0, minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: isMobile ? 10 : barSizing.gap, flex: isMobile ? 'none' : 1, minHeight: 0, minWidth: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
@@ -663,7 +676,7 @@ export default function Dashboard() {
 
           {/* Recent Transactions — flex:1, not a guessed fixed height. */}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <p className="font-mono" style={{ fontSize: 18, color: '#000', margin: '0 0 8px', fontWeight: 700, flexShrink: 0 }}>Recent Transactions</p>
+            <p className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: '0 0 8px', fontWeight: 700, flexShrink: 0 }}>Recent Transactions</p>
             <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
               <div className="dark-surface" style={{
                 ...darkListStyle,
@@ -686,7 +699,7 @@ export default function Dashboard() {
                           width: 6, height: 6, borderRadius: '50%', background: dotColor,
                           boxShadow: `0 0 6px ${dotColor}99`, flexShrink: 0,
                         }} />
-                        {t.description || '(no description)'}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.description || '(no description)'}</span>
                       </p>
                       <p className="font-mono" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: dotColor, flexShrink: 0, marginLeft: 12 }}>
                         {isExpense ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
@@ -708,6 +721,10 @@ export default function Dashboard() {
 const darkCardStyle = {
   borderRadius: 12, padding: '16px 18px',
   boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
+};
+const mobileDarkCardStyle = {
+  ...darkCardStyle, padding: '14px 16px',
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
 };
 const darkListStyle = {
   borderRadius: 14, padding: 4, overflow: 'hidden',

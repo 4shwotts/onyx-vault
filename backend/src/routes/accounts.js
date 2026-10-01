@@ -9,7 +9,6 @@ const MAX_ACCOUNTS_PER_USER = 10;
 
 // Every route below is scoped to req.userId (set by requireAuth from the
 // verified JWT), so a user can only ever see or modify their own accounts.
-
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(

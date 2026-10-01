@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
@@ -6,11 +6,14 @@ import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
 import { BASE_CATEGORIES } from '../constants/categories';
 import { CategoryIcon } from '../components/Icon';
+import useIsMobile from '../hooks/useIsMobile';
 
-// 9 per page. (8 was tried at one point -- it left too much empty
-// space below the list before the Previous/Next controls -- and this
-// was reverted back to 9.)
+// Page size on mobile (where the page scrolls normally) and before the
+// first measurement. On desktop the page size is derived from the space
+// left below the header / recurring list, so the pagination controls
+// always sit inside the viewport.
 const PAGE_SIZE = 9;
+const LIST_PADDING_Y = 10;
 
 const FAKE_TRANSACTIONS = [
   { id: 'ghost-1', description: 'Tesco Express', category_name: 'Groceries', account_name: 'Current', date: '2026-08-01', amount: -34.20, is_recurring: false, is_anomaly: false },
@@ -58,6 +61,9 @@ export default function Transactions() {
   const [filterMonth, setFilterMonth] = useState('');
   const [appliedUrlFilters, setAppliedUrlFilters] = useState(false);
   const [page, setPage] = useState(1);
+  const isMobile = useIsMobile();
+  const listSlotRef = useRef(null);
+  const [fitPageSize, setFitPageSize] = useState(PAGE_SIZE);
 
   const [showForm, setShowForm] = useState(false);
   const [accountId, setAccountId] = useState('');
@@ -248,36 +254,65 @@ export default function Transactions() {
     }
   }
 
+  // Fits as many rows as the list slot can hold. The slot is flex:1, so
+  // its height comes from the viewport minus everything above it, not
+  // from its contents; re-measured whenever that space changes (window
+  // resize, recurring list or messages appearing) and when the list
+  // itself resizes, since row height shifts once the web fonts load.
+  useLayoutEffect(() => {
+    const slot = listSlotRef.current;
+    if (isMobile || !slot) return undefined;
+
+    function measure() {
+      const row = slot.querySelector('[data-tx-row]');
+      const rowHeight = row ? row.offsetHeight : 73;
+      const available = slot.clientHeight - LIST_PADDING_Y * 2;
+      setFitPageSize(Math.max(1, Math.floor(available / rowHeight)));
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(slot);
+    if (slot.firstElementChild) observer.observe(slot.firstElementChild);
+    return () => observer.disconnect();
+  }, [isMobile, loading]);
+
+  useEffect(() => {
+    if (!showForm) return undefined;
+    function handleKey(e) {
+      if (e.key === 'Escape') setShowForm(false);
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [showForm]);
+
+  const pageSize = isMobile ? PAGE_SIZE : fitPageSize;
   const displayTransactions = transactions.length === 0 ? FAKE_TRANSACTIONS : transactions;
-  const totalPages = Math.max(1, Math.ceil(displayTransactions.length / PAGE_SIZE));
-  const pagedTransactions = displayTransactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(displayTransactions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTransactions = displayTransactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div style={{ minHeight: '100vh', padding: '20px 32px', position: 'relative', zIndex: 1 }}>
+    <div className="hide-scrollbar" style={{
+      ...(isMobile
+        ? { minHeight: '100vh', padding: 16 }
+        : { height: '100vh', padding: '20px 32px', overflowY: 'auto' }),
+      display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1,
+    }}>
       <Nav />
 
-      <div className="page-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <p className="font-mono" style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#000' }}>Transactions</p>
+      <div className="page-container" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* The add form floats over the list (anchored to this header)
+            instead of being inserted into the flow, so opening it
+            doesn't push the list and pagination below the fold. */}
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexShrink: 0 }}>
+          <p className="font-mono" style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, margin: 0, color: '#000' }}>Transactions</p>
           <button onClick={() => setShowForm(!showForm)} className="font-mono" style={buttonStyle}>
             {showForm ? 'Cancel' : '+ Add'}
           </button>
-        </div>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <select value={filterAccount} onChange={(e) => setFilterAccount(e.target.value)} className="font-mono" style={chipStyle}>
-            <option value="">All Accounts</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-          <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="font-mono" style={chipStyle}>
-            <option value="">Category</option>
-            {mergedFilterCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <MonthPicker months={getAvailableMonths(allTransactionsForMonths)} value={filterMonth} onChange={setFilterMonth} allowAll />
-        </div>
-
-        {showForm && (
-          <form onSubmit={handleCreate} style={formStyle}>
+          {showForm && (
+          <form onSubmit={handleCreate} style={{ ...formStyle, ...(isMobile ? { left: 0, right: 0 } : { right: 0, width: 360 }) }}>
             <select value={accountId} onChange={(e) => setAccountId(e.target.value)} required className="font-mono" style={selectStyle}>
               <option value="">Select account</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -312,31 +347,50 @@ export default function Transactions() {
               {submitting ? 'Saving...' : makeRecurring ? 'Create recurring rule' : 'Add transaction'}
             </button>
           </form>
-        )}
+          )}
+        </div>
 
-        {error && <p className="font-mono" style={{ color: 'var(--expense)', fontSize: 14, marginBottom: 14 }}>{error}</p>}
-        {info && <p className="font-mono" style={{ color: 'var(--accent)', fontSize: 14, marginBottom: 14 }}>{info}</p>}
+        <div style={{ display: isMobile ? 'grid' : 'flex', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16, flexShrink: 0 }}>
+          <select value={filterAccount} onChange={(e) => setFilterAccount(e.target.value)} className="font-mono" style={isMobile ? mobileChipStyle : chipStyle}>
+            <option value="">All Accounts</option>
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="font-mono" style={isMobile ? mobileChipStyle : chipStyle}>
+            <option value="">Category</option>
+            {mergedFilterCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <div style={isMobile ? { gridColumn: '1 / -1' } : undefined}>
+            <MonthPicker months={getAvailableMonths(allTransactionsForMonths)} value={filterMonth} onChange={setFilterMonth} allowAll fullWidth={isMobile} />
+          </div>
+        </div>
+
+        {error && <p className="font-mono" style={{ color: 'var(--expense)', fontSize: 14, margin: '0 0 14px', flexShrink: 0 }}>{error}</p>}
+        {info && <p className="font-mono" style={{ color: 'var(--accent)', fontSize: 14, margin: '0 0 14px', flexShrink: 0 }}>{info}</p>}
 
         {recurring.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 20, flexShrink: 0 }}>
             <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 8px', fontWeight: 700 }}>Transactions Recurring</p>
             <div className="dark-surface" style={darkListStyle}>
-              {recurring.map((r, i) => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', borderBottom: i < recurring.length - 1 ? '0.5px solid #262626' : 'none', position: 'relative', zIndex: 1 }}>
-                  <div>
-                    <p className="font-mono" style={{ fontSize: 16, color: '#e5e5e5', margin: '0 0 2px', fontWeight: 600 }}>{r.description || '(no description)'}</p>
-                    <p className="font-mono" style={{ fontSize: 12, color: '#8a8a8a', margin: 0 }}>
-                      {r.account_name?.toUpperCase()} · {r.frequency.toUpperCase()} · NEXT {formatNextRun(r.next_run_date)}
-                    </p>
+              {/* Capped at ~3 rows so a long list of rules can't eat the
+                  space the transaction list needs; scrolls past that. */}
+              <div className="hide-scrollbar" style={{ maxHeight: 190, overflowY: 'auto', position: 'relative', zIndex: 1 }}>
+                {recurring.map((r, i) => (
+                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: isMobile ? '10px 12px' : '10px 18px', borderBottom: i < recurring.length - 1 ? '0.5px solid #262626' : 'none' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p className="font-mono" style={{ fontSize: isMobile ? 14 : 16, color: '#e5e5e5', margin: '0 0 2px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.description || '(no description)'}</p>
+                      <p className="font-mono" style={{ fontSize: isMobile ? 10 : 12, color: '#8a8a8a', margin: 0 }}>
+                        {r.account_name?.toUpperCase()} · {r.frequency.toUpperCase()} · NEXT {formatNextRun(r.next_run_date)}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, flexShrink: 0 }}>
+                      <p className="font-mono" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, margin: 0, whiteSpace: 'nowrap', color: Number(r.amount) < 0 ? 'var(--expense)' : 'var(--income)' }}>
+                        {Number(r.amount) < 0 ? '−' : '+'}£{Math.abs(Number(r.amount)).toFixed(2)}
+                      </p>
+                      <span onClick={() => handleDeleteRecurring(r.id)} style={{ cursor: 'pointer', color: '#8a8a8a', fontSize: 15 }}>×</span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <p className="font-mono" style={{ fontSize: 16, fontWeight: 700, margin: 0, color: Number(r.amount) < 0 ? 'var(--expense)' : 'var(--income)' }}>
-                      {Number(r.amount) < 0 ? '−' : '+'}£{Math.abs(Number(r.amount)).toFixed(2)}
-                    </p>
-                    <span onClick={() => handleDeleteRecurring(r.id)} style={{ cursor: 'pointer', color: '#8a8a8a', fontSize: 15 }}>×</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -345,37 +399,41 @@ export default function Transactions() {
           <p style={{ color: '#888', fontSize: 14 }}>Loading transactions...</p>
         ) : (
           <>
-            <div style={{ position: 'relative' }}>
+            <div ref={listSlotRef} style={isMobile ? { position: 'relative' } : { position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="chrome-surface" style={{
-                borderRadius: 14, padding: '10px 8px',
+                borderRadius: 14, padding: `${LIST_PADDING_Y}px ${isMobile ? 4 : 8}px`,
                 filter: transactions.length === 0 ? 'blur(3px)' : 'none',
                 opacity: transactions.length === 0 ? 0.55 : 1,
                 pointerEvents: transactions.length === 0 ? 'none' : 'auto',
               }}>
                 {pagedTransactions.map((t, i) => (
-                  <div key={t.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px',
+                  <div key={t.id} data-tx-row style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
+                    padding: isMobile ? '11px 10px' : '13px 18px',
                     borderBottom: i < pagedTransactions.length - 1 ? '0.5px solid #00000022' : 'none',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <CategoryIcon name={t.category_name} size={46} />
-                      <div>
-                        <p className="font-mono" style={{ fontSize: 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {t.description || '(no description)'}
-                          {t.is_recurring && <span className="font-mono" style={{ fontSize: 12, color: '#333', border: '1px solid #333', borderRadius: 4, padding: '1px 6px' }}>RECURRING</span>}
+                    {/* minWidth:0 + nowrap/ellipsis keep every row one fixed
+                        height (the desktop page-size maths relies on it)
+                        and stop long text pushing the amount off-screen. */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, minWidth: 0 }}>
+                      <CategoryIcon name={t.category_name} size={isMobile ? 36 : 46} />
+                      <div style={{ minWidth: 0 }}>
+                        <p className="font-mono" style={{ fontSize: isMobile ? 13 : 17, color: '#101112', margin: '0 0 3px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8, minWidth: 0 }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{t.description || '(no description)'}</span>
+                          {t.is_recurring && <span className="font-mono" style={{ ...badgeStyle, fontSize: isMobile ? 8 : 12, color: '#333', border: '1px solid #333' }}>{isMobile ? 'REC' : 'RECURRING'}</span>}
                           {t.is_anomaly && (
-                            <span className="font-mono" style={{ fontSize: 12, color: 'var(--expense)', border: '1px solid var(--expense)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                              <span style={{ fontSize: 15, position: 'relative', top: -1 }}>⚠</span> UNUSUAL
+                            <span className="font-mono" style={{ ...badgeStyle, fontSize: isMobile ? 8 : 12, color: 'var(--expense)', border: '1px solid var(--expense)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <span style={{ fontSize: isMobile ? 10 : 15, position: 'relative', top: -1 }}>⚠</span>{!isMobile && ' UNUSUAL'}
                             </span>
                           )}
                         </p>
-                        <p className="font-mono" style={{ fontSize: 13, color: '#3a3a3a', margin: 0 }}>
+                        <p className="font-mono" style={{ fontSize: isMobile ? 10 : 13, color: '#3a3a3a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.account_name} · {t.category_name || 'Other'} · {new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                         </p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <p className="font-mono" style={{ fontSize: 17, fontWeight: 700, margin: 0, color: Number(t.amount) < 0 ? '#b83232' : '#1f8a52' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, flexShrink: 0 }}>
+                      <p className="font-mono" style={{ fontSize: isMobile ? 13 : 17, fontWeight: 700, margin: 0, whiteSpace: 'nowrap', color: Number(t.amount) < 0 ? '#b83232' : '#1f8a52' }}>
                         {Number(t.amount) < 0 ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
                       </p>
                       <span onClick={() => handleDelete(t.id)} style={{ cursor: 'pointer', color: '#00000066', fontSize: 16 }}>×</span>
@@ -386,24 +444,24 @@ export default function Transactions() {
               {transactions.length === 0 && <EmptyOverlay message="No transactions yet." />}
             </div>
 
-            {transactions.length > PAGE_SIZE && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 12 }}>
+            {transactions.length > pageSize && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? 8 : 14, marginTop: 12, flexShrink: 0 }}>
                 <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
                   className="font-mono"
-                  style={{ ...pageButtonStyle, opacity: page === 1 ? 0.4 : 1, cursor: page === 1 ? 'default' : 'pointer' }}
+                  style={{ ...pageButtonStyle, minWidth: isMobile ? 84 : 100, opacity: currentPage === 1 ? 0.4 : 1, cursor: currentPage === 1 ? 'default' : 'pointer' }}
                 >
                   Previous
                 </button>
-                <p className="font-mono" style={{ fontSize: 13, color: '#555', margin: 0, minWidth: 90, textAlign: 'center' }}>
-                  Page {page} of {totalPages}
+                <p className="font-mono" style={{ fontSize: isMobile ? 11 : 13, color: '#555', margin: 0, minWidth: isMobile ? 0 : 90, textAlign: 'center' }}>
+                  Page {currentPage} of {totalPages}
                 </p>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
                   className="font-mono"
-                  style={{ ...pageButtonStyle, opacity: page === totalPages ? 0.4 : 1, cursor: page === totalPages ? 'default' : 'pointer' }}
+                  style={{ ...pageButtonStyle, minWidth: isMobile ? 84 : 100, opacity: currentPage === totalPages ? 0.4 : 1, cursor: currentPage === totalPages ? 'default' : 'pointer' }}
                 >
                   Next
                 </button>
@@ -446,6 +504,10 @@ const chipStyle = {
   backgroundPosition: 'right 14px center',
   backgroundSize: '11px',
 };
+const mobileChipStyle = {
+  ...chipStyle, width: '100%', minWidth: 0, padding: '10px 30px 10px 14px', textOverflow: 'ellipsis',
+};
+const badgeStyle = { borderRadius: 4, padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' };
 const buttonStyle = {
   background: '#141414', color: '#fff', border: 'none', borderRadius: 8,
   padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
@@ -454,4 +516,8 @@ const pageButtonStyle = {
   background: '#141414', color: '#e5e5e5', border: '0.5px solid #333', borderRadius: 8,
   padding: '9px 16px', fontSize: 13, fontWeight: 600, minWidth: 100, textAlign: 'center',
 };
-const formStyle = { background: '#141414', borderRadius: 12, padding: 22, marginBottom: 22, maxWidth: 360 };
+const formStyle = {
+  position: 'absolute', top: 'calc(100% + 8px)', zIndex: 20,
+  background: '#141414', borderRadius: 12, padding: 22,
+  boxShadow: '0 18px 44px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.25)',
+};

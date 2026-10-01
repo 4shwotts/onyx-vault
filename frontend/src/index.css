@@ -17,6 +17,18 @@
 
 * { box-sizing: border-box; }
 
+/* Scrollbars hidden on the page and on opted-in inner scrollers; content
+   still scrolls by wheel, touch and keyboard. */
+html, body, .hide-scrollbar { scrollbar-width: none; }
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* iOS Safari zooms the page when a field under 16px is focused. */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]), textarea { font-size: 16px !important; }
+}
+
 body {
   margin: 0;
   min-height: 100vh;

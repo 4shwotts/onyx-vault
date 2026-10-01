@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import Nav from '../components/Nav';
 import { api } from '../api/client';
 import { BASE_CATEGORIES } from '../constants/categories';
+import useIsMobile from '../hooks/useIsMobile';
 
 const CATEGORY_RULES = [
   { keywords: ['tesco', 'waitrose', 'sainsbury', 'asda', 'aldi', 'lidl', 'grocery'], category: 'Groceries' },
@@ -29,6 +30,7 @@ export default function Import() {
   const [error, setError] = useState('');
   const [importing, setImporting] = useState(false);
   const [done, setDone] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     api.getAccounts().then(setAccounts).catch((err) => setError(err.message));
@@ -119,11 +121,11 @@ export default function Import() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '24px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
-      <div className="page-container" style={{ maxWidth: 800, margin: '0 auto', paddingTop: 90 }}>
-      <p className="font-mono" style={{ fontSize: 24, fontWeight: 700, margin: '0 0 6px', color: '#000', textAlign: 'center' }}>Import Statement</p>
+      <div className="page-container" style={{ maxWidth: 800, margin: '0 auto', paddingTop: isMobile ? 12 : 90 }}>
+      <p className="font-mono" style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, margin: '0 0 6px', color: '#000', textAlign: 'center' }}>Import Statement</p>
       <p className="font-mono" style={{ fontSize: 14, color: '#666', margin: '0 0 22px', textAlign: 'center' }}>
         Upload a CSV export from your bank — we'll auto-detect categories so you can review before confirming.
       </p>
@@ -133,7 +135,7 @@ export default function Import() {
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
 
-        <label style={dropZoneStyle}>
+        <label style={isMobile ? { ...dropZoneStyle, padding: '32px 20px' } : dropZoneStyle}>
           <input type="file" accept=".csv" onChange={handleFile} style={{ display: 'none' }} />
           <p className="font-mono" style={{ fontSize: 15, color: '#e5e5e5', margin: '0 0 6px', fontWeight: 600 }}>Drag CSV here or click to browse</p>
           <p className="font-mono" style={{ fontSize: 11, color: '#8a8a8a', margin: 0, letterSpacing: 0.5 }}>
@@ -165,23 +167,23 @@ export default function Import() {
             <div style={darkListStyle}>
               {rows.map((row, i) => (
                 <div key={row.id} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '14px 18px', gap: 14,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: isMobile ? 'wrap' : 'nowrap',
+                  padding: isMobile ? '12px 14px' : '14px 18px', gap: isMobile ? 10 : 14,
                   borderBottom: i < rows.length - 1 ? '0.5px solid #262626' : 'none',
                 }}>
-                  <p className="font-mono" style={{ fontSize: 14, color: '#e5e5e5', margin: 0, flex: 1, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p className="font-mono" style={{ fontSize: 14, color: '#e5e5e5', margin: 0, flex: isMobile ? '1 1 100%' : 1, minWidth: 0, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {row.description}
                   </p>
 
                   <select value={row.category} onChange={(e) => updateRowCategory(row.id, e.target.value)}
-                    className="font-mono" style={categorySelectStyle}>
+                    className="font-mono" style={isMobile ? { ...categorySelectStyle, flex: 1, width: 'auto', minWidth: 0 } : categorySelectStyle}>
                     {BASE_CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
 
                   <p className="font-mono" style={{
-                    fontSize: 15, fontWeight: 700, margin: 0, width: 100,
+                    fontSize: 15, fontWeight: 700, margin: 0, minWidth: 100, flexShrink: 0,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2,
                     color: row.amount < 0 ? 'var(--expense)' : 'var(--income)',
                   }}>

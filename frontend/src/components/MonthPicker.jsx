@@ -6,7 +6,7 @@ import { MONTH_NAMES } from '../utils/months';
 // the list of months that actually have data — used to grey out and
 // disable any month with nothing in it, rather than letting the user
 // pick an empty month.
-export default function MonthPicker({ months, value, onChange, allowAll = false }) {
+export default function MonthPicker({ months, value, onChange, allowAll = false, fullWidth = false }) {
   const [open, setOpen] = useState(false);
   const years = Array.from(new Set(months.map((m) => m.year))).sort((a, b) => b - a);
   const selected = months.find((m) => m.value === value);
@@ -37,7 +37,7 @@ export default function MonthPicker({ months, value, onChange, allowAll = false 
       <button
         onClick={() => setOpen((o) => !o)}
         className="font-mono"
-        style={pickerButtonStyle}
+        style={fullWidth ? { ...pickerButtonStyle, width: '100%', justifyContent: 'space-between' } : pickerButtonStyle}
       >
         {allowAll && !value ? 'All Time' : selected ? selected.label : 'Select month'}
         <svg width="9" height="6" viewBox="0 0 10 6" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}>
@@ -108,6 +108,7 @@ export default function MonthPicker({ months, value, onChange, allowAll = false 
 const pickerButtonStyle = {
   display: 'flex', alignItems: 'center', gap: 8, background: '#141414', color: '#fff',
   border: 'none', borderRadius: 20, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+  whiteSpace: 'nowrap',
 };
 
 const panelStyle = {
