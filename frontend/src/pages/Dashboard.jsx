@@ -72,6 +72,21 @@ const ACCOUNT_ROTATE_MS = 4000;
 // counts (getLegendSizing / getBarSizing).
 const CARD_HEIGHT = 320;
 
+// Mobile equivalents. The 2x2 card is also a fixed height, so switching
+// to a month with fewer categories (or loading) never resizes it; the
+// legend and bars scale their text down at higher counts instead.
+const MOBILE_CARD_HEIGHT = 430;
+const MOBILE_DONUT_ROW = 150;
+const MOBILE_ACCOUNT_CARD_HEIGHT = 52;
+const MOBILE_ACCOUNT_GAP = 10;
+
+function getMobileBarSizing(count) {
+  if (count <= 6) return { labelFontSize: 10, labelMB: 3, barHeight: 7 };
+  if (count <= 8) return { labelFontSize: 9, labelMB: 2, barHeight: 5 };
+  if (count <= 10) return { labelFontSize: 8, labelMB: 1, barHeight: 4 };
+  return { labelFontSize: 7, labelMB: 1, barHeight: 3 };
+}
+
 function getLegendSizing(count) {
   if (count <= 6) return { fontSize: 16, swatch: 15 };
   if (count <= 8) return { fontSize: 14, swatch: 13 };
@@ -201,13 +216,13 @@ function DashboardSkeleton({ isMobile }) {
         <div className="skeleton-block" style={{ width: 220, height: 44, marginBottom: 8 }} />
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 16 }}>
           {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton-block-dark" style={{ height: isMobile ? 50 : 84, borderRadius: 12 }} />
+            <div key={i} className="skeleton-block-dark" style={{ height: isMobile ? MOBILE_ACCOUNT_CARD_HEIGHT : 84, borderRadius: 12 }} />
           ))}
         </div>
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 18, marginBottom: 8 }} />
-        <div className="skeleton-block" style={{ height: isMobile ? 340 : CARD_HEIGHT, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: isMobile ? MOBILE_CARD_HEIGHT : CARD_HEIGHT, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 18, marginBottom: 8 }} />
@@ -296,10 +311,13 @@ export default function Dashboard() {
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
   // Phone quadrants are ~half the card width, so text is capped smaller.
-  const legendFontSize = isMobile ? Math.min(legendSizing.fontSize, 11) : legendSizing.fontSize;
-  const legendSwatch = isMobile ? 10 : legendSizing.swatch;
+  const legendCount = categoryList.length || FAKE_CATEGORY_LIST.length;
+  const legendFontSize = isMobile ? Math.max(7, Math.min(11, Math.floor(110 / legendCount))) : legendSizing.fontSize;
+  const legendSwatch = isMobile ? Math.min(10, legendFontSize) : legendSizing.swatch;
   const subheadingSize = isMobile ? 11 : SUBHEADING_SIZE;
-  const barSizing = getBarSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
+  const barSizing = isMobile
+    ? getMobileBarSizing(categoryList.length || FAKE_CATEGORY_LIST.length)
+    : getBarSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
 
   let previousCategoryTotals = {};
   let prevTotalSpend = 0;
@@ -375,6 +393,8 @@ export default function Dashboard() {
   const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
   const hasRecent = recent.length > 0;
   const currentAccountPage = accountPages[accountPage] || [];
+  const accountSlots = Math.min(ACCOUNTS_PER_PAGE, (hasAccounts ? accounts : FAKE_ACCOUNTS).length) || 1;
+  const mobileAccountsHeight = accountSlots * MOBILE_ACCOUNT_CARD_HEIGHT + (accountSlots - 1) * MOBILE_ACCOUNT_GAP;
 
   const revealArcs = chartsMounted ? displayArcs : displayArcs.map((a) => ({ ...a, dashArray: `0 ${circumference}` }));
   const revealMaxBar =  displayMaxBarVal ;
@@ -414,14 +434,17 @@ export default function Dashboard() {
               £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
-            <div style={{ position: 'relative', minHeight: 84, marginTop: 8 }}>
+            {/* On phones the cards stack, so a last page with fewer
+                cards would be shorter; reserving a full page's height
+                keeps the rotation from shifting everything below. */}
+            <div style={{ position: 'relative', minHeight: isMobile ? mobileAccountsHeight : 84, marginTop: 8 }}>
               <div
                 key={hasAccounts ? accountPage : 'empty'}
                 className={hasAccounts ? 'account-page-fade' : ''}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: isMobile ? '1fr' : `repeat(${Math.min((hasAccounts ? currentAccountPage.length : FAKE_ACCOUNTS.length) || 1, 3)}, 1fr)`,
-                  gap: isMobile ? 10 : 16,
+                  gap: isMobile ? MOBILE_ACCOUNT_GAP : 16,
                   filter: hasAccounts ? 'none' : 'blur(3px)',
                   opacity: hasAccounts ? 1 : 0.55,
                   pointerEvents: hasAccounts ? 'auto' : 'none',
@@ -475,7 +498,10 @@ export default function Dashboard() {
               smaller than its fixed inner height and visually overlap
               the section below it. */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            {/* Fixed height on phones: a long month name ("September
+                2026") wraps the title to two lines, which would
+                otherwise push the card down when switching months. */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 8, ...(isMobile && { height: 40 }) }}>
               <p className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
               {availableMonths.length > 0 && (
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
@@ -483,7 +509,7 @@ export default function Dashboard() {
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: isMobile ? 14 : `${CARD_PADDING_Y}px 28px`, height: isMobile ? 'auto' : CARD_HEIGHT,
+              borderRadius: 16, padding: isMobile ? 14 : `${CARD_PADDING_Y}px 28px`, height: isMobile ? MOBILE_CARD_HEIGHT : CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
               boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 2px 6px rgba(0,0,0,0.18)',
             }}>
@@ -493,7 +519,11 @@ export default function Dashboard() {
                   own grid cells without changing the desktop markup. */}
               <div style={{
                 ...(isMobile
-                  ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: 14, rowGap: 12, alignItems: 'start' }
+                  ? {
+                    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                    gridTemplateRows: `auto ${MOBILE_DONUT_ROW}px auto minmax(0, 1fr)`,
+                    columnGap: 14, rowGap: 10, alignItems: 'start',
+                  }
                   : { display: 'flex', gap: 0 }),
                 width: '100%', height: '100%',
                 filter: hasSpendData ? 'none' : 'blur(3px)',
@@ -507,7 +537,7 @@ export default function Dashboard() {
                   </p>
                   <div style={isMobile ? { display: 'contents' } : { display: 'flex', alignItems: 'center', gap: 26, flex: 1, minHeight: 0 }}>
                     <svg viewBox="0 0 120 120" style={{
-                      ...(isMobile ? { width: '100%', maxWidth: 150, height: 'auto', justifySelf: 'center', alignSelf: 'center' } : { width: 175, height: 175 }),
+                      ...(isMobile ? { width: '100%', maxWidth: MOBILE_DONUT_ROW, height: MOBILE_DONUT_ROW, justifySelf: 'center', alignSelf: 'center' } : { width: 175, height: 175 }),
                       flexShrink: 0, overflow: 'visible', position: 'relative', zIndex: 1,
                     }}>
                       <defs>
@@ -539,7 +569,7 @@ export default function Dashboard() {
                     </svg>
                     <div style={{
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', position: 'relative', zIndex: 1,
-                      ...(isMobile ? { gap: 8, alignSelf: 'center', minWidth: 0 } : { height: '100%' }),
+                      ...(isMobile ? { alignSelf: 'stretch', minWidth: 0, overflow: 'hidden' } : { height: '100%' }),
                     }}>
                       {displayArcs.map((arc) => {
                         const arrowSize = Math.max(10, legendSizing.fontSize - 3);
@@ -621,7 +651,7 @@ export default function Dashboard() {
                 <div style={{ ...(isMobile ? { gridColumn: '1 / -1', height: 1, margin: '4px 0' } : { width: 1, margin: '0 26px' }), background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 2: pace / projection */}
-                <div style={{ width: isMobile ? 'auto' : 190, minWidth: 0, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: isMobile ? 'auto' : '100%' }}>
+                <div style={{ width: isMobile ? 'auto' : 190, minWidth: 0, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%', overflow: isMobile ? 'hidden' : 'visible', ...(isMobile && { alignSelf: 'stretch' }) }}>
                   <p className="font-mono" style={{ fontSize: subheadingSize, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
@@ -656,19 +686,19 @@ export default function Dashboard() {
                 {/* SECTION 3: this month vs last month bars */}
                 <div style={{
                   display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden',
-                  ...(isMobile ? { alignSelf: 'stretch', borderLeft: '1px solid rgba(0,0,0,0.15)', paddingLeft: 12 } : { flex: 1, height: '100%' }),
+                  ...(isMobile ? { alignSelf: 'stretch', height: '100%', minHeight: 0, borderLeft: '1px solid rgba(0,0,0,0.15)', paddingLeft: 12 } : { flex: 1, height: '100%' }),
                 }}>
                   <p className="font-mono" style={{ fontSize: subheadingSize, color: '#2a2a2a', margin: isMobile ? '0 0 8px' : '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: isMobile ? 7 : barSizing.gap, flex: isMobile ? 'none' : 1, minHeight: 0, minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: isMobile ? 0 : barSizing.gap, flex: 1, minHeight: 0, minWidth: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
                         <div key={arc.name} style={{ minWidth: 0 }}>
                           <p className="font-mono" style={{
-                            fontSize: isMobile ? Math.min(barSizing.labelFontSize, 10) : barSizing.labelFontSize, color: '#444', margin: `0 0 ${barSizing.labelMB}px`, fontWeight: 700,
+                            fontSize: barSizing.labelFontSize, color: '#444', margin: `0 0 ${barSizing.labelMB}px`, fontWeight: 700,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: barSizing.barHeight, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
@@ -745,7 +775,7 @@ const darkCardStyle = {
   boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
 };
 const mobileDarkCardStyle = {
-  ...darkCardStyle, padding: '14px 16px',
+  ...darkCardStyle, padding: '0 16px', height: MOBILE_ACCOUNT_CARD_HEIGHT,
   display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
 };
 const darkListStyle = {
