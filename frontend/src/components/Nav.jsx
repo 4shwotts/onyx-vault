@@ -3,11 +3,11 @@ import { api } from '../api/client';
 import SpinningGem from './SpinningGem';
 import useIsMobile from '../hooks/useIsMobile';
 
-// shortLabel is used in the mobile tab bar, where four full Orbitron
-// labels don't fit across a phone-width row.
+// shortLabel is used in the mobile tab bar, where "Dashboard" is
+// shortened so all four tabs fit across a phone-width row.
 const links = [
   { to: '/dashboard', label: 'Dashboard', shortLabel: 'Home' },
-  { to: '/transactions', label: 'Transactions', shortLabel: 'Activity' },
+  { to: '/transactions', label: 'Transactions', shortLabel: 'Transactions' },
   { to: '/accounts', label: 'Accounts', shortLabel: 'Accounts' },
   { to: '/import', label: 'Import', shortLabel: 'Import' },
 ];
@@ -152,7 +152,7 @@ function MobileNav({ onSearch, onLogout }) {
         </div>
       </div>
 
-      <div className="dark-surface" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderRadius: 12, padding: 4, gap: 2 }}>
+      <div className="dark-surface" style={{ display: 'flex', borderRadius: 12, padding: 4, gap: 2 }}>
         {links.map((link) => (
           <NavLink
             key={link.to}
@@ -164,7 +164,8 @@ function MobileNav({ onSearch, onLogout }) {
               textTransform: 'uppercase',
               textDecoration: 'none',
               textAlign: 'center',
-              padding: '11px 2px',
+              padding: '11px 6px',
+              flex: '1 1 auto',
               borderRadius: 8,
               color: isActive ? '#fff' : 'var(--text-secondary)',
               background: isActive ? '#2a2f33' : 'transparent',

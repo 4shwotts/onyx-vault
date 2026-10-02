@@ -207,7 +207,7 @@ function DashboardSkeleton({ isMobile }) {
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 180, height: 18, marginBottom: 8 }} />
-        <div className="skeleton-block" style={{ height: isMobile ? 520 : CARD_HEIGHT, borderRadius: 16 }} />
+        <div className="skeleton-block" style={{ height: isMobile ? 340 : CARD_HEIGHT, borderRadius: 16 }} />
       </div>
       <div>
         <div className="skeleton-block" style={{ width: 170, height: 18, marginBottom: 8 }} />
@@ -295,6 +295,10 @@ export default function Dashboard() {
   const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
+  // Phone quadrants are ~half the card width, so text is capped smaller.
+  const legendFontSize = isMobile ? Math.min(legendSizing.fontSize, 11) : legendSizing.fontSize;
+  const legendSwatch = isMobile ? 10 : legendSizing.swatch;
+  const subheadingSize = isMobile ? 11 : SUBHEADING_SIZE;
   const barSizing = getBarSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
 
   let previousCategoryTotals = {};
@@ -479,23 +483,33 @@ export default function Dashboard() {
             </div>
 
             <div className="chrome-surface" style={{
-              borderRadius: 16, padding: isMobile ? 18 : `${CARD_PADDING_Y}px 28px`, height: isMobile ? 'auto' : CARD_HEIGHT,
+              borderRadius: 16, padding: isMobile ? 14 : `${CARD_PADDING_Y}px 28px`, height: isMobile ? 'auto' : CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
               boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 2px 6px rgba(0,0,0,0.18)',
             }}>
+              {/* On phones the card is a 2x2 grid — donut | legend over
+                  pace | bars. Section 1 and its donut row become
+                  display:contents so the donut and legend land in their
+                  own grid cells without changing the desktop markup. */}
               <div style={{
-                display: 'flex', flexDirection: isMobile ? 'column' : 'row', width: '100%', height: '100%', gap: 0,
+                ...(isMobile
+                  ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', columnGap: 14, rowGap: 12, alignItems: 'start' }
+                  : { display: 'flex', gap: 0 }),
+                width: '100%', height: '100%',
                 filter: hasSpendData ? 'none' : 'blur(3px)',
                 opacity: hasSpendData ? 1 : 0.55,
                 pointerEvents: hasSpendData ? 'auto' : 'none',
               }}>
                 {/* SECTION 1: donut + legend */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0, height: '100%' }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
+                <div style={isMobile ? { display: 'contents' } : { display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1, flexShrink: 0, height: '100%' }}>
+                  <p className="font-mono" style={{ fontSize: subheadingSize, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0, position: 'relative', zIndex: 1, ...(isMobile && { gridColumn: '1 / -1' }) }}>
                     Categories
                   </p>
-                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: isMobile ? 18 : 26, flex: 1, minHeight: 0 }}>
-                    <svg viewBox="0 0 120 120" style={{ width: isMobile ? 160 : 175, height: isMobile ? 160 : 175, flexShrink: 0, overflow: 'visible' }}>
+                  <div style={isMobile ? { display: 'contents' } : { display: 'flex', alignItems: 'center', gap: 26, flex: 1, minHeight: 0 }}>
+                    <svg viewBox="0 0 120 120" style={{
+                      ...(isMobile ? { width: '100%', maxWidth: 150, height: 'auto', justifySelf: 'center', alignSelf: 'center' } : { width: 175, height: 175 }),
+                      flexShrink: 0, overflow: 'visible', position: 'relative', zIndex: 1,
+                    }}>
                       <defs>
                         <filter id="donutArcShadow" x="-30%" y="-30%" width="160%" height="160%">
                           <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity="0.28" />
@@ -523,7 +537,10 @@ export default function Dashboard() {
                         {displayShortMonthLabel.toUpperCase()}
                       </text>
                     </svg>
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', height: isMobile ? 'auto' : '100%', gap: isMobile ? 10 : 0, width: isMobile ? '100%' : 'auto' }}>
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', position: 'relative', zIndex: 1,
+                      ...(isMobile ? { gap: 8, alignSelf: 'center', minWidth: 0 } : { height: '100%' }),
+                    }}>
                       {displayArcs.map((arc) => {
                         const arrowSize = Math.max(10, legendSizing.fontSize - 3);
                         // minWidth (not a fixed width) — a fixed width
@@ -539,12 +556,12 @@ export default function Dashboard() {
                           <div key={arc.name} style={{
                             display: 'grid',
                             gridTemplateColumns: isMobile
-                              ? `${legendSizing.swatch}px minmax(0, 1fr) auto ${badgeMinWidth + 18}px`
+                              ? `${legendSwatch}px minmax(0, 1fr) auto`
                               : `${legendSizing.swatch}px 138px minmax(48px, auto) minmax(0, 1fr)`,
-                            alignItems: 'center', columnGap: 10,
+                            alignItems: 'center', columnGap: isMobile ? 6 : 10,
                           }}>
                             <span style={{
-                              width: legendSizing.swatch, height: legendSizing.swatch, borderRadius: 4, background: arc.color,
+                              width: legendSwatch, height: legendSwatch, borderRadius: isMobile ? 3 : 4, background: arc.color,
                               border: '0.5px solid rgba(0,0,0,0.18)',
                               boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
                             }} />
@@ -552,7 +569,7 @@ export default function Dashboard() {
                               onClick={() => goToCategory(arc.name)}
                               className="font-mono"
                               style={{
-                                fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700,
+                                fontSize: legendFontSize, color: '#101112', fontWeight: 700,
                                 cursor: 'pointer',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 textDecoration: 'underline',
@@ -562,9 +579,10 @@ export default function Dashboard() {
                             >
                               {arc.name}
                             </span>
-                            <span className="font-mono" style={{ fontSize: legendSizing.fontSize, color: '#101112', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            <span className="font-mono" style={{ fontSize: legendFontSize, color: '#101112', fontWeight: 700, whiteSpace: 'nowrap' }}>
                               £{arc.value.toFixed(0)}
                             </span>
+                            {!isMobile && (
                             <span style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                               {arc.pct !== null && (
                                 <span className="font-mono" style={{
@@ -591,6 +609,7 @@ export default function Dashboard() {
                                 </span>
                               )}
                             </span>
+                            )}
                           </div>
                         );
                       })}
@@ -599,54 +618,57 @@ export default function Dashboard() {
                 </div>
 
                 {/* divider */}
-                <div style={{ ...(isMobile ? { height: 1, margin: '20px 0' } : { width: 1, margin: '0 26px' }), background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />
+                <div style={{ ...(isMobile ? { gridColumn: '1 / -1', height: 1, margin: '4px 0' } : { width: 1, margin: '0 26px' }), background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />
 
                 {/* SECTION 2: pace / projection */}
-                <div style={{ width: isMobile ? 'auto' : 190, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%' }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ width: isMobile ? 'auto' : 190, minWidth: 0, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: isMobile ? 'auto' : '100%' }}>
+                  <p className="font-mono" style={{ fontSize: subheadingSize, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                     {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
                   </p>
-                  <p className="font-mono" style={{ fontSize: isMobile ? 30 : 36, color: '#101112', margin: isMobile ? '8px 0 6px' : '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
+                  <p className="font-mono" style={{ fontSize: isMobile ? 24 : 36, color: '#101112', margin: isMobile ? '6px 0 4px' : '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
                   <p className="font-mono" style={{
-                    fontSize: 16, margin: 0, fontWeight: 700,
+                    fontSize: isMobile ? 11 : 16, margin: 0, fontWeight: 700,
                     color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
                   }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <TrendArrow up={displayPctVsLastMonth >= 0} size={13} />
+                      <TrendArrow up={displayPctVsLastMonth >= 0} size={isMobile ? 10 : 13} />
                       {Math.abs(displayPctVsLastMonth).toFixed(0)}%
                     </span>
                     {' '}vs last month
                   </p>
                   {displayIsCurrentMonth && (
-                    <p className="font-mono" style={{ fontSize: 13, color: '#777', margin: '12px 0 0' }}>
+                    <p className="font-mono" style={{ fontSize: isMobile ? 10 : 13, color: '#777', margin: isMobile ? '6px 0 0' : '12px 0 0' }}>
                       Day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
                   )}
                   {insight && (
-                    <p className="font-mono" style={{ fontSize: 12, color: insightColor, margin: '14px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
+                    <p className="font-mono" style={{ fontSize: isMobile ? 10 : 12, color: insightColor, margin: isMobile ? '8px 0 0' : '14px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
                       {insight.text}
                     </p>
                   )}
                 </div>
 
                 {/* divider */}
-                <div style={{ ...(isMobile ? { height: 1, margin: '20px 0' } : { width: 1, margin: '0 26px' }), background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />
+                {!isMobile && <div style={{ width: 1, margin: '0 26px', background: 'rgba(0,0,0,0.15)', position: 'relative', zIndex: 1 }} />}
 
                 {/* SECTION 3: this month vs last month bars */}
-                <div style={{ flex: isMobile ? 'none' : 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: isMobile ? 'auto' : '100%' }}>
-                  <p className="font-mono" style={{ fontSize: SUBHEADING_SIZE, color: '#2a2a2a', margin: '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
+                <div style={{
+                  display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden',
+                  ...(isMobile ? { alignSelf: 'stretch', borderLeft: '1px solid rgba(0,0,0,0.15)', paddingLeft: 12 } : { flex: 1, height: '100%' }),
+                }}>
+                  <p className="font-mono" style={{ fontSize: subheadingSize, color: '#2a2a2a', margin: isMobile ? '0 0 8px' : '0 0 10px', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0 }}>
                     This Month vs Last
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: isMobile ? 10 : barSizing.gap, flex: isMobile ? 'none' : 1, minHeight: 0, minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: isMobile ? 7 : barSizing.gap, flex: isMobile ? 'none' : 1, minHeight: 0, minWidth: 0 }}>
                     {displayArcs.map((arc) => {
                       const curPct = chartsMounted ? Math.min(100, (arc.value / revealMaxBar) * 100) : 0;
                       const prevPct = Math.min(100, (arc.prevValue / revealMaxBar) * 100);
                       return (
                         <div key={arc.name} style={{ minWidth: 0 }}>
                           <p className="font-mono" style={{
-                            fontSize: barSizing.labelFontSize, color: '#444', margin: `0 0 ${barSizing.labelMB}px`, fontWeight: 700,
+                            fontSize: isMobile ? Math.min(barSizing.labelFontSize, 10) : barSizing.labelFontSize, color: '#444', margin: `0 0 ${barSizing.labelMB}px`, fontWeight: 700,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>{arc.name}</p>
                           <div style={{ position: 'relative', height: barSizing.barHeight, borderRadius: 4, background: 'rgba(0,0,0,0.08)', width: '100%' }}>
