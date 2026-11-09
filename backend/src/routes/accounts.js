@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { asyncHandler } = require('../utils/http');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -9,7 +10,7 @@ const MAX_ACCOUNTS_PER_USER = 10;
 
 // Every route below is scoped to req.userId (set by requireAuth from the
 // verified JWT), so a user can only ever see or modify their own accounts.
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT id, name, type, balance, created_at FROM accounts WHERE user_id = $1 ORDER BY created_at ASC',
@@ -20,9 +21,9 @@ router.get('/', async (req, res) => {
     console.error('Get accounts error:', err.message);
     res.status(500).json({ error: 'Could not load accounts' });
   }
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { name, type } = req.body;
 
   if (!name || !type) {
@@ -46,9 +47,9 @@ router.post('/', async (req, res) => {
     console.error('Create account error:', err.message);
     res.status(500).json({ error: 'Could not create account' });
   }
-});
+}));
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT id, name, type, balance, created_at FROM accounts WHERE id = $1 AND user_id = $2',
@@ -62,12 +63,12 @@ router.get('/:id', async (req, res) => {
     console.error('Get account error:', err.message);
     res.status(500).json({ error: 'Could not load account' });
   }
-});
+}));
 
 // ON DELETE CASCADE on transactions.account_id (see schema) means deleting
 // an account also deletes every transaction tied to it at the database
 // level — no separate cleanup query needed here.
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       'DELETE FROM accounts WHERE id = $1 AND user_id = $2 RETURNING id',
@@ -83,6 +84,6 @@ router.delete('/:id', async (req, res) => {
     console.error('Delete account error:', err.message);
     res.status(500).json({ error: 'Could not delete account' });
   }
-});
+}));
 
 module.exports = router;

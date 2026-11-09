@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { asyncHandler, parseId } = require('../utils/http');
 const { processRecurringTransactions, processRule } = require('../cron/processRecurring');
 
 const router = express.Router();
@@ -8,7 +9,7 @@ router.use(requireAuth);
 
 const MAX_RECURRING_RULES_PER_USER = 15;
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT r.id, r.account_id, r.category_id, r.amount, r.description, r.frequency, r.next_run_date,
@@ -25,9 +26,9 @@ router.get('/', async (req, res) => {
     console.error('Get recurring error:', err.message);
     res.status(500).json({ error: 'Could not load recurring transactions' });
   }
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { account_id, category_id, amount, description, frequency, start_date } = req.body;
 
   if (!account_id || amount === undefined || !frequency || !start_date) {
@@ -38,13 +39,26 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'frequency must be "weekly" or "monthly"' });
   }
 
-  const owns = await pool.query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [account_id, req.userId]);
+  // Ids are checked before they reach a query: a malformed id used to make
+  // Postgres reject outside any error handling and take the API down.
+  const accountId = parseId(account_id);
+  if (accountId === null) {
+    return res.status(400).json({ error: 'account_id must be a positive whole number' });
+  }
+
+  const hasCategory = category_id !== undefined && category_id !== null && category_id !== '';
+  const categoryId = hasCategory ? parseId(category_id) : null;
+  if (hasCategory && categoryId === null) {
+    return res.status(400).json({ error: 'category_id must be a positive whole number' });
+  }
+
+  const owns = await pool.query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [accountId, req.userId]);
   if (owns.rows.length === 0) {
     return res.status(403).json({ error: 'That account does not belong to you' });
   }
 
-  if (category_id) {
-    const ownsCategory = await pool.query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [category_id, req.userId]);
+  if (categoryId) {
+    const ownsCategory = await pool.query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [categoryId, req.userId]);
     if (ownsCategory.rows.length === 0) {
       return res.status(403).json({ error: 'That category does not belong to you' });
     }
@@ -59,7 +73,7 @@ router.post('/', async (req, res) => {
     const inserted = await pool.query(
       `INSERT INTO recurring_transactions (user_id, account_id, category_id, amount, description, frequency, next_run_date)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [req.userId, account_id, category_id || null, Number(amount), description || null, frequency, start_date]
+      [req.userId, accountId, categoryId, Number(amount), description || null, frequency, start_date]
     );
     let rule = inserted.rows[0];
     let firstTransactionCreated = false;
@@ -90,9 +104,9 @@ router.post('/', async (req, res) => {
     console.error('Create recurring error:', err.message);
     res.status(500).json({ error: 'Could not create recurring transaction' });
   }
-});
+}));
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       'DELETE FROM recurring_transactions WHERE id = $1 AND user_id = $2 RETURNING id',
@@ -106,7 +120,7 @@ router.delete('/:id', async (req, res) => {
     console.error('Delete recurring error:', err.message);
     res.status(500).json({ error: 'Could not delete recurring transaction' });
   }
-});
+}));
 
 // Manually triggers processing of the REQUESTING USER'S OWN due
 // recurring rules only. Previously this called processRecurringTransactions()
@@ -117,7 +131,7 @@ router.delete('/:id', async (req, res) => {
 // the POST / handler already uses for immediate processing, scoped to
 // req.userId via the WHERE clause below, so it can only ever affect
 // the calling user's own rules.
-router.post('/run-now', async (req, res) => {
+router.post('/run-now', asyncHandler(async (req, res) => {
   try {
     const dueRules = await pool.query(
       `SELECT * FROM recurring_transactions
@@ -146,6 +160,6 @@ router.post('/run-now', async (req, res) => {
     console.error('Manual recurring run error:', err.message);
     res.status(500).json({ error: 'Could not process recurring transactions' });
   }
-});
+}));
 
 module.exports = router;

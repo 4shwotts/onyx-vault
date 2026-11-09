@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { asyncHandler } = require('../utils/http');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -18,7 +19,7 @@ router.use(requireAuth);
 const MAX_CATEGORIES_PER_USER = 40;
 const MAX_NAME_LENGTH = 40;
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT id, name FROM categories WHERE user_id = $1 ORDER BY name ASC',
@@ -29,9 +30,9 @@ router.get('/', async (req, res) => {
     console.error('Get categories error:', err.message);
     res.status(500).json({ error: 'Could not load categories' });
   }
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const name = (req.body.name || '').trim();
 
   if (!name) {
@@ -65,6 +66,6 @@ router.post('/', async (req, res) => {
     console.error('Create category error:', err.message);
     res.status(500).json({ error: 'Could not create category' });
   }
-});
+}));
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { asyncHandler, parseId } = require('../utils/http');
 const { isAnomalous } = require('../utils/anomaly');
 
 const router = express.Router();
@@ -41,7 +42,7 @@ async function countUserTransactions(userId, client = pool) {
   return Number(result.rows[0].count);
 }
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const { account_id, category_id, from, to } = req.query;
 
   const conditions = ['a.user_id = $1'];
@@ -81,13 +82,26 @@ router.get('/', async (req, res) => {
     console.error('Get transactions error:', err.message);
     res.status(500).json({ error: 'Could not load transactions' });
   }
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { account_id, category_id, amount, description, date } = req.body;
 
   if (!account_id || amount === undefined || !date) {
     return res.status(400).json({ error: 'account_id, amount, and date are required' });
+  }
+
+  // Ids are checked before they reach a query: a malformed id used to make
+  // Postgres reject outside any error handling and take the API down.
+  const accountId = parseId(account_id);
+  if (accountId === null) {
+    return res.status(400).json({ error: 'account_id must be a positive whole number' });
+  }
+
+  const hasCategory = category_id !== undefined && category_id !== null && category_id !== '';
+  const categoryId = hasCategory ? parseId(category_id) : null;
+  if (hasCategory && categoryId === null) {
+    return res.status(400).json({ error: 'category_id must be a positive whole number' });
   }
 
   const numericAmount = Number(amount);
@@ -95,7 +109,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'amount must be a number' });
   }
 
-  const owns = await assertAccountOwnership(account_id, req.userId);
+  const owns = await assertAccountOwnership(accountId, req.userId);
   if (!owns) {
     return res.status(403).json({ error: 'That account does not belong to you' });
   }
@@ -104,8 +118,8 @@ router.post('/', async (req, res) => {
   // could submit another user's category id and have it silently accepted,
   // since categories are otherwise only ever filtered by ownership on the
   // list endpoint, not when referenced by id elsewhere.
-  if (category_id) {
-    const ownsCategory = await assertCategoryOwnership(category_id, req.userId);
+  if (categoryId) {
+    const ownsCategory = await assertCategoryOwnership(categoryId, req.userId);
     if (!ownsCategory) {
       return res.status(403).json({ error: 'That category does not belong to you' });
     }
@@ -120,17 +134,17 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const flagged = await isAnomalous(client, req.userId, category_id, numericAmount);
+    const flagged = await isAnomalous(client, req.userId, categoryId, numericAmount);
 
     const txResult = await client.query(
       `INSERT INTO transactions (account_id, category_id, amount, description, date, is_anomaly)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [account_id, category_id || null, numericAmount, description || null, date, flagged]
+      [accountId, categoryId, numericAmount, description || null, date, flagged]
     );
 
     await client.query(
       'UPDATE accounts SET balance = balance + $1 WHERE id = $2',
-      [numericAmount, account_id]
+      [numericAmount, accountId]
     );
 
     await client.query('COMMIT');
@@ -142,9 +156,9 @@ router.post('/', async (req, res) => {
   } finally {
     client.release();
   }
-});
+}));
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -176,6 +190,6 @@ router.delete('/:id', async (req, res) => {
   } finally {
     client.release();
   }
-});
+}));
 
 module.exports = router;

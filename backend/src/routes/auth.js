@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { asyncHandler } = require('../utils/http');
 const { generateToken, hashToken } = require('../utils/tokens');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../email');
 
@@ -124,7 +125,7 @@ function normalizeEmail(email) {
   return (email || '').trim().toLowerCase();
 }
 
-router.post('/register', registerLimiter, async (req, res) => {
+router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
   const { password, honeypot, formRenderedAt } = req.body;
 
@@ -178,9 +179,9 @@ router.post('/register', registerLimiter, async (req, res) => {
     console.error('Register error:', err.message);
     res.status(500).json({ error: 'Something went wrong creating your account' });
   }
-});
+}));
 
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', asyncHandler(async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
@@ -208,9 +209,9 @@ router.post('/verify-email', async (req, res) => {
     console.error('Verify email error:', err.message);
     res.status(500).json({ error: 'Something went wrong verifying your email' });
   }
-});
+}));
 
-router.post('/resend-verification', resendVerificationLimiter, async (req, res) => {
+router.post('/resend-verification', resendVerificationLimiter, asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
 
   if (!email) {
@@ -247,9 +248,9 @@ router.post('/resend-verification', resendVerificationLimiter, async (req, res) 
     console.error('Resend verification error:', err.message);
     res.json(genericResponse);
   }
-});
+}));
 
-router.post('/login', authLimiter, async (req, res) => {
+router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
   const { password } = req.body;
 
@@ -281,14 +282,14 @@ router.post('/login', authLimiter, async (req, res) => {
     console.error('Login error:', err.message);
     res.status(500).json({ error: 'Something went wrong logging in' });
   }
-});
+}));
 
 router.post('/logout', (req, res) => {
   res.clearCookie('token', COOKIE_OPTIONS);
   res.json({ success: true });
 });
 
-router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
 
   if (!email) {
@@ -323,9 +324,9 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
     console.error('Forgot password error:', err.message);
     res.json(genericResponse);
   }
-});
+}));
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', asyncHandler(async (req, res) => {
   const { token, password } = req.body;
 
   if (!token || !password || password.length < 8 || password.length > 72) {
@@ -354,9 +355,9 @@ router.post('/reset-password', async (req, res) => {
     console.error('Reset password error:', err.message);
     res.status(500).json({ error: 'Something went wrong resetting your password' });
   }
-});
+}));
 
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
     const result = await pool.query('SELECT id, email FROM users WHERE id = $1', [req.userId]);
     if (result.rows.length === 0) {
@@ -367,9 +368,9 @@ router.get('/me', requireAuth, async (req, res) => {
     console.error('Me error:', err.message);
     res.status(500).json({ error: 'Could not verify session' });
   }
-});
+}));
 
-router.delete('/account', requireAuth, async (req, res) => {
+router.delete('/account', requireAuth, asyncHandler(async (req, res) => {
   const { password } = req.body;
 
   if (!password) {
@@ -397,6 +398,6 @@ router.delete('/account', requireAuth, async (req, res) => {
     console.error('Delete account error:', err.message);
     res.status(500).json({ error: 'Something went wrong deleting your account' });
   }
-});
+}));
 
 module.exports = router;
