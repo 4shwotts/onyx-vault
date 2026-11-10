@@ -17,16 +17,17 @@ const CATEGORY_ICON_MAP = {
   shopping: 'Shopping',
   income: 'Income',
   individual: 'Individual',
-  other: 'Individual',
+  other: 'Other',
 };
 
-// Falls back to the "other" mapping (-> Individual.svg) for an empty
-// name or any category not present in CATEGORY_ICON_MAP — covers
-// custom categories a user creates that don't have a dedicated icon.
+// Falls back to Other.svg for an empty name or any category not present
+// in CATEGORY_ICON_MAP — covers custom categories a user creates that
+// don't have a dedicated icon. Icons are Material Symbols (Apache-2.0);
+// see public/icons/CREDITS.md.
 function resolveCategoryFile(name) {
   const trimmed = (name || '').trim();
   const key = trimmed ? trimmed.toLowerCase() : 'other';
-  return CATEGORY_ICON_MAP[key] || 'Individual';
+  return CATEGORY_ICON_MAP[key] || 'Other';
 }
 
 // Renders a category's icon as a rounded tile. If the mapped SVG fails

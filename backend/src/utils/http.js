@@ -28,4 +28,16 @@ function parseId(value) {
   return null;
 }
 
-module.exports = { asyncHandler, parseId, MAX_INT4 };
+// The one error format for every 4xx/5xx response: { "error": "..." }.
+function sendError(res, status, message) {
+  return res.status(status).json({ error: message });
+}
+
+// Shorthand for "not found", used both for ids that don't exist and for
+// ids that belong to someone else, so a response never confirms that
+// another user's record exists.
+function notFound(res, what = 'Not found') {
+  return sendError(res, 404, what);
+}
+
+module.exports = { asyncHandler, parseId, MAX_INT4, sendError, notFound };

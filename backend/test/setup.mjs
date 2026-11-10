@@ -8,8 +8,11 @@ delete process.env.DATABASE_URL;
 process.env.TEST_DATABASE_URL = inject('testDatabaseUrl');
 process.env.JWT_SECRET = 'test-only-secret-not-used-anywhere-else';
 process.env.CLIENT_ORIGIN = 'http://localhost:5173';
-process.env.BREVO_API_KEY = 'test-only-dummy-key';
-process.env.BREVO_SENDER_EMAIL = 'noreply@example.invalid';
+process.env.ALLOWED_ORIGINS = 'http://localhost:5173';
+// No email provider settings at all: under NODE_ENV=test, email.js writes
+// to an in-memory outbox and must not need them.
+delete process.env.BREVO_API_KEY;
+delete process.env.BREVO_SENDER_EMAIL;
 
 // Belt and braces: any attempt to reach the real email API fails the test
 // loudly instead of sending anything.

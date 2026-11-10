@@ -8,44 +8,82 @@ const accountsRoutes = require('./routes/accounts');
 const categoriesRoutes = require('./routes/categories');
 const transactionsRoutes = require('./routes/transactions');
 const recurringRoutes = require('./routes/recurring');
+const rateLimit = require('express-rate-limit');
+const pool = require('./db');
+const { getAllowedOrigins, isPublicSignupEnabled } = require('./config');
+const { rejectCrossSiteWrites } = require('./middleware/origin');
+const { sendError, asyncHandler } = require('./utils/http');
 
-// Builds the Express app without starting a server, scheduling cron jobs
-// or touching anything outside the request cycle. index.js calls listen()
-// on the result in production; the test suite drives it with Supertest.
-function createApp() {
+// The sign-in page pings /wake each time it loads; this is generous for a
+// person and stops anyone using it to hammer the database.
+const wakeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (req, res) => sendError(res, 429, 'Too many requests. Please wait a minute and try again.'),
+});
+
+const BODY_LIMIT = '100kb';
+
+// Full details go to the server log (never to the client). Under test, a
+// one-line summary is enough: some tests break the database on purpose to
+// prove the client only ever sees a generic message.
+function logUnexpectedError(err) {
+  if (process.env.NODE_ENV === 'test') {
+    console.error(`[expected in some tests] ${err.code || ''} ${err.message}`);
+  } else {
+    console.error(err);
+  }
+}
+
+// Builds the Express app without starting a server, scheduling jobs or
+// touching anything outside the request cycle. index.js calls listen() on
+// the result in production; the test suite drives it with Supertest.
+//
+// Every error response, from any layer, has the same shape:
+//   { "error": "A short, human-readable message" }
+function createApp({ allowedOrigins = getAllowedOrigins() } = {}) {
   const app = express();
 
-  // Required behind Render's reverse proxy — without this, Express can't
-  // determine the real client IP (from X-Forwarded-For) or whether the
-  // original request was HTTPS. That affects express-rate-limit (which
-  // would otherwise bucket every user behind the proxy under one IP) and
-  // secure-cookie/HTTPS detection. A hop count of 1 means only the
+  // Behind Render's reverse proxy. A hop count of 1 means only the
   // right-most X-Forwarded-For entry (the one Render appends) is trusted,
-  // so a client can't spoof its IP by sending its own header.
+  // so a client can't spoof its IP to dodge rate limits.
   app.set('trust proxy', 1);
+  app.disable('x-powered-by');
 
   app.use(helmet());
 
-  // Vite picks the next free port (5173, 5174, ...) whenever more than one
-  // dev server is running, so a single hard-coded CLIENT_ORIGIN breaks CORS
-  // as soon as that happens. In development, trust any localhost/127.0.0.1
-  // origin regardless of port; in production, stay locked to CLIENT_ORIGIN.
-  const isDev = process.env.NODE_ENV !== 'production';
-  const localOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
-
+  // CORS only decides whether a page on another origin may *read* our
+  // responses. Unknown origins simply get no CORS headers (rather than an
+  // error, which used to surface as a 500); cross-site *writes* are refused
+  // separately below.
+  const allowed = new Set(allowedOrigins);
   app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (isDev && localOriginPattern.test(origin)) return callback(null, true);
-      if (origin === process.env.CLIENT_ORIGIN) return callback(null, true);
-      callback(new Error('Not allowed by CORS'));
-    },
+    origin: (origin, callback) => callback(null, !origin || allowed.has(origin)),
     credentials: true,
   }));
-  app.use(express.json());
+  app.use(rejectCrossSiteWrites(allowedOrigins));
+
+  app.use(express.json({ limit: BODY_LIMIT }));
   app.use(cookieParser());
 
+  // Health check for the host: answers without touching the database, so
+  // it stays cheap and works even if the database is unavailable.
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+  // Public settings the frontend needs before anyone signs in. No database.
+  app.get('/config', (req, res) => {
+    res.json({ publicSignupEnabled: isPublicSignupEnabled() });
+  });
+
+  // Called by the sign-in page as it loads. The free hosting plan puts the
+  // server (and the database) to sleep when idle; one trivial query wakes
+  // both, so the visitor's sign-in isn't the request that waits.
+  app.get('/wake', wakeLimiter, asyncHandler(async (req, res) => {
+    await pool.query('SELECT 1');
+    res.json({ status: 'awake' });
+  }));
 
   app.use('/auth', authRoutes);
   app.use('/accounts', accountsRoutes);
@@ -53,10 +91,25 @@ function createApp() {
   app.use('/transactions', transactionsRoutes);
   app.use('/recurring', recurringRoutes);
 
+  // Test-only helpers for the browser tests. Never mounted outside
+  // NODE_ENV=test (and db.js refuses anything but a local test database
+  // under NODE_ENV=test).
+  if (process.env.NODE_ENV === 'test') {
+    const { createTestRouter } = require('./testing/testRoutes');
+    app.use('/__test__', createTestRouter());
+  }
+
+  app.use((req, res) => sendError(res, 404, 'Not found'));
+
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    // Errors raised by the JSON body parser are the client's fault.
+    if (err.type === 'entity.parse.failed') return sendError(res, 400, 'Request body is not valid JSON');
+    if (err.type === 'entity.too.large') return sendError(res, 413, 'Request body is too large');
+    if (err.status >= 400 && err.status < 500 && err.expose) return sendError(res, err.status, 'Bad request');
+
+    logUnexpectedError(err);
+    return sendError(res, 500, 'Internal server error');
   });
 
   return app;

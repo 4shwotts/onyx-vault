@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Onyx Vault</title>
+  <!-- Original drawing for Onyx Vault: an octahedral gem seen from the side. -->
+  <path d="M32 3 56 32 32 61 8 32Z" fill="#2a2d31"/>
+  <path d="M32 3 8 32h24Z" fill="#c9cdd2"/>
+  <path d="M32 3 56 32H32Z" fill="#8a9097"/>
+  <path d="M8 32 32 61V32Z" fill="#5b6168"/>
+  <path d="M56 32 32 61V32Z" fill="#3a3e44"/>
+  <path d="M32 3 56 32 32 61 8 32Z" fill="none" stroke="#101112" stroke-width="2" stroke-linejoin="round"/>
+</svg>

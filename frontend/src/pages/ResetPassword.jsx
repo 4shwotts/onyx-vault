@@ -1,34 +1,43 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
+import AuthCard from '../components/AuthCard';
+import { authInputStyle, authButtonStyle, authLinkStyle, authErrorStyle, authTextStyle } from '../components/authStyles';
 
 export default function ResetPassword() {
+  const [searchParams] = useSearchParams();
+  // Kept in memory and removed from the address bar, so the one-time
+  // reset code isn't left in browser history.
+  const tokenRef = useRef(searchParams.get('token'));
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const token = searchParams.get('token');
+
+  useEffect(() => {
+    if (tokenRef.current) window.history.replaceState(window.history.state, '', window.location.pathname);
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (password.length < 8 || password.length > 72) {
+      setError('Choose a password between 8 and 72 characters.');
       return;
     }
-
-    if (!token) {
-      setError('Missing reset token');
+    if (password !== confirmPassword) {
+      setError('The passwords don’t match.');
+      return;
+    }
+    if (!tokenRef.current) {
+      setError('This link is missing its reset code. Request a new link.');
       return;
     }
 
     setLoading(true);
     try {
-      await api.resetPassword(token, password);
+      await api.resetPassword(tokenRef.current, password);
       setSuccess(true);
     } catch (err) {
       setError(err.message);
@@ -38,92 +47,39 @@ export default function ResetPassword() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: 24,
-      position: 'relative', zIndex: 1,
-    }}>
-      <div style={{
-        background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, minHeight: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
-        position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <p className="font-mono" style={{ fontSize: 15, margin: 0 }}>Choose a new password</p>
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          {success ? (
-            <>
-              <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
-                Your password has been updated.
-              </p>
-              <button onClick={() => navigate('/login')} className="font-mono" style={buttonStyle}>
-                Go to sign in
-              </button>
-            </>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <input
-                type="password"
-                placeholder="New password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="font-mono"
-                style={inputStyle}
-              />
-              <input
-                type="password"
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={8}
-                className="font-mono"
-                style={{ ...inputStyle, marginBottom: 18 }}
-              />
-
-              {error && (
-                <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 14 }}>{error}</p>
-              )}
-
-              <button type="submit" disabled={loading} className="font-mono" style={buttonStyle}>
-                {loading ? 'Please wait...' : 'Update password'}
-              </button>
-            </form>
-          )}
-        </div>
-
-        <p className="font-mono" style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 18 }}>
-          <Link to="/login" style={{ color: '#7d3c98' }}>Back to sign in</Link>
-        </p>
+    <AuthCard title="Choose a new password">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        {success ? (
+          <>
+            <p role="status" className="font-mono" style={{ ...authTextStyle, textAlign: 'center', marginTop: 0 }}>
+              Your password has been updated, and any other signed-in sessions have been signed out.
+            </p>
+            <Link to="/login" className="font-mono" style={{ ...authButtonStyle, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>
+              Go to sign in
+            </Link>
+          </>
+        ) : (
+          <form onSubmit={handleSubmit} noValidate aria-label="Choose a new password">
+            <label htmlFor="new-password" className="visually-hidden">New password</label>
+            <input id="new-password" type="password" autoComplete="new-password" placeholder="New password (8–72 characters)"
+              value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8}
+              className="font-mono" style={{ ...authInputStyle, marginBottom: 10 }} />
+            <label htmlFor="confirm-password" className="visually-hidden">Confirm new password</label>
+            <input id="confirm-password" type="password" autoComplete="new-password" placeholder="Confirm new password"
+              value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8}
+              className="font-mono" style={{ ...authInputStyle, marginBottom: 14 }} />
+            {error && <p role="alert" style={{ ...authErrorStyle, margin: '0 0 12px' }}>{error}</p>}
+            <button type="submit" disabled={loading} className="font-mono" style={authButtonStyle}>
+              {loading ? 'Please wait…' : 'Update password'}
+            </button>
+          </form>
+        )}
       </div>
-    </div>
+      <p className="font-mono" style={{ ...authTextStyle, textAlign: 'center', marginTop: 18, marginBottom: 0 }}>
+        <Link to="/forgot-password" style={authLinkStyle}>Request a new link</Link>
+        {' · '}
+        <Link to="/login" style={authLinkStyle}>Sign in</Link>
+      </p>
+    </AuthCard>
   );
 }
-
-const inputStyle = {
-  width: '100%',
-  boxSizing: 'border-box',
-  background: '#15181a',
-  border: '0.5px solid #2e3336',
-  borderRadius: 8,
-  padding: '11px 12px',
-  fontSize: 14,
-  color: 'var(--text-primary)',
-  marginBottom: 10,
-};
-
-const buttonStyle = {
-  width: '100%',
-  background: 'var(--accent)',
-  color: 'var(--accent-text)',
-  border: 'none',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 14,
-  fontWeight: 500,
-  cursor: 'pointer',
-};

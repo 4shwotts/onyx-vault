@@ -4,6 +4,12 @@ import Nav from '../components/Nav';
 import MonthPicker from '../components/MonthPicker';
 import { api } from '../api/client';
 import { getAvailableMonths } from '../utils/months';
+import { summariseMonth } from '../lib/spending';
+import { toDateKey } from '../utils/dates';
+import { toPence, sumPence, formatSignedGBP } from '../utils/money';
+import { prefersReducedMotion } from '../lib/graphics';
+import EmptyOverlay from '../components/EmptyOverlay';
+import InsightLine from '../components/InsightLine';
 import useIsMobile from '../hooks/useIsMobile';
 
 // All-purple palette, light to dark. When there are more categories than
@@ -126,15 +132,20 @@ const FAKE_ACCOUNTS = [
   { id: 'ghost-3', name: 'Credit', balance: -180 },
 ];
 const FAKE_CATEGORY_LIST = [['Groceries', 420], ['Transport', 180], ['Dining', 150], ['Utilities', 95], ['Shopping', 60]];
+// Placeholder rows behind the "No transactions yet" message. Every name
+// is made up; no real shops or companies.
 const FAKE_RECENT = [
-  { id: 'ghost-1', description: 'Tesco', amount: -42.10 },
-  { id: 'ghost-2', description: 'Salary', amount: 2100 },
-  { id: 'ghost-3', description: 'Netflix', amount: -11.99 },
-  { id: 'ghost-4', description: 'Costa Coffee', amount: -4.50 },
-  { id: 'ghost-5', description: 'Amazon', amount: -28.99 },
+  { id: 'ghost-1', description: 'Fernhollow Grocers', amount: '-42.10' },
+  { id: 'ghost-2', description: 'Salary – Brambleworth Ltd', amount: '2100.00' },
+  { id: 'ghost-3', description: 'Velvetreel Streaming', amount: '-11.99' },
+  { id: 'ghost-4', description: 'Pebblewick Coffee', amount: '-4.50' },
+  { id: 'ghost-5', description: 'Hollowmere Homewares', amount: '-28.99' },
 ];
 
-function buildArcs(list, totalSpend, previousTotals, circumference) {
+// pctByName carries the like-for-like change per category from
+// lib/spending.js; without it (the placeholder chart) the change is worked
+// out against previousTotals.
+function buildArcs(list, totalSpend, previousTotals, circumference, pctByName = null) {
   const rawDashes = list.map(([, value]) => {
     const fraction = totalSpend > 0 ? value / totalSpend : 0;
     return fraction * circumference;
@@ -149,7 +160,9 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
     const visibleDash = value > 0 ? Math.max(scaledEffective - GAP, 0) : 0;
     const color = getCategoryColor(i);
     const prevValue = previousTotals[name] || 0;
-    const pct = prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : (value > 0 ? null : 0);
+    const pct = pctByName
+      ? (pctByName[name] ?? null)
+      : (prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : (value > 0 ? null : 0));
     const arc = {
       name, value, color, prevValue, pct,
       dashArray: `${visibleDash} ${circumference - visibleDash}`,
@@ -160,25 +173,6 @@ function buildArcs(list, totalSpend, previousTotals, circumference) {
   });
 }
 
-function EmptyOverlay({ message, tone = 'light' }) {
-  const isLight = tone === 'light';
-  return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-      <p className="font-mono" style={{
-        fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
-        letterSpacing: 0.3, fontWeight: 600,
-        color: isLight ? '#2a2a2a' : '#d5d5d5',
-        background: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(20,20,20,0.78)',
-        border: isLight ? '0.5px solid rgba(0,0,0,0.08)' : '0.5px solid rgba(255,255,255,0.08)',
-        boxShadow: isLight ? '0 6px 18px rgba(0,0,0,0.10)' : '0 6px 18px rgba(0,0,0,0.35)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}>
-        {message}
-      </p>
-    </div>
-  );
-}
 
 function AnimatedNumber({ value, formatter, duration = 700 }) {
   const [display, setDisplay] = useState(value);
@@ -208,9 +202,9 @@ function AnimatedNumber({ value, formatter, duration = 700 }) {
   return <>{formatter(display)}</>;
 }
 
-function DashboardSkeleton({ isMobile }) {
+export function DashboardSkeleton({ isMobile }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+    <div role="status" aria-label="Loading your dashboard" aria-busy="true" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
       <div>
         <div className="skeleton-block" style={{ width: 140, height: 15, marginBottom: 4 }} />
         <div className="skeleton-block" style={{ width: 220, height: 44, marginBottom: 8 }} />
@@ -236,7 +230,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [allTransactions, setAllTransactions] = useState([]);
-  const [monthTransactions, setMonthTransactions] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -264,16 +257,6 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!selectedMonth) {
-      setMonthTransactions([]);
-      return;
-    }
-    const monthRange = availableMonths.find((m) => m.value === selectedMonth);
-    if (!monthRange) return;
-    setMonthTransactions(allTransactions.filter((t) => t.date >= monthRange.from && t.date <= monthRange.to));
-  }, [selectedMonth, allTransactions]);
-
-  useEffect(() => {
     if (loading) return;
     const timer = setTimeout(() => setChartsMounted(true), 60);
     return () => clearTimeout(timer);
@@ -282,32 +265,31 @@ export default function Dashboard() {
   const hasAccounts = accounts.length > 0;
   const accountPages = chunkArray(accounts, ACCOUNTS_PER_PAGE);
 
+  // The account cards rotate every few seconds when there are more than
+  // fit — but not for visitors who prefer reduced motion, and not while
+  // the pointer or keyboard focus is on them (so nobody is reading a card
+  // as it slides away).
+  const [rotationPaused, setRotationPaused] = useState(false);
   useEffect(() => {
-    if (accountPages.length <= 1) return;
+    if (accountPages.length <= 1 || rotationPaused || prefersReducedMotion()) return undefined;
     const interval = setInterval(() => {
       setAccountPage((p) => (p + 1) % accountPages.length);
     }, ACCOUNT_ROTATE_MS);
     return () => clearInterval(interval);
-  }, [accountPages.length]);
+  }, [accountPages.length, rotationPaused]);
 
-  useEffect(() => {
-    if (accountPage >= accountPages.length) setAccountPage(0);
-  }, [accountPages.length, accountPage]);
+  // An account deleted elsewhere can leave the page index past the end.
+  const visibleAccountPage = accountPage < accountPages.length ? accountPage : 0;
 
-  const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+  const totalBalance = sumPence(accounts.map((a) => toPence(a.balance))) / 100;
   const monthLabel = availableMonths.find((m) => m.value === selectedMonth)?.label || '';
   const shortMonthLabel = monthLabel.split(' ').map((w, i) => (i === 0 ? w.slice(0, 3) : w)).join(' ');
 
-  const categoryTotals = {};
-  monthTransactions
-    .filter((t) => Number(t.amount) < 0)
-    .forEach((t) => {
-      const name = t.category_name || 'Other';
-      categoryTotals[name] = (categoryTotals[name] || 0) + Math.abs(Number(t.amount));
-    });
-
-  const categoryList = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
-  const totalSpend = categoryList.reduce((sum, [, val]) => sum + val, 0);
+  // Totals are worked out in pence (lib/spending.js) and only turned back
+  // into pounds here, for the chart geometry and display.
+  const summary = selectedMonth ? summariseMonth(allTransactions, selectedMonth) : null;
+  const categoryList = summary ? summary.categories.map((c) => [c.name, c.pence / 100]) : [];
+  const totalSpend = summary ? summary.totalPence / 100 : 0;
   const hasSpendData = categoryList.length > 0;
   const legendSizing = getLegendSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
   // Phone quadrants are ~half the card width, so text is capped smaller.
@@ -319,41 +301,18 @@ export default function Dashboard() {
     ? getMobileBarSizing(categoryList.length || FAKE_CATEGORY_LIST.length)
     : getBarSizing(categoryList.length || FAKE_CATEGORY_LIST.length);
 
-  let previousCategoryTotals = {};
-  let prevTotalSpend = 0;
-  let selYear, selMonthNum, daysInSelMonth, isCurrentMonth, daysElapsed;
-
-  if (selectedMonth) {
-    [selYear, selMonthNum] = selectedMonth.split('-').map(Number);
-    let prevMonthNum = selMonthNum - 1;
-    let prevYear = selYear;
-    if (prevMonthNum === 0) { prevMonthNum = 12; prevYear -= 1; }
-    const prevFrom = new Date(prevYear, prevMonthNum - 1, 1).toISOString().slice(0, 10);
-    const prevLastDay = new Date(prevYear, prevMonthNum, 0).getDate();
-    const prevTo = new Date(prevYear, prevMonthNum - 1, prevLastDay).toISOString().slice(0, 10);
-
-    const prevMonthTransactions = allTransactions.filter((t) => t.date >= prevFrom && t.date <= prevTo);
-    prevMonthTransactions
-      .filter((t) => Number(t.amount) < 0)
-      .forEach((t) => {
-        const name = t.category_name || 'Other';
-        previousCategoryTotals[name] = (previousCategoryTotals[name] || 0) + Math.abs(Number(t.amount));
-      });
-    prevTotalSpend = Object.values(previousCategoryTotals).reduce((a, b) => a + b, 0);
-
-    daysInSelMonth = new Date(selYear, selMonthNum, 0).getDate();
-    const now = new Date();
-    isCurrentMonth = selYear === now.getFullYear() && selMonthNum === now.getMonth() + 1;
-    daysElapsed = isCurrentMonth ? now.getDate() : daysInSelMonth;
-  }
-
-  const projectedTotal = daysElapsed > 0 ? (totalSpend / daysElapsed) * (daysInSelMonth || 1) : totalSpend;
-  const pctVsLastMonth = prevTotalSpend > 0
-    ? ((projectedTotal - prevTotalSpend) / prevTotalSpend) * 100
-    : (projectedTotal > 0 ? 100 : 0);
+  const previousCategoryTotals = summary
+    ? Object.fromEntries(summary.categories.map((c) => [c.name, c.prevPence / 100]))
+    : {};
+  const daysInSelMonth = summary?.daysInMonth;
+  const isCurrentMonth = summary?.isCurrentMonth;
+  const daysElapsed = summary?.daysElapsed;
+  const projectedTotal = summary ? summary.projectedPence / 100 : 0;
+  const pctVsLastMonth = summary ? summary.pctVsLastMonth : 0;
 
   const circumference = 2 * Math.PI * 46;
-  const arcs = buildArcs(categoryList, totalSpend, previousCategoryTotals, circumference);
+  const pctByName = summary ? Object.fromEntries(summary.categories.map((c) => [c.name, c.pct])) : {};
+  const arcs = buildArcs(categoryList, totalSpend, previousCategoryTotals, circumference, pctByName);
 
   const fakeTotalSpend = FAKE_CATEGORY_LIST.reduce((sum, [, v]) => sum + v, 0);
   const fakeArcs = buildArcs(FAKE_CATEGORY_LIST, fakeTotalSpend, {}, circumference);
@@ -368,31 +327,13 @@ export default function Dashboard() {
   const displayMaxBarVal = hasSpendData ? Math.max(1, ...arcs.map((a) => a.value), ...arcs.map((a) => a.prevValue)) : Math.max(1, ...fakeArcs.map((a) => a.value));
   const displayShortMonthLabel = hasSpendData ? shortMonthLabel : 'THIS MONTH';
 
-  function buildInsight(insightArcs) {
-    const withIncrease = insightArcs.filter((a) => a.pct !== null && a.pct > 5).sort((a, b) => b.pct - a.pct);
-    const withDecrease = insightArcs.filter((a) => a.pct !== null && a.pct < -5).sort((a, b) => a.pct - b.pct);
 
-    if (withIncrease.length > 0) {
-      const top = withIncrease[0];
-      return { text: `You're spending ${Math.round(top.pct)}% more on ${top.name} than last month.`, tone: 'warn' };
-    }
-    if (withDecrease.length > 0) {
-      const top = withDecrease[0];
-      return { text: `Nice — ${top.name} spending is down ${Math.round(Math.abs(top.pct))}% from last month.`, tone: 'good' };
-    }
-    if (insightArcs.length > 0) {
-      const top = insightArcs.slice().sort((a, b) => b.value - a.value)[0];
-      const dayNote = isCurrentMonth ? ` (day ${daysElapsed} of ${daysInSelMonth})` : '';
-      return { text: `${top.name} is your biggest category so far this month${dayNote}.`, tone: 'neutral' };
-    }
-    return null;
-  }
-
-  const insight = hasSpendData ? buildInsight(arcs) : null;
-
-  const recent = allTransactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  // Newest first by calendar date, then by id for transactions on the same day.
+  const recent = allTransactions.slice()
+    .sort((a, b) => toDateKey(b.date).localeCompare(toDateKey(a.date)) || b.id - a.id)
+    .slice(0, 5);
   const hasRecent = recent.length > 0;
-  const currentAccountPage = accountPages[accountPage] || [];
+  const currentAccountPage = accountPages[visibleAccountPage] || [];
   const accountSlots = Math.min(ACCOUNTS_PER_PAGE, (hasAccounts ? accounts : FAKE_ACCOUNTS).length) || 1;
   const mobileAccountsHeight = accountSlots * MOBILE_ACCOUNT_CARD_HEIGHT + (accountSlots - 1) * MOBILE_ACCOUNT_GAP;
 
@@ -406,7 +347,6 @@ export default function Dashboard() {
     navigate(`/transactions?${params.toString()}`);
   }
 
-  const insightColor = insight?.tone === 'warn' ? '#b83232' : insight?.tone === 'good' ? '#1f8a52' : '#555';
 
   // Desktop is a fixed one-screen layout; on phones the sections stack
   // and the page scrolls normally.
@@ -417,29 +357,38 @@ export default function Dashboard() {
     }}>
       <Nav />
 
-      {error && <p style={{ color: 'var(--expense)', fontSize: 13, marginBottom: 10 }}>{error}</p>}
+      <h1 className="visually-hidden">Dashboard</h1>
+      {error && <p role="alert" style={{ color: '#8f1d1d', fontSize: 13, marginBottom: 10 }}>{error}</p>}
 
       {loading ? (
         <DashboardSkeleton isMobile={isMobile} />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, overflow: 'hidden' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, overflow: 'hidden' }}>
 
           {/* Total Balance section. flexShrink:0 — only Recent
               Transactions below is designed to absorb space pressure. */}
           <div style={{ flexShrink: 0 }}>
-            <p className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <h2 className="font-mono" style={{ fontSize: 15, color: '#333', margin: '0 0 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Total Balance:
-            </p>
+            </h2>
             <p className="font-mono" style={{ fontSize: isMobile ? 'clamp(22px, 8.5vw, 44px)' : 44, fontWeight: 700, color: '#000', margin: 0, letterSpacing: -0.5, overflowWrap: 'anywhere' }}>
-              £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
+              £<AnimatedNumber value={totalBalance} formatter={(v) => v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
 
             {/* On phones the cards stack, so a last page with fewer
                 cards would be shorter; reserving a full page's height
                 keeps the rotation from shifting everything below. */}
-            <div style={{ position: 'relative', minHeight: isMobile ? mobileAccountsHeight : 84, marginTop: 8 }}>
+            <div
+              style={{ position: 'relative', minHeight: isMobile ? mobileAccountsHeight : 84, marginTop: 8 }}
+              onMouseEnter={() => setRotationPaused(true)}
+              onMouseLeave={() => setRotationPaused(false)}
+              onFocus={() => setRotationPaused(true)}
+              onBlur={() => setRotationPaused(false)}
+            >
               <div
-                key={hasAccounts ? accountPage : 'empty'}
+                key={hasAccounts ? visibleAccountPage : 'empty'}
+                aria-hidden={hasAccounts ? undefined : 'true'}
+                inert={!hasAccounts}
                 className={hasAccounts ? 'account-page-fade' : ''}
                 style={{
                   display: 'grid',
@@ -458,17 +407,17 @@ export default function Dashboard() {
                       {acc.name}
                     </p>
                     <p className="font-mono" style={{ fontSize: isMobile ? 17 : 25, fontWeight: 700, color: '#f3f3f3', margin: 0, letterSpacing: -0.4, position: 'relative', zIndex: 1, whiteSpace: 'nowrap' }}>
-                      £<AnimatedNumber value={Number(acc.balance)} formatter={(v) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
+                      £<AnimatedNumber value={toPence(acc.balance) / 100} formatter={(v) => v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                     </p>
                   </div>
                 ))}
               </div>
               {!hasAccounts && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, transform: 'translateY(-6px)' }}>
-                  <p className="font-mono" style={{
+                  <p role="status" className="font-mono" style={{
                     fontSize: 13, margin: 0, padding: '9px 20px', borderRadius: 20,
-                    letterSpacing: 0.3, fontWeight: 600, color: '#d5d5d5',
-                    background: 'rgba(20,20,20,0.78)', border: '0.5px solid rgba(255,255,255,0.08)',
+                    letterSpacing: 0.3, fontWeight: 600, color: '#e5e5e5',
+                    background: 'rgba(20,20,20,0.86)', border: '0.5px solid rgba(255,255,255,0.08)',
                     boxShadow: '0 6px 18px rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
                   }}>
                     No accounts yet — add one on the Accounts page.
@@ -477,11 +426,11 @@ export default function Dashboard() {
               )}
             </div>
             {hasAccounts && accountPages.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
+              <div aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
                 {accountPages.map((_, i) => (
                   <span key={i} style={{
                     width: 6, height: 6, borderRadius: '50%',
-                    background: i === accountPage ? '#333' : 'rgba(0,0,0,0.2)',
+                    background: i === visibleAccountPage ? '#333' : 'rgba(0,0,0,0.2)',
                     transition: 'background 0.3s ease',
                   }} />
                 ))}
@@ -502,13 +451,13 @@ export default function Dashboard() {
                 2026") wraps the title to two lines, which would
                 otherwise push the card down when switching months. */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 8, ...(isMobile && { height: 40 }) }}>
-              <p className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</p>
+              <h2 className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: 0, fontWeight: 700 }}>Spend by Category</h2>
               {availableMonths.length > 0 && (
                 <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth} />
               )}
             </div>
 
-            <div className="chrome-surface" style={{
+            <div className="chrome-surface" aria-hidden={hasSpendData ? undefined : 'true'} inert={!hasSpendData} style={{
               borderRadius: 16, padding: isMobile ? 14 : `${CARD_PADDING_Y}px 28px`, height: isMobile ? MOBILE_CARD_HEIGHT : CARD_HEIGHT,
               position: 'relative', display: 'flex', alignItems: 'stretch', gap: 0, overflow: 'hidden',
               boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 2px 6px rgba(0,0,0,0.18)',
@@ -595,20 +544,22 @@ export default function Dashboard() {
                               border: '0.5px solid rgba(0,0,0,0.18)',
                               boxShadow: '0 1px 2px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
                             }} />
-                            <span
+                            <button
+                              type="button"
                               onClick={() => goToCategory(arc.name)}
+                              aria-label={`Show ${arc.name} transactions`}
                               className="font-mono"
                               style={{
                                 fontSize: legendFontSize, color: '#101112', fontWeight: 700,
-                                cursor: 'pointer',
+                                cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', minWidth: 0,
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 textDecoration: 'underline',
-                                textDecorationColor: 'rgba(0,0,0,0.15)',
+                                textDecorationColor: 'rgba(0,0,0,0.25)',
                                 textUnderlineOffset: 3,
                               }}
                             >
                               {arc.name}
-                            </span>
+                            </button>
                             <span className="font-mono" style={{ fontSize: legendFontSize, color: '#101112', fontWeight: 700, whiteSpace: 'nowrap' }}>
                               £{arc.value.toFixed(0)}
                             </span>
@@ -653,31 +604,32 @@ export default function Dashboard() {
                 {/* SECTION 2: pace / projection */}
                 <div style={{ width: isMobile ? 'auto' : 190, minWidth: 0, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 1, height: '100%', overflow: isMobile ? 'hidden' : 'visible', ...(isMobile && { alignSelf: 'stretch' }) }}>
                   <p className="font-mono" style={{ fontSize: subheadingSize, color: '#2a2a2a', margin: 0, letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
-                    {displayIsCurrentMonth ? 'On Track For' : 'Total Spend'}
+                    {displayIsCurrentMonth ? 'Projected' : 'Total Spend'}
                   </p>
                   <p className="font-mono" style={{ fontSize: isMobile ? 24 : 36, color: '#101112', margin: isMobile ? '6px 0 4px' : '14px 0 10px', fontWeight: 700, letterSpacing: -0.5 }}>
                     £<AnimatedNumber value={displayIsCurrentMonth ? displayProjected : displayTotalSpend} formatter={(v) => v.toFixed(0)} />
                   </p>
-                  <p className="font-mono" style={{
-                    fontSize: isMobile ? 11 : 16, margin: 0, fontWeight: 700,
-                    color: displayPctVsLastMonth >= 0 ? '#b83232' : '#1f8a52',
-                  }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <TrendArrow up={displayPctVsLastMonth >= 0} size={isMobile ? 10 : 13} />
-                      {Math.abs(displayPctVsLastMonth).toFixed(0)}%
-                    </span>
-                    {' '}vs last month
-                  </p>
+                  {/* Last month can be £0, in which case there is no
+                      percentage to show (it would be infinite). */}
+                  {displayPctVsLastMonth === null ? (
+                    <p className="font-mono" style={{ fontSize: isMobile ? 11 : 14, margin: 0, fontWeight: 700, color: '#555' }}>
+                      No spending last month
+                    </p>
+                  ) : (
+                    <p className="font-mono" style={{ fontSize: isMobile ? 11 : 16, margin: 0, fontWeight: 700, color: '#333' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <TrendArrow up={displayPctVsLastMonth >= 0} size={isMobile ? 10 : 13} />
+                        {Math.abs(displayPctVsLastMonth).toFixed(0)}%
+                      </span>
+                      {' '}vs last month
+                    </p>
+                  )}
                   {displayIsCurrentMonth && (
                     <p className="font-mono" style={{ fontSize: isMobile ? 10 : 13, color: '#777', margin: isMobile ? '6px 0 0' : '12px 0 0' }}>
-                      Day {displayDaysElapsed} of {displayDaysInMonth}
+                      At current pace · day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
                   )}
-                  {insight && (
-                    <p className="font-mono" style={{ fontSize: isMobile ? 10 : 12, color: insightColor, margin: isMobile ? '8px 0 0' : '14px 0 0', fontWeight: 600, lineHeight: 1.4 }}>
-                      {insight.text}
-                    </p>
-                  )}
+                  {hasSpendData && <InsightLine summary={summary} compact={isMobile} />}
                 </div>
 
                 {/* divider */}
@@ -728,9 +680,9 @@ export default function Dashboard() {
 
           {/* Recent Transactions — flex:1, not a guessed fixed height. */}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <p className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: '0 0 8px', fontWeight: 700, flexShrink: 0 }}>Recent Transactions</p>
+            <h2 className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: '0 0 8px', fontWeight: 700, flexShrink: 0 }}>Recent Transactions</h2>
             <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-              <div className="dark-surface" style={{
+              <div className="dark-surface" aria-hidden={hasRecent ? undefined : 'true'} inert={!hasRecent} style={{
                 ...darkListStyle,
                 height: '100%',
                 filter: hasRecent ? 'none' : 'blur(3px)',
@@ -738,8 +690,9 @@ export default function Dashboard() {
                 pointerEvents: hasRecent ? 'auto' : 'none',
               }}>
                 {(hasRecent ? recent : FAKE_RECENT).map((t, i, arr) => {
-                  const isExpense = Number(t.amount) < 0;
-                  const dotColor = isExpense ? '#e05a5a' : '#3fbf7f';
+                  const pence = toPence(t.amount);
+                  const isExpense = pence < 0;
+                  const dotColor = isExpense ? '#ff8a8a' : '#6fdba5';
                   return (
                     <div key={t.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px',
@@ -754,7 +707,7 @@ export default function Dashboard() {
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.description || '(no description)'}</span>
                       </p>
                       <p className="font-mono" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: dotColor, flexShrink: 0, marginLeft: 12 }}>
-                        {isExpense ? '−' : '+'}£{Math.abs(Number(t.amount)).toFixed(2)}
+                        {formatSignedGBP(pence)}
                       </p>
                     </div>
                   );
@@ -764,7 +717,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-        </div>
+        </main>
       )}
     </div>
   );

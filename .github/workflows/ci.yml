@@ -1,0 +1,208 @@
+# Continuous integration for Onyx Vault.
+#
+# On every push and pull request:
+#   backend   lint, unit + integration + API tests with coverage, against a
+#             Postgres 18 service container (never the live database)
+#   frontend  lint, unit + component tests with coverage, production build
+#   e2e       Playwright browser tests in Chromium and WebKit, against the
+#             real API (NODE_ENV=test) on its own Postgres service
+# After a passing run on main, the server coverage badge is updated on the
+# `badges` branch.
+#
+# Reports (coverage, Playwright HTML report, failure screenshots and traces)
+# are kept as artifacts for 14 days.
+
+name: CI
+
+on:
+  push:
+    # The badge job pushes to `badges`; don't run CI for those commits.
+    branches-ignore: [badges]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  CI: 'true'
+
+jobs:
+  backend:
+    name: Backend (lint, unit, integration, API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: onyx_vault_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # A local, throwaway database. The test guard refuses anything else.
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/onyx_vault_test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - name: Tests with coverage
+        run: npm run test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 14
+          if-no-files-found: warn
+
+  frontend:
+    name: Frontend (lint, unit, component, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - name: Tests with coverage
+        run: npm run test:coverage
+      - name: Production build
+        run: npm run build
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 14
+          if-no-files-found: warn
+
+  e2e:
+    name: Browser tests (Chromium + WebKit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: onyx_vault_e2e_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/onyx_vault_e2e_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+        working-directory: frontend
+      - name: Playwright tests
+        run: npx playwright test
+        working-directory: frontend
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Upload failure screenshots and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  coverage-badge:
+    name: Update coverage badge
+    needs: [backend, frontend, e2e]
+    # Only after a fully passing run on main (not for pull requests).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+      - uses: actions/download-artifact@v8
+        with:
+          name: backend-coverage
+          path: backend-coverage
+      - name: Build badge
+        run: node .github/scripts/coverage-badge.mjs backend-coverage/coverage-summary.json coverage-server.json "server coverage"
+      - name: Publish to the badges branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads "$remote" badges > /dev/null; then
+            git clone --depth 1 --branch badges "$remote" badges-branch
+          else
+            mkdir badges-branch
+            git -C badges-branch init --quiet
+            git -C badges-branch checkout --orphan badges
+            git -C badges-branch remote add origin "$remote"
+          fi
+          cp coverage-server.json badges-branch/
+          printf '%s\n' '# Badges' '' 'Generated by the CI workflow after each passing run on main. Not part of the app; nothing here is deployed.' > badges-branch/README.md
+          cd badges-branch
+          git add coverage-server.json README.md
+          if git diff --cached --quiet; then
+            echo "Coverage unchanged; nothing to publish."
+          else
+            git commit --quiet -m "Update server coverage badge to $(node -p "require('./coverage-server.json').message") [skip ci]"
+            git push origin badges
+          fi

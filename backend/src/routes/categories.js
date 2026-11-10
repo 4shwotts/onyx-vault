@@ -1,71 +1,73 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const { asyncHandler } = require('../utils/http');
+const { asyncHandler, parseId, sendError, notFound } = require('../utils/http');
+const { withUserLock } = require('../utils/locks');
+const { schemas, validate } = require('../validation/schemas');
 
 const router = express.Router();
 router.use(requireAuth);
 
-// No GET /:id or DELETE /:id yet — categories are currently created
-// on the fly (see resolveCategoryId in the frontend) and only ever
-// listed or referenced by id elsewhere, never fetched/deleted individually.
-
-// Matches the same pattern as MAX_ACCOUNTS_PER_USER (accounts.js) and
-// MAX_RECURRING_RULES_PER_USER (recurring.js) — this route had no cap
-// at all before, unlike every other create-a-thing route in the app.
-// Set higher than those two since categories get created automatically
-// during CSV import (one per distinct category guessed from each row),
-// not just by direct user action.
+// Higher than the other caps, since categories are also created
+// automatically during CSV import.
 const MAX_CATEGORIES_PER_USER = 40;
-const MAX_NAME_LENGTH = 40;
 
 router.get('/', asyncHandler(async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, name FROM categories WHERE user_id = $1 ORDER BY name ASC',
-      [req.userId]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Get categories error:', err.message);
-    res.status(500).json({ error: 'Could not load categories' });
-  }
+  const result = await pool.query(
+    'SELECT id, name FROM categories WHERE user_id = $1 ORDER BY name ASC, id ASC',
+    [req.userId]
+  );
+  res.json(result.rows);
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
-  const name = (req.body.name || '').trim();
+  const input = validate(schemas.createCategory, req.body);
+  if (!input.ok) return sendError(res, 400, input.error);
 
-  if (!name) {
-    return res.status(400).json({ error: 'Category name is required' });
-  }
-
-  // No previous cap on length — an unbounded string here isn't a
-  // security hole (React escapes it on render), but it can bloat
-  // storage or break layout in the category selects/badges elsewhere
-  // in the app, so it gets the same kind of limit as password length
-  // already has on the auth routes.
-  if (name.length > MAX_NAME_LENGTH) {
-    return res.status(400).json({ error: `Category name must be ${MAX_NAME_LENGTH} characters or fewer` });
-  }
-
-  try {
-    // Counted here rather than relying on a DB constraint, so we can
-    // return a clear message instead of a raw constraint violation —
-    // same reasoning as the equivalent check in accounts.js.
-    const countResult = await pool.query('SELECT COUNT(*) FROM categories WHERE user_id = $1', [req.userId]);
-    if (Number(countResult.rows[0].count) >= MAX_CATEGORIES_PER_USER) {
-      return res.status(403).json({ error: `You've reached the limit of ${MAX_CATEGORIES_PER_USER} categories` });
-    }
-
-    const result = await pool.query(
-      'INSERT INTO categories (user_id, name) VALUES ($1, $2) RETURNING *',
-      [req.userId, name]
+  const created = await withUserLock(req.userId, async (client) => {
+    const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM categories WHERE user_id = $1', [req.userId]);
+    if (rows[0].n >= MAX_CATEGORIES_PER_USER) return null;
+    const result = await client.query(
+      'INSERT INTO categories (user_id, name) VALUES ($1, $2) RETURNING id, name',
+      [req.userId, input.data.name]
     );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error('Create category error:', err.message);
-    res.status(500).json({ error: 'Could not create category' });
-  }
+    return result.rows[0];
+  });
+
+  if (!created) return sendError(res, 403, `You've reached the limit of ${MAX_CATEGORIES_PER_USER} categories`);
+  res.status(201).json(created);
+}));
+
+router.get('/:id', asyncHandler(async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return notFound(res, 'Category not found');
+  const result = await pool.query('SELECT id, name FROM categories WHERE id = $1 AND user_id = $2', [id, req.userId]);
+  if (result.rows.length === 0) return notFound(res, 'Category not found');
+  res.json(result.rows[0]);
+}));
+
+router.put('/:id', asyncHandler(async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return notFound(res, 'Category not found');
+  const input = validate(schemas.updateCategory, req.body);
+  if (!input.ok) return sendError(res, 400, input.error);
+
+  const result = await pool.query(
+    'UPDATE categories SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING id, name',
+    [input.data.name, id, req.userId]
+  );
+  if (result.rows.length === 0) return notFound(res, 'Category not found');
+  res.json(result.rows[0]);
+}));
+
+// Transactions and rules in the category are kept and become
+// uncategorised (ON DELETE SET NULL).
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return notFound(res, 'Category not found');
+  const result = await pool.query('DELETE FROM categories WHERE id = $1 AND user_id = $2 RETURNING id', [id, req.userId]);
+  if (result.rows.length === 0) return notFound(res, 'Category not found');
+  res.json({ success: true });
 }));
 
 module.exports = router;

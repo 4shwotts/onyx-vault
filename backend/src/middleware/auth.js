@@ -1,4 +1,5 @@
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../auth/sessions');
+const { sendError } = require('../utils/http');
 
 // Fail fast if the secret isn't configured — better than every
 // verification silently breaking later.
@@ -8,21 +9,18 @@ if (!process.env.JWT_SECRET) {
 
 // Reads the JWT from an httpOnly cookie rather than a header or
 // localStorage, so client-side JS can never access the token directly.
+// A valid signature isn't enough: the session it names must still exist
+// (logout, password reset and account deletion remove it) and must not
+// have expired.
 function requireAuth(req, res, next) {
-  const token = req.cookies?.token;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    // Restrict verification to HS256 to prevent algorithm-confusion attacks.
-    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-    req.userId = payload.userId;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired session' });
-  }
+  verifySession(req.cookies?.token)
+    .then((session) => {
+      if (!session) return sendError(res, 401, 'Not signed in, or your session has ended');
+      req.userId = session.userId;
+      req.sessionId = session.sessionId;
+      return next();
+    })
+    .catch(next);
 }
 
 module.exports = { requireAuth };

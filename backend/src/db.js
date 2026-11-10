@@ -1,30 +1,17 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+const { buildPoolConfig } = require('./dbConfig');
 
-// Under test, only ever connect to the throwaway local database named in
-// TEST_DATABASE_URL, never DATABASE_URL (which on a developer machine
-// points at the live database). The guard throws before a pool exists if
-// the URL looks remotely like a hosted database.
-function buildPoolConfig() {
-  if (process.env.NODE_ENV === 'test') {
-    const { assertSafeTestDatabaseUrl } = require('./testing/dbGuard');
-    assertSafeTestDatabaseUrl(process.env.TEST_DATABASE_URL);
-    return {
-      connectionString: process.env.TEST_DATABASE_URL,
-      ssl: false,
-      max: 5,
-    };
-  }
-
-  return {
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
-  };
-}
+// DATE columns (type OID 1082) come back as their 'YYYY-MM-DD' text.
+// node-postgres would otherwise build a JavaScript Date at *local*
+// midnight, which shifts the day whenever the server clock isn't UTC
+// (a UK machine in summer, for instance), and the shifted day then
+// flowed into recurring-rule scheduling and API responses.
+const DATE_OID = 1082;
+types.setTypeParser(DATE_OID, (value) => value);
 
 // Shared connection pool for the app; allows concurrent queries across
-// requests instead of serialising through a single client.
+// requests instead of serialising through a single client. Under test,
+// buildPoolConfig only ever returns the guarded local test database.
 const pool = new Pool(buildPoolConfig());
 
 // Required: an unhandled error on an idle client otherwise crashes the

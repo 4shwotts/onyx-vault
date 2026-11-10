@@ -1,5 +1,6 @@
--- Onyx Vault database schema
--- Run this against a fresh PostgreSQL database to set up all tables
+-- 001_initial.sql
+-- Core tables. Migrations are idempotent (IF NOT EXISTS) and are applied
+-- in filename order; see db/migrations/README.md.
 
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,

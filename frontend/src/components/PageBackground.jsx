@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRichGraphics } from '../lib/graphics';
 
 // A genuine WebGL fragment shader rather than layered CSS gradients —
 // CSS radial gradients can approximate light/dark banding but can't
@@ -72,13 +72,48 @@ const fragmentShader = `
   }
 `;
 
+// Shown when WebGL isn't available, the visitor prefers reduced motion, or
+// the shader fails to start: a still CSS version of the same look.
+function StaticBackground() {
+  return <div className="page-background page-background--static" data-testid="page-background" data-mode="static" />;
+}
+
 export default function PageBackground() {
+  const rich = useRichGraphics();
+  const [failed, setFailed] = useState(false);
+  const handleFail = useCallback(() => setFailed(true), []);
+  if (!rich || failed) return <StaticBackground />;
+  return <ShaderBackground onFail={handleFail} />;
+}
+
+function ShaderBackground({ onFail }) {
   const mountRef = useRef(null);
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return undefined;
+    let cleanup = () => {};
+    let cancelled = false;
 
+    // Three.js is loaded on demand, in its own chunk.
+    import('three')
+      .then((THREE) => {
+        if (cancelled) return;
+        cleanup = startShader(THREE, mount);
+      })
+      .catch(() => onFail());
+
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
+  }, [onFail]);
+
+  return <div ref={mountRef} className="page-background" data-testid="page-background" data-mode="animated" />;
+}
+
+function startShader(THREE, mount) {
+  {
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -98,10 +133,12 @@ export default function PageBackground() {
     scene.add(mesh);
 
     let frameId;
-    const clock = new THREE.Clock();
+    // THREE.Timer replaces the deprecated THREE.Clock.
+    const timer = new THREE.Timer();
 
     function animate() {
-      uniforms.uTime.value = clock.getElapsedTime();
+      timer.update();
+      uniforms.uTime.value = timer.getElapsed();
       renderer.render(scene, camera);
       frameId = requestAnimationFrame(animate);
     }
@@ -118,12 +155,10 @@ export default function PageBackground() {
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
-      mount.removeChild(renderer.domElement);
+      if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       geometry.dispose();
       material.dispose();
       renderer.dispose();
     };
-  }, []);
-
-  return <div ref={mountRef} className="page-background" />;
+  }
 }

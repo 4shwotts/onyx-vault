@@ -1,88 +1,104 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
+import AuthCard from '../components/AuthCard';
+import { authInputStyle, authButtonStyle, authLinkStyle, authTextStyle } from '../components/authStyles';
 
+// Opened from the link in the verification email.
+//
+// - The token is sent exactly once. (In development React runs effects
+//   twice; sending it twice made the second request fail and showed
+//   "Verification failed" right after a successful verification.)
+// - The token is removed from the address bar straight away, so it isn't
+//   left in browser history or passed on in a Referer header.
+// - If the link is invalid or has expired, a new one can be requested
+//   from the same page.
 export default function VerifyEmail() {
-  const [status, setStatus] = useState('verifying'); // verifying | success | error
-  const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const [token] = useState(() => searchParams.get('token'));
+  const sentRef = useRef(false);
+  const [result, setResult] = useState(null); // { ok: true } | { ok: false, message }
 
   useEffect(() => {
-    const token = searchParams.get('token');
-
-    if (!token) {
-      setStatus('error');
-      setError('Missing verification token');
-      return;
-    }
-
+    if (!token || sentRef.current) return;
+    sentRef.current = true;
+    window.history.replaceState(window.history.state, '', window.location.pathname);
     api.verifyEmail(token)
-      .then(() => setStatus('success'))
-      .catch((err) => {
-        setStatus('error');
-        setError(err.message);
-      });
-  }, [searchParams]);
+      .then(() => setResult({ ok: true }))
+      .catch((err) => setResult({ ok: false, message: err.message }));
+  }, [token]);
+
+  const status = !token ? 'missing' : result === null ? 'verifying' : result.ok ? 'success' : 'failed';
+
+  if (status === 'verifying') {
+    return (
+      <AuthCard title="Verifying your email">
+        <p role="status" className="font-mono" style={{ ...authTextStyle, textAlign: 'center' }}>Verifying your email…</p>
+      </AuthCard>
+    );
+  }
+
+  if (status === 'success') {
+    return (
+      <AuthCard title="Email verified">
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1, gap: 20 }}>
+          <p role="status" className="font-mono" style={{ ...authTextStyle, textAlign: 'center', margin: 0 }}>
+            Your email address is verified. You can now sign in.
+          </p>
+          <Link to="/login" className="font-mono" style={{ ...authButtonStyle, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>
+            Go to sign in
+          </Link>
+        </div>
+      </AuthCard>
+    );
+  }
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: 24,
-      position: 'relative', zIndex: 1,
-    }}>
-      <div style={{
-        background: 'rgba(11,13,15,0.92)', borderRadius: 12, padding: '36px 32px',
-        width: 300, minHeight: 300, border: '0.5px solid #3a4045', borderTop: '0.5px solid #6b7278',
-        position: 'relative', zIndex: 1, textAlign: 'center',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-      }}>
-        {status === 'verifying' && (
-          <p className="font-mono" style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-            Verifying your email...
-          </p>
-        )}
-
-        {status === 'success' && (
-          <>
-            <p className="font-mono" style={{ fontSize: 15, marginBottom: 16 }}>
-              Email verified
-            </p>
-            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
-              You can now sign in to your account.
-            </p>
-            <button onClick={() => navigate('/login')} className="font-mono" style={buttonStyle}>
-              Go to sign in
-            </button>
-          </>
-        )}
-
-        {status === 'error' && (
-          <>
-            <p className="font-mono" style={{ fontSize: 15, color: 'var(--expense)', marginBottom: 12 }}>
-              Verification failed
-            </p>
-            <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
-              {error}
-            </p>
-            <Link to="/login" className="font-mono" style={{ fontSize: 13, color: '#7d3c98' }}>
-              Back to sign in
-            </Link>
-          </>
-        )}
-      </div>
-    </div>
+    <AuthCard title="Verification failed">
+      <p role="alert" className="font-mono" style={{ ...authTextStyle, textAlign: 'center', marginTop: 0 }}>
+        {status === 'missing' ? 'This link is missing its verification code.' : result.message}
+      </p>
+      <ResendForm />
+      <p className="font-mono" style={{ ...authTextStyle, textAlign: 'center', marginBottom: 0 }}>
+        <Link to="/login" style={authLinkStyle}>Back to sign in</Link>
+      </p>
+    </AuthCard>
   );
 }
 
-const buttonStyle = {
-  width: '100%',
-  background: 'var(--accent)',
-  color: 'var(--accent-text)',
-  border: 'none',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 14,
-  fontWeight: 500,
-  cursor: 'pointer',
-};
+function ResendForm() {
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState('idle'); // idle | sending | sent
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setState('sending');
+    try {
+      await api.resendVerification(email);
+    } finally {
+      setState('sent');
+    }
+  }
+
+  if (state === 'sent') {
+    return (
+      <p role="status" className="font-mono" style={{ ...authTextStyle, textAlign: 'center' }}>
+        If that account exists and isn’t verified yet, a new link has been sent.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} aria-label="Send a new verification link" style={{ marginTop: 8 }}>
+      <label htmlFor="resend-email" className="font-mono" style={{ ...authTextStyle, display: 'block', fontSize: 12, marginBottom: 6 }}>
+        Send a new link to:
+      </label>
+      <input id="resend-email" type="email" autoComplete="email" placeholder="Email" value={email}
+        onChange={(e) => setEmail(e.target.value)} required className="font-mono" style={{ ...authInputStyle, marginBottom: 10 }} />
+      <button type="submit" disabled={state === 'sending'} className="font-mono" style={authButtonStyle}>
+        {state === 'sending' ? 'Sending…' : 'Send a new link'}
+      </button>
+    </form>
+  );
+}

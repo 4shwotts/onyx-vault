@@ -1,78 +1,53 @@
-import { useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import { Component, lazy, Suspense } from 'react';
+import { useRichGraphics } from '../lib/graphics';
 
-function GemMesh({ variant }) {
-  const groupRef = useRef();
+// Three.js and react-three-fiber are only downloaded when the animated gem
+// is actually shown, so they don't weigh down the first page load.
+const GemCanvas = lazy(() => import('./GemCanvas'));
 
-  const { topGeometry, bottomGeometry } = useMemo(() => {
-    const topCone = new THREE.ConeGeometry(1.25, 1.55, 4, 1);
-    const bottomCone = new THREE.ConeGeometry(1.25, 1.55, 4, 1);
-    bottomCone.rotateX(Math.PI);
-    bottomCone.translate(0, -1.55, 0);
-    topCone.rotateY(Math.PI / 4);
-    bottomCone.rotateY(Math.PI / 4);
-    return { topGeometry: topCone, bottomGeometry: bottomCone };
-  }, []);
-
-  // Slowed from 0.012 to 0.006 — roughly half the previous speed.
-  useFrame(() => {
-    if (groupRef.current) groupRef.current.rotation.y += 0.006;
-  });
-
-  const isDark = variant === 'dark';
-  const baseColor = isDark ? '#d6d8db' : '#aaaeb3';
-  const emissive = isDark ? '#3a3d42' : '#000000';
-  const emissiveIntensity = isDark ? 0.5 : 0;
-
+// The still version: the same gem as the favicon, drawn as an SVG.
+function StaticGem({ size }) {
   return (
-    <group ref={groupRef}>
-      <mesh geometry={topGeometry} position={[0, 0.775, 0]}>
-        <meshStandardMaterial
-          color={baseColor}
-          metalness={0.8}
-          roughness={0.25}
-          flatShading
-          emissive={emissive}
-          emissiveIntensity={emissiveIntensity}
-        />
-      </mesh>
-      <mesh geometry={bottomGeometry} position={[0, 0.775, 0]}>
-        <meshStandardMaterial
-          color={baseColor}
-          metalness={0.8}
-          roughness={0.25}
-          flatShading
-          emissive={emissive}
-          emissiveIntensity={emissiveIntensity}
-        />
-      </mesh>
-    </group>
+    <img
+      src="/favicon.svg"
+      alt=""
+      width={size}
+      height={size}
+      data-testid="gem-static"
+      style={{ display: 'block', width: size, height: size }}
+    />
   );
 }
 
+// If WebGL fails part-way (e.g. the GPU context is lost), fall back to the
+// still gem rather than leaving a hole in the header.
+class GemErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 export default function SpinningGem({ size = 36, variant = 'light' }) {
-  const isDark = variant === 'dark';
+  const rich = useRichGraphics();
+  const still = <StaticGem size={size} />;
+  if (!rich) return still;
 
   return (
-    <div style={{ width: size, height: size }}>
-      <Canvas
-        camera={{ position: [0, 0, 4.3], fov: 38 }}
-        gl={{ antialias: true, alpha: true }}
-        dpr={[1, 2]}
-        style={{ width: '100%', height: '100%', display: 'block' }}
-      >
-        <hemisphereLight
-          skyColor={isDark ? '#f5f5f6' : '#e8e9eb'}
-          groundColor={isDark ? '#6a6a6e' : '#3a3a3d'}
-          intensity={isDark ? 0.75 : 0.55}
-        />
-        <ambientLight intensity={isDark ? 0.4 : 0.22} />
-        <directionalLight position={[-3, 2, 4]} intensity={isDark ? 1.6 : 1.9} />
-        <directionalLight position={[3, -1, 2]} intensity={isDark ? 0.55 : 0.4} />
-        <directionalLight position={[0, 3, -4]} intensity={0.35} color="#8e44ad" />
-        <GemMesh variant={variant} />
-      </Canvas>
-    </div>
+    <GemErrorBoundary fallback={still}>
+      <Suspense fallback={still}>
+        <div data-testid="gem-animated" style={{ width: size, height: size }}>
+          <GemCanvas size={size} variant={variant} />
+        </div>
+      </Suspense>
+    </GemErrorBoundary>
   );
 }
