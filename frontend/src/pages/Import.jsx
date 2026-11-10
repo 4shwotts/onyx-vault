@@ -109,7 +109,7 @@ export default function Import() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '16px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       <main className="page-container" style={{ maxWidth: 800, margin: '0 auto', paddingTop: isMobile ? 12 : 60 }}>

@@ -95,7 +95,7 @@ export default function Accounts() {
   const grid = { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: isMobile ? 12 : 18 };
 
   return (
-    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '16px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
 
       <main className="page-container">

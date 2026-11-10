@@ -16,7 +16,7 @@ export default function Settings() {
   const isDemo = Boolean(user?.isDemo);
 
   return (
-    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '24px 32px', position: 'relative', zIndex: 1 }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? 16 : '16px 32px', position: 'relative', zIndex: 1 }}>
       <Nav />
       <main className="page-container" style={{ maxWidth: 640, margin: '0 auto' }}>
         <h1 className="font-mono" style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, margin: '0 0 22px', color: '#000' }}>Settings</h1>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The demo entry points, the demo banner and the sign-up switch.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Login from './Login';
@@ -160,9 +160,10 @@ describe('demo banner and End demo', () => {
   it('End demo deletes the demo (via logout) and returns to sign-in with a message', async () => {
     api.logout.mockResolvedValue({ success: true });
     renderAt('/dashboard', <Nav />, demoSession);
-    // Both the banner and the header offer it.
-    expect(screen.getAllByRole('button', { name: 'End demo' })).toHaveLength(2);
-    await userEvent.setup().click(screen.getAllByRole('button', { name: 'End demo' })[0]);
+    // Only the header offers it; the banner has no button of its own.
+    expect(screen.getAllByRole('button', { name: 'End demo' })).toHaveLength(1);
+    expect(within(screen.getByRole('region', { name: 'Demo mode' })).queryByRole('button')).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'End demo' }));
     expect(api.logout).toHaveBeenCalledTimes(1);
     expect(await screen.findByTestId('location')).toHaveTextContent('/login?demoEnded=1');
   });

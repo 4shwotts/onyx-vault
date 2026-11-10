@@ -36,7 +36,9 @@ test('try the demo from the sign-in page, look around, then end it', async ({ pa
   await expect(page.getByRole('region', { name: 'Delete your account' })).toHaveCount(0);
 
   // End demo: back to sign-in, and the demo is gone.
-  await page.getByRole('region', { name: 'Demo mode' }).getByRole('button', { name: 'End demo' }).click();
+  // The header has the only End demo button; the banner has none.
+  await expect(page.getByRole('region', { name: 'Demo mode' }).getByRole('button')).toHaveCount(0);
+  await page.getByRole('banner').getByRole('button', { name: 'End demo' }).click();
   await expect(page).toHaveURL(/\/login\?demoEnded=1$/);
   await expect(page.getByRole('status').first()).toHaveText('Your demo has ended and all its data has been deleted.');
   await page.goto('/dashboard');

@@ -238,7 +238,7 @@ export default function Transactions() {
     <div className="hide-scrollbar" style={{
       ...(isMobile
         ? { minHeight: '100vh', padding: 16 }
-        : { height: '100vh', padding: '20px 32px', overflowY: 'auto' }),
+        : { height: '100vh', padding: '16px 32px', overflowY: 'auto' }),
       display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1,
     }}>
       <Nav />

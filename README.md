@@ -15,7 +15,7 @@ Developed with AI-assisted tooling (Claude Code). Test strategy, review, manual 
 
 Onyx Vault lets you keep track of your own accounts and spending by typing them in (or importing a CSV file). It shows where the money went each month, how this month compares with the last, and what's coming up from recurring payments.
 
-It's built to the standard you'd expect of a small production app: exact money handling, server-side sessions, strict input validation, per-user limits, protection against bots and cross-site requests, accessibility, and **1,073 automated tests** across unit, integration, API, component and browser levels, run on every push. The focus of the project is engineering and quality assurance; see [TESTING.md](TESTING.md) and [BUGS.md](BUGS.md).
+It's built to the standard you'd expect of a small production app: exact money handling, server-side sessions, strict input validation, per-user limits, protection against bots and cross-site requests, accessibility, and **1,087 automated tests** across unit, integration, API, component and browser levels, run on every push. The focus of the project is engineering and quality assurance; see [TESTING.md](TESTING.md) and [BUGS.md](BUGS.md).
 
 ## Try the demo
 
@@ -90,7 +90,7 @@ flowchart LR
 
 ## Testing
 
-**1,073 automated tests, all passing**, run on every push and pull request:
+**1,087 automated tests, all passing**, run on every push and pull request:
 
 | Level | Tests |
 |---|---|
@@ -98,7 +98,7 @@ flowchart LR
 | Integration (real database) | 31 |
 | API (real database) | 426 |
 | Component | 98 |
-| Browser (Chromium and WebKit) | 113 |
+| Browser (Chromium and WebKit) | 127 |
 | Image-size checks | 16 |
 
 Server coverage is **96.2% of lines** (87.3% of branches). The browser tests cover five end-to-end journeys (sign-up to sign-in with data kept, forgotten password, add/edit/delete, recurring payments, account deletion) and more besides, an axe accessibility scan of every page, and layout checks at seven screen sizes.

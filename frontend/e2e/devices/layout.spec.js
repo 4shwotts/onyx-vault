@@ -80,7 +80,8 @@ for (const viewport of VIEWPORTS) {
       await expect(page).toHaveURL(/\/dashboard$/);
       const banner = page.getByRole('region', { name: 'Demo mode' });
       await expect(banner).toBeVisible();
-      await expect(banner.getByRole('button', { name: 'End demo' })).toBeInViewport({ ratio: 1 });
+      await expect(banner.getByRole('link', { name: 'Read the disclaimer' })).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('banner').getByRole('button', { name: 'End demo' })).toBeInViewport({ ratio: 1 });
       for (const control of await page.getByRole('banner').getByRole('button').all()) {
         await expect(control).toBeInViewport({ ratio: 1 });
       }
@@ -89,6 +90,18 @@ for (const viewport of VIEWPORTS) {
         await expect(page.getByRole('main')).toBeVisible();
         expect(await horizontalOverflow(page), path).toEqual([]);
       }
+    });
+
+    test('the header sits in exactly the same place on every signed-in page', async ({ page }) => {
+      await seedUserWithData(page.request);
+      const positions = {};
+      for (const path of SIGNED_IN) {
+        await page.goto(path);
+        await expect(page.getByRole('main')).toBeVisible();
+        const box = await page.getByRole('banner').boundingBox();
+        positions[path] = { x: Math.round(box.x), y: Math.round(box.y), width: Math.round(box.width), height: Math.round(box.height) };
+      }
+      for (const path of SIGNED_IN) expect(positions[path], path).toEqual(positions['/dashboard']);
     });
 
     test('signed-in pages fit the screen', async ({ page }) => {

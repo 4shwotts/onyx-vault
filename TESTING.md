@@ -1,6 +1,6 @@
 # Testing Onyx Vault
 
-**1,073 automated tests, all passing:** 1,057 functional tests across five
+**1,087 automated tests, all passing:** 1,071 functional tests across five
 levels, plus 16 image-size checks. Every push and pull request runs all of
 them in GitHub Actions (see [CI](#continuous-integration)).
 
@@ -10,10 +10,10 @@ them in GitHub Actions (see [CI](#continuous-integration)).
 | Integration (real database, no HTTP) | Vitest + Postgres | **31** |
 | API | Vitest + Supertest + Postgres | **426** |
 | Component | Vitest + Testing Library | **98** |
-| Browser | Playwright (Chromium + WebKit) | **113** |
-| **Functional total** | | **1,057** |
+| Browser | Playwright (Chromium + WebKit) | **127** |
+| **Functional total** | | **1,071** |
 | Image-size checks | Vitest | **16** |
-| **Overall** | | **1,073** |
+| **Overall** | | **1,087** |
 
 Coverage (from the unit, integration, API and component tests):
 
@@ -104,7 +104,7 @@ touch and screen-reader roles), the insight line, loading and empty states, the
 the demo pages and banner, the sign-up switch, the graphics fallbacks, and the
 privacy notice and disclaimer (each required statement is checked).
 
-### Browser (113)
+### Browser (127)
 - **Journeys in Chromium (21):** sign up → verify → add transactions → check
   totals and charts → log out → log back in; forgotten password; add, edit and
   delete a transaction; create a recurring transaction and see it post; delete an
@@ -114,10 +114,10 @@ privacy notice and disclaimer (each required statement is checked).
   and keyboard-only use.
 - **Accessibility (22):** axe (WCAG 2.2 A and AA) on every page, including open
   pop-ups, error states, empty states and the demo. Any violation fails the run.
-- **Phones and tablets (70):** at 320×568, 390×844, 844×390, 768×1024,
+- **Phones and tablets (84):** at 320×568, 390×844, 844×390, 768×1024,
   820×1180, 1024×768 and 1100×800, in Chromium and WebKit with touch: nothing
   runs off the screen, the right navigation is used with every link on screen,
-  the demo banner fits, and pop-ups and the command palette work by tapping.
+  the demo banner fits, the header sits in exactly the same place on every page, and pop-ups and the command palette work by tapping.
 
 ### Image-size checks (16)
 Every image and icon the app ships, and the README's animation, is under
@@ -170,7 +170,7 @@ What passing looks like:
 
 - backend: `Test Files  32 passed (32)` and `Tests  683 passed (683)`;
 - frontend: `Test Files  15 passed (15)` and `Tests  277 passed (277)`;
-- browser: `113 passed`.
+- browser: `127 passed`.
 
 Notes:
 
