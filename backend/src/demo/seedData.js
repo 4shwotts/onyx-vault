@@ -102,6 +102,9 @@ function buildDemoData(today, { monthsBack = 3 } = {}) {
     }
     // Energy varies a little month to month.
     add('current', key(y, m, 5), 'Quillby Energy', 'Bills', -between(rand, 6200, 7800));
+    // A small clothes purchase early each month, so Shopping has something
+    // to compare against like for like (not only the odd big purchase).
+    add('current', key(y, m, 4), 'Marrowby Outfitters', 'Shopping', -between(rand, 1800, 4500));
     for (const rule of RULES) {
       add('current', key(y, m, Math.min(rule.day, last)), rule.description, rule.category, rule.pence, { isRecurring: true });
     }
@@ -109,10 +112,13 @@ function buildDemoData(today, { monthsBack = 3 } = {}) {
   }
   add('savings', start, 'Opening balance', 'Income', 180000);
 
-  // Day-to-day spending.
+  // Day-to-day spending: a big grocery shop every week (on the 3rd, 10th,
+  // 17th, 24th and 31st, so every month has the same pattern), with
+  // smaller top-up shops in between.
   for (let date = start; date <= today; date = addDays(date, 1)) {
     const day = Number(date.slice(8, 10));
-    if (rand() < 0.3) add('current', date, GROCERS[Math.floor(rand() * GROCERS.length)], 'Groceries', -between(rand, 850, 7400));
+    if (day % 7 === 3) add('current', date, 'Fernhollow Grocers', 'Groceries', -between(rand, 4500, 7500));
+    else if (rand() < 0.15) add('current', date, GROCERS[Math.floor(rand() * GROCERS.length)], 'Groceries', -between(rand, 350, 2000));
     if (rand() < 0.28) add('current', date, CAFES[Math.floor(rand() * CAFES.length)], 'Eating Out', -between(rand, 280, 460));
     if (rand() < 0.25) add('current', date, 'Glimmerline Rail', 'Transport', -between(rand, 420, 1430));
     if (rand() < 0.07) add('current', date, RESTAURANTS[Math.floor(rand() * RESTAURANTS.length)], 'Eating Out', -between(rand, 2400, 4800));

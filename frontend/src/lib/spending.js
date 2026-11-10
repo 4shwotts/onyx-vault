@@ -81,8 +81,16 @@ export function summariseMonth(transactions, monthKey, today = new Date()) {
   const comparableTotalPence = sumPence(Object.values(previousToDate));
 
   // The projection compares the expected full month with the whole of last
-  // month, which is already like for like.
-  const projectedPence = Math.round((totalPence / daysElapsed) * monthDays);
+  // month. For a month in progress, the rest of the month is assumed to go
+  // as the same days of last month did, so a payment that falls early (like
+  // rent on the 1st) is counted once rather than multiplied by the pace.
+  // With no spending last month to go on, it falls back to the pace so far.
+  const projectionBasis = isCurrentMonth && prevTotalPence > 0 ? 'last-month' : 'pace';
+  const projectedPence = !isCurrentMonth
+    ? totalPence
+    : projectionBasis === 'last-month'
+      ? totalPence + (prevTotalPence - comparableTotalPence)
+      : Math.round((totalPence / daysElapsed) * monthDays);
   const pctVsLastMonth = prevTotalPence > 0 ? percentChange(projectedPence, prevTotalPence) : null;
 
   return {
@@ -91,6 +99,7 @@ export function summariseMonth(transactions, monthKey, today = new Date()) {
     prevTotalPence,
     comparableTotalPence,
     projectedPence,
+    projectionBasis,
     pctVsLastMonth,
     isCurrentMonth,
     daysElapsed,

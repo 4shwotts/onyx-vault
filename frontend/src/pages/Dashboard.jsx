@@ -236,6 +236,16 @@ export default function Dashboard() {
   const [accountPage, setAccountPage] = useState(0);
   const [chartsMounted, setChartsMounted] = useState(false);
   const isMobile = useIsMobile();
+  // Height available to the Recent Transactions list on desktop.
+  const recentSpaceRef = useRef(null);
+  const [recentSpace, setRecentSpace] = useState(null);
+  useEffect(() => {
+    const el = recentSpaceRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(() => setRecentSpace(el.clientHeight));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, isMobile]);
 
   const availableMonths = getAvailableMonths(allTransactions);
 
@@ -333,6 +343,11 @@ export default function Dashboard() {
     .sort((a, b) => toDateKey(b.date).localeCompare(toDateKey(a.date)) || b.id - a.id)
     .slice(0, 5);
   const hasRecent = recent.length > 0;
+  // On desktop the list gets whatever height is left on screen; show only
+  // the rows that fit completely, never one cut in half.
+  const recentRows = isMobile || recentSpace === null
+    ? 5
+    : Math.max(1, Math.floor((recentSpace - RECENT_LIST_PADDING * 2) / RECENT_ROW_HEIGHT));
   const currentAccountPage = accountPages[visibleAccountPage] || [];
   const accountSlots = Math.min(ACCOUNTS_PER_PAGE, (hasAccounts ? accounts : FAKE_ACCOUNTS).length) || 1;
   const mobileAccountsHeight = accountSlots * MOBILE_ACCOUNT_CARD_HEIGHT + (accountSlots - 1) * MOBILE_ACCOUNT_GAP;
@@ -626,7 +641,9 @@ export default function Dashboard() {
                   )}
                   {displayIsCurrentMonth && (
                     <p className="font-mono" style={{ fontSize: isMobile ? 10 : 13, color: '#777', margin: isMobile ? '6px 0 0' : '12px 0 0' }}>
-                      At current pace · day {displayDaysElapsed} of {displayDaysInMonth}
+                      {hasSpendData && summary.projectionBasis === 'last-month'
+                        ? `Rest of month as in ${summary.prevMonthName}`
+                        : 'At current pace'} · day {displayDaysElapsed} of {displayDaysInMonth}
                     </p>
                   )}
                   {hasSpendData && <InsightLine summary={summary} compact={isMobile} />}
@@ -681,21 +698,22 @@ export default function Dashboard() {
           {/* Recent Transactions — flex:1, not a guessed fixed height. */}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <h2 className="font-mono" style={{ fontSize: isMobile ? 15 : 18, color: '#000', margin: '0 0 8px', fontWeight: 700, flexShrink: 0 }}>Recent Transactions</h2>
-            <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            <div ref={recentSpaceRef} style={{ position: 'relative', flex: 1, minHeight: 0 }}>
               <div className="dark-surface" aria-hidden={hasRecent ? undefined : 'true'} inert={!hasRecent} style={{
                 ...darkListStyle,
-                height: '100%',
+                ...(isMobile ? { height: '100%' } : { maxHeight: '100%' }),
                 filter: hasRecent ? 'none' : 'blur(3px)',
                 opacity: hasRecent ? 1 : 0.55,
                 pointerEvents: hasRecent ? 'auto' : 'none',
               }}>
-                {(hasRecent ? recent : FAKE_RECENT).map((t, i, arr) => {
+                {(hasRecent ? recent : FAKE_RECENT).slice(0, recentRows).map((t, i, arr) => {
                   const pence = toPence(t.amount);
                   const isExpense = pence < 0;
                   const dotColor = isExpense ? '#ff8a8a' : '#6fdba5';
                   return (
                     <div key={t.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 18px',
+                      height: RECENT_ROW_HEIGHT, boxSizing: 'border-box',
                       borderBottom: i < arr.length - 1 ? '0.5px solid #262626' : 'none',
                       position: 'relative', zIndex: 1,
                     }}>
@@ -731,7 +749,9 @@ const mobileDarkCardStyle = {
   ...darkCardStyle, padding: '0 16px', height: MOBILE_ACCOUNT_CARD_HEIGHT,
   display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
 };
+const RECENT_ROW_HEIGHT = 44;
+const RECENT_LIST_PADDING = 4;
 const darkListStyle = {
-  borderRadius: 14, padding: 4, overflow: 'hidden',
+  borderRadius: 14, padding: RECENT_LIST_PADDING, overflow: 'hidden', boxSizing: 'border-box',
   boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 -1px 0 rgba(0,0,0,0.6) inset, 0 2px 6px rgba(0,0,0,0.25)',
 };
